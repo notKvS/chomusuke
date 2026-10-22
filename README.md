@@ -1,0 +1,40 @@
+# Chomusuke
+
+A desktop music player that streams audio straight from torrents, with a YouTube Music–style UI.
+Paste a magnet link, a 40-character info hash or an https `.torrent` URL (or open a `.torrent` file),
+pick a song, and it starts playing while only the pieces you need are downloaded.
+
+## Run it
+
+Requires Node.js 22.12+.
+
+```sh
+npm install      # lifecycle scripts are disabled in .npmrc on purpose
+npm run setup    # fetches the Electron binary and node-datachannel's prebuilt WebRTC addon
+npm run dev      # dev mode with hot reload
+```
+
+Other scripts: `npm run build` (production bundle in `out/`), `npm start` (run the built app),
+`npm test` (unit tests via Node's built-in runner), `npm run typecheck`.
+
+## How it works
+
+- **Main process** (`src/main`) runs [WebTorrent](https://webtorrent.io). Torrents are added with every
+  piece deselected; streaming a track creates a prioritised piece selection for just that byte range.
+- **Stream server** (`src/main/stream-server.ts`) listens on `127.0.0.1` on a random port and serves only the
+  audio and cover files of loaded torrents, with HTTP Range support so the `<audio>` element can seek.
+  Each launch generates a random token that every URL must carry, and requests with a foreign `Host` are refused.
+- **Library** (`src/main/library.ts`) turns a torrent's file list into an album: one track per song (preferring
+  MP3 when the same song exists in several formats), track numbers and titles from file names, a common
+  `Artist - ` prefix lifted into the artist, and a cover image.
+- **Renderer** (`src/renderer`) is React in a sandboxed, context-isolated window. It can only call
+  `loadSource`, `openTorrentFile` and `onStats` through the preload bridge.
+
+Downloaded pieces live in a session cache under the OS temp folder, wiped on launch and on quit.
+
+## Notes
+
+- The featured albums on the home screen are freely licensed (Creative Commons) releases hosted by the
+  Internet Archive. Their torrents include HTTP web seeds, so they play even when no peers are online.
+- Only stream content you have the right to download and share.
+- UPnP/NAT-PMP port mapping and uTP are turned off; peers are reached over TCP and web seeds.

@@ -1,0 +1,13 @@
+node_modules/
+out/
+dist/
+*.log
+
+# Never commit secrets, even though the app needs none today.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*
+secrets*

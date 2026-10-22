@@ -1,0 +1,32 @@
+{
+  "name": "chomusuke",
+  "version": "0.1.0",
+  "description": "Desktop music player that streams audio straight from torrents",
+  "private": true,
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "setup": "node node_modules/electron/install.js && cd node_modules/node-datachannel && prebuild-install -r napi",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "test": "node --disable-warning=ExperimentalWarning --test \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "webtorrent": "3.0.21"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "@types/webtorrent": "3.0.0",
+    "@vitejs/plugin-react": "5.2.0",
+    "electron": "44.6.0",
+    "electron-vite": "5.0.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "typescript": "5.9.3",
+    "vite": "7.3.7"
+  }
+}

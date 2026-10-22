@@ -1,0 +1,17 @@
+import { defineConfig } from 'electron-vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  main: {},
+  preload: {
+    build: {
+      rollupOptions: {
+        // Sandboxed preloads must be CommonJS.
+        output: { format: 'cjs', entryFileNames: '[name].cjs' }
+      }
+    }
+  },
+  renderer: {
+    plugins: [react()]
+  }
+})
