@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildLibrary, type TorrentFileInfo } from './library.ts'
+import { buildLibrary, isAudioFileName, titleFromFileName, trackKey, type TorrentFileInfo } from './library.ts'
 
 const files = (torrentName: string, entries: Array<[string, number]>): TorrentFileInfo[] =>
   entries.map(([p, length]) => ({ path: `${torrentName}/${p}`, length }))
@@ -122,6 +122,28 @@ test('single-file torrent uses the file name without extension as title', () => 
   const lib = buildLibrary('Some_Song.mp3', [{ path: 'Some_Song.mp3', length: 10 }])
   assert.equal(lib.title, 'Some Song')
   assert.equal(lib.tracks.length, 1)
+})
+
+test('track keys ignore the torrent folder, extension and derivative suffix', () => {
+  const lib = buildLibrary(
+    'Box',
+    files('Box', [
+      ['CD1/01_Song_vbr.mp3', 1],
+      ['CD1/01_Song.flac', 1]
+    ])
+  )
+  assert.deepEqual(
+    lib.tracks.map(t => t.key),
+    ['cd1/01_song']
+  )
+  assert.equal(trackKey('CD1\\01_Song_64kb.mp3'), 'cd1/01_song')
+  assert.equal(trackKey('Single.mp3'), 'single')
+})
+
+test('filename helpers', () => {
+  assert.equal(titleFromFileName('dir/02_letting_you_vbr.mp3'), 'letting you')
+  assert.equal(isAudioFileName('a.FLAC'), true)
+  assert.equal(isAudioFileName('a.shn'), false)
 })
 
 test('no playable audio yields no tracks', () => {

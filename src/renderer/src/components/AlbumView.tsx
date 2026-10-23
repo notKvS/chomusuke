@@ -69,7 +69,9 @@ export function AlbumView({ album, stats, durations, currentTrackId, isPlaying, 
                 <span className="track__artist">{track.artist ?? ''}</span>
                 <span className="track__format">{track.format}</span>
                 <span className="track__duration">
-                  {durations[track.id] ? formatTime(durations[track.id]) : formatBytes(track.size)}
+                  {(durations[track.id] ?? track.duration)
+                    ? formatTime(durations[track.id] ?? track.duration ?? 0)
+                    : formatBytes(track.size)}
                 </span>
               </button>
             </li>

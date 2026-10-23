@@ -27,6 +27,13 @@ const MAX_FILES = 50_000
 const MAX_TRACKS = 5_000
 const MAX_PIECE_LENGTH = 64 * 1024 * 1024
 
+export interface TrackAnnotation {
+  title?: string
+  artist?: string
+  trackNo?: number
+  duration?: number
+}
+
 interface LoadedTorrent {
   torrent: Torrent
   album: Album
@@ -96,6 +103,27 @@ export class TorrentEngine {
       torrent.destroy()
       throw err
     }
+  }
+
+  /** Applies better titles, artists and durations (e.g. archive.org tags) to a loaded album. */
+  annotate(infoHash: string, info: Map<string, TrackAnnotation>): Album | undefined {
+    const entry = this.loaded.get(infoHash)
+    if (!entry) return undefined
+    entry.album = {
+      ...entry.album,
+      tracks: entry.album.tracks.map(track => {
+        const extra = info.get(track.key)
+        if (!extra) return track
+        return {
+          ...track,
+          title: extra.title ?? track.title,
+          artist: extra.artist ?? track.artist,
+          trackNo: extra.trackNo ?? track.trackNo,
+          duration: extra.duration ?? track.duration
+        }
+      })
+    }
+    return entry.album
   }
 
   resolveFile(infoHash: string, fileIndex: number): StreamableFile | undefined {

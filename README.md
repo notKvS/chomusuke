@@ -27,8 +27,16 @@ Other scripts: `npm run build` (production bundle in `out/`), `npm start` (run t
 - **Library** (`src/main/library.ts`) turns a torrent's file list into an album: one track per song (preferring
   MP3 when the same song exists in several formats), track numbers and titles from file names, a common
   `Artist - ` prefix lifted into the artist, and a cover image.
-- **Renderer** (`src/renderer`) is React in a sandboxed, context-isolated window. It can only call
-  `loadSource`, `openTorrentFile` and `onStats` through the preload bridge.
+- **Renderer** (`src/renderer`) is React in a sandboxed, context-isolated window. It only reaches the main
+  process through the narrow functions in `src/preload/index.ts`.
+- **Search** (`src/main/providers/`) fans a query out to every enabled provider:
+  - the **Internet Archive** (built in): albums from its search API, songs from the top items' file tags;
+  - **Torznab indexers** you add under *Sources*: Jackett, Prowlarr, BitMagnet or anything else that speaks
+    Torznab, so you can search whichever trackers you've configured there. API keys are encrypted with the OS
+    credential store (Electron `safeStorage`) and never reach the renderer.
+
+  Results come back as opaque ids; opening one turns it into a magnet or `.torrent` in the main process.
+  See [docs/sources.md](docs/sources.md) for adding providers and a list of candidates.
 
 Downloaded pieces live in a session cache under the OS temp folder, wiped on launch and on quit.
 

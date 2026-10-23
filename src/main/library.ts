@@ -6,6 +6,8 @@ export interface TorrentFileInfo {
 
 export interface LibraryTrack {
   fileIndex: number
+  /** See trackKey() */
+  key: string
   title: string
   artist?: string
   trackNo?: number
@@ -44,6 +46,7 @@ const naturalCompare = new Intl.Collator(undefined, { numeric: true, sensitivity
 
 interface ParsedFile {
   index: number
+  key: string
   dir: string
   stem: string
   ext: string
@@ -57,8 +60,11 @@ function parseFile(file: TorrentFileInfo, index: number): ParsedFile | null {
   const name = parts[parts.length - 1]
   const dot = name.lastIndexOf('.')
   if (dot <= 0) return null
+  // Multi-file torrents prefix every path with the torrent name; single-file torrents are just the name.
+  const relative = parts.length > 1 ? parts.slice(1) : parts
   return {
     index,
+    key: trackKey(relative.join('/')),
     dir: parts.slice(0, -1).join('/'),
     stem: name.slice(0, dot),
     ext: name.slice(dot + 1).toLowerCase(),
@@ -67,7 +73,29 @@ function parseFile(file: TorrentFileInfo, index: number): ParsedFile | null {
 }
 
 const prettify = (text: string): string => text.replace(/_/g, ' ').replace(/\s+/g, ' ').trim()
-const songKey = (file: ParsedFile): string => `${file.dir}/${file.stem.replace(DERIVATIVE_SUFFIX, '')}`.toLowerCase()
+
+/**
+ * Stable id for a song inside a torrent: its path relative to the torrent root, lower-cased, without
+ * extension or archive.org derivative suffix — so 01_Song.flac and 01_Song_vbr.mp3 share a key.
+ */
+export function trackKey(relativePath: string): string {
+  const parts = relativePath.split(/[\\/]/)
+  const name = parts.pop() ?? ''
+  const dot = name.lastIndexOf('.')
+  const stem = (dot > 0 ? name.slice(0, dot) : name).replace(DERIVATIVE_SUFFIX, '')
+  return [...parts, stem].join('/').toLowerCase()
+}
+
+export function isAudioFileName(name: string): boolean {
+  return name.slice(name.lastIndexOf('.') + 1).toLowerCase() in AUDIO_RANK
+}
+
+/** Display title derived from a file name, e.g. "02_letting_you_vbr.mp3" -> "letting you". */
+export function titleFromFileName(name: string): string {
+  const base = name.slice(name.search(/[^\\/]*$/))
+  const dot = base.lastIndexOf('.')
+  return parseTitle(dot > 0 ? base.slice(0, dot) : base).title
+}
 
 function audioRank(file: ParsedFile): number {
   const derivative = DERIVATIVE_SUFFIX.test(file.stem)
@@ -97,7 +125,7 @@ export function buildLibrary(torrentName: string, files: TorrentFileInfo[]): Lib
   const bestPerSong = new Map<string, ParsedFile>()
   for (const file of parsed) {
     if (!(file.ext in AUDIO_RANK)) continue
-    const key = songKey(file)
+    const key = file.key
     const current = bestPerSong.get(key)
     if (!current || audioRank(file) < audioRank(current)) bestPerSong.set(key, file)
   }
@@ -112,6 +140,7 @@ export function buildLibrary(torrentName: string, files: TorrentFileInfo[]): Lib
     )
     .map(({ file, title, trackNo }): LibraryTrack => ({
       fileIndex: file.index,
+      key: file.key,
       title,
       trackNo,
       format: file.ext.toUpperCase(),
@@ -128,7 +157,7 @@ export function buildLibrary(torrentName: string, files: TorrentFileInfo[]): Lib
   const songKeys = new Set(bestPerSong.keys())
   const cover = tracks.length
     ? parsed
-        .filter(f => IMAGE_EXTENSIONS.has(f.ext) && f.length <= MAX_COVER_BYTES && !songKeys.has(songKey(f)))
+        .filter(f => IMAGE_EXTENSIONS.has(f.ext) && f.length <= MAX_COVER_BYTES && !songKeys.has(f.key))
         .sort((a, b) => coverScore(b) - coverScore(a) || b.length - a.length)[0]
     : undefined
 

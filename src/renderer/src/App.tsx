@@ -1,24 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Album, LoadResult, SourceHints, TorrentStats } from '../../shared/types'
+import type { Album, LoadResult, SearchAlbum, SearchSong, SourceHints, TorrentStats } from '../../shared/types'
 import { AlbumError, AlbumLoading, AlbumView } from './components/AlbumView'
 import { Home } from './components/Home'
 import { Icon } from './components/Icon'
 import { PlayerBar } from './components/PlayerBar'
+import { SearchView, type SearchState } from './components/SearchView'
 import { Sidebar } from './components/Sidebar'
+import { SourcesView } from './components/SourcesView'
 import { TopBar } from './components/TopBar'
+import { looksLikeSource } from './source'
 import { usePlayer } from './usePlayer'
 
 type View =
   | { kind: 'home' }
+  | { kind: 'search' }
+  | { kind: 'sources' }
   | { kind: 'loading'; title?: string; artist?: string; artwork?: string }
   | { kind: 'album'; infoHash: string }
   | { kind: 'error'; message: string; retry?: () => void }
+
+/** What to start once an album has loaded: nothing, its first track, or a specific song. */
+type Autoplay = boolean | { key: string }
 
 const TOAST_MS = 6000
 
 export function App() {
   const [albums, setAlbums] = useState<Album[]>([])
   const [view, setView] = useState<View>({ kind: 'home' })
+  const [search, setSearch] = useState<SearchState | null>(null)
   const [stats, setStats] = useState<Record<string, TorrentStats>>({})
   const [toast, setToast] = useState<string | null>(null)
   const player = usePlayer(setToast)
@@ -26,6 +35,8 @@ export function App() {
 
   const viewRef = useRef(view)
   const requestId = useRef(0)
+  const searchId = useRef(0)
+  /** Loaded albums by the URL or search-result id they came from, so reopening is instant. */
   const sourceToHash = useRef(new Map<string, string>())
   const albumsRef = useRef(albums)
   const contentRef = useRef<HTMLElement>(null)
@@ -58,10 +69,15 @@ export function App() {
   }, [toggle])
 
   const showAlbum = useCallback(
-    (album: Album, autoplay: boolean) => {
+    (album: Album, autoplay: Autoplay) => {
       setAlbums(prev => (prev.some(a => a.infoHash === album.infoHash) ? prev : [album, ...prev]))
       setView({ kind: 'album', infoHash: album.infoHash })
-      if (autoplay) playAt(album, 0)
+      if (autoplay === true) playAt(album, 0)
+      if (typeof autoplay === 'object') {
+        const index = album.tracks.findIndex(t => t.key === autoplay.key)
+        if (index >= 0) playAt(album, index)
+        else setToast("That song isn't in this torrent's playable files — here's the rest of the album.")
+      }
     },
     [playAt]
   )
@@ -86,7 +102,7 @@ export function App() {
   )
 
   const loadSource = useCallback(
-    (source: string, hints?: SourceHints, artwork?: string, autoplay = false) => {
+    (source: string, hints?: SourceHints, artwork?: string, autoplay: Autoplay = false) => {
       const knownHash = sourceToHash.current.get(source)
       const known = albumsRef.current.find(a => a.infoHash === knownHash)
       if (known) return showAlbum(known, autoplay)
@@ -97,13 +113,69 @@ export function App() {
         album => {
           sourceToHash.current.set(source, album.infoHash)
           // Curated artwork is served over plain https and is more reliable than an image inside the torrent.
-          showAlbum({ ...album, coverUrl: artwork ?? album.coverUrl }, autoplay)
+          const withArt = { ...album, coverUrl: artwork ?? album.coverUrl }
+          setAlbums(prev => prev.map(a => (a.infoHash === album.infoHash ? withArt : a)))
+          showAlbum(withArt, autoplay)
         },
         () => loadSource(source, hints, artwork, autoplay)
       )
     },
     [runLoad, showAlbum]
   )
+
+  const runSearch = useCallback(async (query: string) => {
+    const id = ++searchId.current
+    requestId.current++ // cancel any album load in flight
+    setSearch({ query, status: 'loading' })
+    setView({ kind: 'search' })
+    const response = await window.chomusuke.search(query)
+    if (id !== searchId.current) return
+    setSearch(
+      response.ok
+        ? { query, status: 'done', results: response.results }
+        : { query, status: 'error', error: response.error }
+    )
+  }, [])
+
+  const submitTopBar = useCallback(
+    (input: string) => (looksLikeSource(input) ? loadSource(input) : void runSearch(input)),
+    [loadSource, runSearch]
+  )
+
+  const openSearchAlbum = useCallback(
+    (album: SearchAlbum, autoplay: Autoplay) => {
+      const knownHash = sourceToHash.current.get(album.id)
+      const known = albumsRef.current.find(a => a.infoHash === knownHash)
+      if (known) return showAlbum(known, autoplay)
+
+      void runLoad(
+        () => window.chomusuke.openResult(album.id),
+        { title: album.title, artist: album.artist, artwork: album.artwork },
+        loaded => {
+          sourceToHash.current.set(album.id, loaded.infoHash)
+          const withArt = { ...loaded, coverUrl: album.artwork ?? loaded.coverUrl }
+          setAlbums(prev => prev.map(a => (a.infoHash === loaded.infoHash ? withArt : a)))
+          showAlbum(withArt, autoplay)
+        },
+        () => openSearchAlbum(album, autoplay)
+      )
+    },
+    [runLoad, showAlbum]
+  )
+
+  const playSong = useCallback(
+    (song: SearchSong) => {
+      const hash = sourceToHash.current.get(song.album.id)
+      if (hash && player.state.album?.infoHash === hash && player.track?.key === song.key) return toggle()
+      openSearchAlbum(song.album, { key: song.key })
+    },
+    [openSearchAlbum, player.state.album, player.track, toggle]
+  )
+
+  const isSongPlaying = (song: SearchSong): boolean =>
+    player.track?.key === song.key &&
+    player.state.album?.infoHash !== undefined &&
+    sourceToHash.current.get(song.album.id) === player.state.album.infoHash
 
   const openFile = useCallback(() => {
     void runLoad(
@@ -127,8 +199,18 @@ export function App() {
     setView({ kind: 'home' })
   }, [])
 
+  const goSearch = useCallback(() => {
+    requestId.current++
+    if (search) setView({ kind: 'search' })
+  }, [search])
+
+  const goSources = useCallback(() => {
+    requestId.current++
+    setView({ kind: 'sources' })
+  }, [])
+
   const playingHash = player.state.album?.infoHash ?? null
-  const activeKey = view.kind === 'album' ? view.infoHash : view.kind === 'home' ? 'home' : ''
+  const activeKey = view.kind === 'album' ? view.infoHash : ['home', 'search', 'sources'].includes(view.kind) ? view.kind : ''
 
   let page
   switch (view.kind) {
@@ -140,6 +222,21 @@ export function App() {
           onOpenAlbum={openAlbum}
         />
       )
+      break
+    case 'search':
+      page = search && (
+        <SearchView
+          search={search}
+          isPlaying={isSongPlaying}
+          onPlaySong={playSong}
+          onOpenAlbum={openSearchAlbum}
+          onRetry={() => void runSearch(search.query)}
+          onManageSources={goSources}
+        />
+      )
+      break
+    case 'sources':
+      page = <SourcesView />
       break
     case 'loading':
       page = <AlbumLoading title={view.title} artist={view.artist} artwork={view.artwork} />
@@ -166,12 +263,15 @@ export function App() {
 
   return (
     <div className={`app ${player.track ? 'has-player' : ''}`}>
-      <TopBar onSubmit={source => loadSource(source)} onHome={goHome} />
+      <TopBar onSubmit={submitTopBar} onHome={goHome} />
       <Sidebar
         active={activeKey}
         albums={albums}
         playingAlbum={playingHash}
+        hasSearch={search !== null}
         onHome={goHome}
+        onSearch={goSearch}
+        onSources={goSources}
         onOpenAlbum={openAlbum}
         onOpenFile={openFile}
       />
