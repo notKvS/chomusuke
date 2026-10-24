@@ -1,23 +1,31 @@
 :root {
-  --bg: #030303;
-  --surface: #212121;
-  --surface-raised: #2a2a2a;
-  --hover: rgba(255, 255, 255, 0.1);
-  --pressed: rgba(255, 255, 255, 0.16);
-  --border: rgba(255, 255, 255, 0.1);
-  --text: #ffffff;
-  --text-2: rgba(255, 255, 255, 0.7);
-  --text-3: rgba(255, 255, 255, 0.5);
-  --accent: #ff0033;
-  --ok: #3ec46d;
-  --sidebar-width: 240px;
-  --topbar-height: 64px;
-  --player-height: 72px;
+  --bg: #0d0a1a;
+  --bg-2: #120d24;
+  --surface: #1c1533;
+  --surface-raised: #271d47;
+  --hover: rgba(255, 143, 177, 0.1);
+  --pressed: rgba(255, 143, 177, 0.18);
+  --border: rgba(201, 184, 255, 0.12);
+  --text: #f7f2ff;
+  --text-2: rgba(236, 228, 255, 0.72);
+  --text-3: rgba(236, 228, 255, 0.48);
+  --accent: #ff5c8a;
+  --accent-2: #8a6bff;
+  --accent-3: #5ce1e6;
+  --gold: #ffd25c;
+  --ok: #6ee7b7;
+  --gradient: linear-gradient(120deg, #ff5c8a 0%, #c86bff 55%, #6b8cff 100%);
+  --glow: 0 0 24px rgba(255, 92, 138, 0.35);
+  --radius: 16px;
+  --sidebar-width: 248px;
+  --topbar-height: 68px;
+  --player-height: 80px;
   /* Room for the native window controls drawn by titleBarOverlay. */
   --window-controls: 150px;
+  --font-display: 'M PLUS Rounded 1c', 'Nunito', system-ui, sans-serif;
 
   color-scheme: dark;
-  font-family: Roboto, 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Nunito', 'M PLUS Rounded 1c', 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;
   color: var(--text);
   background: var(--bg);

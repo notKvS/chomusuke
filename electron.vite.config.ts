@@ -19,6 +19,8 @@ export default defineConfig({
   renderer: {
     plugins: [react()],
     build: {
+      // Keep fonts/images as files: the CSP doesn't allow data: URLs.
+      assetsInlineLimit: 0,
       rollupOptions: {
         input: {
           index: resolve('src/renderer/index.html'),

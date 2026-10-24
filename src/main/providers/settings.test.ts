@@ -189,3 +189,23 @@ test('a same-id extension from another repository or with other hosts does not i
     await store.installExtensions('https://evil.example/index.json', [{ manifest: make('https://evil.example/index.json', ['evil.example']), code }])
     assert.equal(store.extensionConfig('ext-demo').options.token, '')
   }))
+
+test('bundled extensions install once, update when changed, and stay removed', () =>
+  withStore(async (store, file) => {
+    const { parseRepository } = await import('../extensions/manifest.ts')
+    const repo = 'https://bundled.chomusuke.invalid/extensions/index.json'
+    const manifest = parseRepository([{ manifestVersion: 1, id: 'bundled', name: 'Bundled', version: '1', type: 'torrent', code: 'b.js', hosts: ['archive.org'] }], repo)[0]
+    await store.syncBundled(repo, [{ manifest, code: 'export default { search: () => [] } // v1' }])
+    assert.equal(store.extensionConfig('ext-bundled').code.endsWith('v1'), true)
+    await store.setEnabled('ext-bundled', false)
+
+    await store.syncBundled(repo, [{ manifest, code: 'export default { search: () => [] } // v2' }])
+    assert.equal(store.extensionConfig('ext-bundled').code.endsWith('v2'), true)
+    assert.equal(store.list().find(p => p.id === 'ext-bundled')?.enabled, false) // user's choice kept
+
+    await store.remove('ext-bundled')
+    const reloaded = new ProviderSettingsStore(file, box)
+    await reloaded.load()
+    await reloaded.syncBundled(repo, [{ manifest, code: 'export default { search: () => [] } // v3' }])
+    assert.equal(reloaded.list().some(p => p.id === 'ext-bundled'), false)
+  }))

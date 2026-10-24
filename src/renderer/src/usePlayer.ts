@@ -197,7 +197,7 @@ export function usePlayer(onError: (message: string) => void) {
 
   useEffect(() => () => audio.pause(), [audio])
 
-  return { state, track, durations, playAt, toggle, next, prev, seek, setVolume, toggleMute }
+  return { audio, state, track, durations, playAt, toggle, next, prev, seek, setVolume, toggleMute }
 }
 
 export type Player = ReturnType<typeof usePlayer>

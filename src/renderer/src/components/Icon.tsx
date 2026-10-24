@@ -43,14 +43,3 @@ export function Icon({ name, size = 24, className }: { name: IconName; size?: nu
     </svg>
   )
 }
-
-export function Logo() {
-  return (
-    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
-      <path d="M6 9 8 2l6 5ZM26 9l-2-7-6 5Z" fill="#ff0033" />
-      <circle cx="16" cy="18" r="13" fill="#ff0033" />
-      <circle cx="16" cy="18" r="7.5" fill="none" stroke="#fff" strokeWidth="1.8" />
-      <path d="M14 14.5v7l5.5-3.5Z" fill="#fff" />
-    </svg>
-  )
-}

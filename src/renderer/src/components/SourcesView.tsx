@@ -58,7 +58,7 @@ export function SourcesView() {
           <SourceRow
             key={provider.id}
             provider={provider}
-            description="Free and public-domain music: live concerts, netlabels, Creative Commons albums, old LPs."
+            description="Searches the Internet Archive's audio collections."
             onToggle={() => void toggle(provider)}
           />
         ))}
@@ -150,8 +150,7 @@ function ExtensionsSection({ extensions, apply, onToggle, onRemove }: Extensions
       <p className="sources__help">
         Like Hayase, Chomusuke ships without tracker integrations: extensions add them. Paste the URL of an extension
         repository (a JSON manifest) to install its extensions. Each one runs in an isolated sandbox and can only reach
-        the websites it declares. Only install repositories you trust, and only use sources you have the right to
-        download from.
+        the websites it declares. Only install repositories you trust.
       </p>
 
       {extensions.map(provider => (

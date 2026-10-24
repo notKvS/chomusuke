@@ -9,6 +9,9 @@ import { Sidebar } from './components/Sidebar'
 import { SourcesView } from './components/SourcesView'
 import { ExploreView } from './components/ExploreView'
 import { TopBar } from './components/TopBar'
+import { Chomu } from './components/mascot/Chomu'
+import { Sakura } from './components/mascot/Sakura'
+import { Splash } from './components/mascot/Splash'
 import { looksLikeSource } from './source'
 import { usePlayer } from './usePlayer'
 
@@ -273,7 +276,8 @@ export function App() {
 
   return (
     <div className={`app ${player.track ? 'has-player' : ''}`}>
-      <TopBar onSubmit={submitTopBar} onHome={goHome} />
+      <Sakura />
+      <TopBar onSubmit={submitTopBar} onHome={goHome} playing={player.state.isPlaying} />
       <Sidebar
         active={activeKey}
         albums={albums}
@@ -296,13 +300,14 @@ export function App() {
       />
       {toast && (
         <div className="toast" role="alert">
-          <Icon name="error" size={20} />
+          <Chomu mood="sad" size={44} headOnly />
           <span>{toast}</span>
           <button type="button" className="icon-button" onClick={() => setToast(null)} aria-label="Dismiss">
             <Icon name="close" size={18} />
           </button>
         </div>
       )}
+      <Splash />
     </div>
   )
 }

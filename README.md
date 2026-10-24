@@ -36,7 +36,7 @@ Other scripts: `npm run build` (production bundle in `out/`), `npm start` (run t
     credential store (Electron `safeStorage`) and never reach the renderer.
 
   - **Extensions** (Hayase-style): import a repository manifest URL under *Sources*; each extension runs in an
-    isolated sandbox that can only reach the https hosts it declares. Example: [`extensions/`](extensions/).
+    isolated sandbox that can only reach the https hosts it declares. Six bundled ones (written in TypeScript) live in [`extensions/src/`](extensions/src/).
 
   Results come back as opaque ids; opening one turns it into a magnet or `.torrent` in the main process.
 - **Explore** browses every source by category (trending this week, live concerts, MP3/Lossless from your

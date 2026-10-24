@@ -3,6 +3,7 @@ import { formatBytes, formatTime, plural } from '../format'
 import { Card } from './Card'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
+import { Chomu } from './mascot/Chomu'
 
 export type SearchState =
   | { query: string; status: 'loading' }
@@ -42,7 +43,7 @@ export function SearchView({ search, isPlaying, onPlaySong, onOpenAlbum, onRetry
 
       {search.status === 'error' && (
         <div className="search__message">
-          <Icon name="error" size={32} />
+          <Chomu mood="sad" size={220} />
           <p>{search.error}</p>
           <button type="button" className="solid-button" onClick={onRetry}>
             Try again
@@ -52,8 +53,8 @@ export function SearchView({ search, isPlaying, onPlaySong, onOpenAlbum, onRetry
 
       {noSources && (
         <div className="search__message">
-          <Icon name="tune" size={32} />
-          <p>Every source is switched off.</p>
+          <Chomu mood="sleep" size={220} />
+          <p>Every source is switched off. Chomusuke is napping.</p>
           <button type="button" className="solid-button" onClick={onManageSources}>
             Manage sources
           </button>
@@ -62,8 +63,8 @@ export function SearchView({ search, isPlaying, onPlaySong, onOpenAlbum, onRetry
 
       {results && !noSources && isEmpty(results) && !results.sections.some(s => s.error) && (
         <div className="search__message">
-          <Icon name="search" size={32} />
-          <p>Nothing found. Try fewer words, or the artist's name on its own.</p>
+          <Chomu mood="confused" size={220} />
+          <p>Nyaa? Nothing found. Try fewer words, or just the artist's name.</p>
         </div>
       )}
 

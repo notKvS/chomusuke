@@ -1,8 +1,15 @@
 import { useState, type FormEvent } from 'react'
 import { looksLikeSource } from '../source'
-import { Icon, Logo } from './Icon'
+import { Icon } from './Icon'
+import { AnimatedLogo } from './mascot/AnimatedLogo'
 
-export function TopBar({ onSubmit, onHome }: { onSubmit: (input: string) => void; onHome: () => void }) {
+interface Props {
+  onSubmit: (input: string) => void
+  onHome: () => void
+  playing: boolean
+}
+
+export function TopBar({ onSubmit, onHome, playing }: Props) {
   const [value, setValue] = useState('')
 
   const submit = (event: FormEvent) => {
@@ -16,16 +23,13 @@ export function TopBar({ onSubmit, onHome }: { onSubmit: (input: string) => void
 
   return (
     <header className="topbar">
-      <button type="button" className="brand" onClick={onHome} aria-label="Chomusuke home">
-        <Logo />
-        <span>Chomusuke</span>
-      </button>
+      <AnimatedLogo playing={playing} onHome={onHome} />
       <form className="source-form" onSubmit={submit}>
         <Icon name="search" className="source-form__icon" />
         <input
           value={value}
           onChange={e => setValue(e.target.value)}
-          placeholder="Search songs, albums, artists — or paste a magnet link"
+          placeholder="Search songs, artists, albums… or paste a magnet  (=^･ω･^=)"
           spellCheck={false}
           autoComplete="off"
           maxLength={8192}

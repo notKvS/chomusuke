@@ -20,11 +20,15 @@ export function Sidebar({ active, albums, playingAlbum, hasSearch, onHome, onSea
     <nav className="sidebar">
       <button type="button" className={`nav-item ${active === 'home' ? 'is-active' : ''}`} onClick={onHome}>
         <Icon name="home" />
-        <span>Home</span>
+        <span className="nav-item__label">
+          Home
+        </span>
       </button>
       <button type="button" className={`nav-item ${active === 'explore' ? 'is-active' : ''}`} onClick={onExplore}>
         <Icon name="explore" />
-        <span>Explore</span>
+        <span className="nav-item__label">
+          Explore
+        </span>
       </button>
       <button
         type="button"
@@ -34,7 +38,9 @@ export function Sidebar({ active, albums, playingAlbum, hasSearch, onHome, onSea
         title={hasSearch ? 'Back to your last search' : 'Search from the bar above'}
       >
         <Icon name="search" />
-        <span>Search</span>
+        <span className="nav-item__label">
+          Search
+        </span>
       </button>
       <button
         type="button"
@@ -43,11 +49,15 @@ export function Sidebar({ active, albums, playingAlbum, hasSearch, onHome, onSea
         disabled={!playingAlbum}
       >
         <Icon name="nowPlaying" />
-        <span>Now playing</span>
+        <span className="nav-item__label">
+          Now playing
+        </span>
       </button>
       <button type="button" className={`nav-item ${active === 'sources' ? 'is-active' : ''}`} onClick={onSources}>
         <Icon name="tune" />
-        <span>Sources</span>
+        <span className="nav-item__label">
+          Sources
+        </span>
       </button>
 
       <hr className="sidebar__divider" />

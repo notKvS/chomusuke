@@ -108,6 +108,8 @@ export function validateTorznabUrl(raw: unknown): string {
 export class ProviderSettingsStore {
   private entries: StoredProvider[] = [archiveEntry()]
   private readonly codes = new Map<string, string>()
+  /** Bundled extensions the user removed; they are not reinstalled. */
+  private dismissed = new Set<string>()
   private readonly file: string
   private readonly box: SecretBox
   private readonly extensionsDir: string
@@ -132,6 +134,9 @@ export class ProviderSettingsStore {
       return
     }
     const list = isRecord(raw) && Array.isArray(raw.providers) ? raw.providers : []
+    this.dismissed = new Set(
+      isRecord(raw) && Array.isArray(raw.dismissedExtensions) ? raw.dismissedExtensions.filter(v => typeof v === 'string') : []
+    )
     const entries: StoredProvider[] = []
     for (const item of list) {
       if (!isRecord(item)) continue
@@ -196,6 +201,7 @@ export class ProviderSettingsStore {
     await mkdir(this.extensionsDir, { recursive: true })
     for (const { manifest, code } of installs) {
       const id = `ext-${manifest.id}`
+      this.dismissed.delete(manifest.id)
       const index = this.entries.findIndex(e => e.id === id)
       await writeFile(this.codeFile(manifest), code, 'utf8')
       this.codes.set(manifest.id, code)
@@ -221,6 +227,19 @@ export class ProviderSettingsStore {
       else this.entries.push(entry)
     }
     await this.persist()
+  }
+
+  /**
+   * Installs bundled extensions the user hasn't removed, and updates installed ones that came from the bundle
+   * when the shipped code changes. Extensions the user installed from elsewhere are left alone.
+   */
+  async syncBundled(repository: string, bundled: Array<{ manifest: ExtensionManifest; code: string }>): Promise<void> {
+    const pending = bundled.filter(({ manifest, code }) => {
+      const entry = this.entries.find(e => e.id === `ext-${manifest.id}`)
+      if (!entry) return !this.dismissed.has(manifest.id)
+      return entry.type === 'extension' && entry.repository === repository && entry.codeSha256 !== sha256(code)
+    })
+    if (pending.length > 0) await this.installExtensions(repository, pending)
   }
 
   /** Saves option values; for secrets, an empty string keeps the saved value. */
@@ -357,6 +376,7 @@ export class ProviderSettingsStore {
     if (!entry || entry.type === 'archive') throw new SettingsError('That source can’t be removed.')
     this.entries = this.entries.filter(e => e !== entry)
     if (entry.type === 'extension') {
+      this.dismissed.add(entry.manifest.id)
       this.codes.delete(entry.manifest.id)
       await rm(this.codeFile(entry.manifest), { force: true })
     }
@@ -386,7 +406,7 @@ export class ProviderSettingsStore {
   }
 
   private async persist(): Promise<void> {
-    const body = JSON.stringify({ version: FILE_VERSION, providers: this.entries }, null, 2)
+    const body = JSON.stringify({ version: FILE_VERSION, providers: this.entries, dismissedExtensions: [...this.dismissed] }, null, 2)
     const temp = `${this.file}.tmp`
     await writeFile(temp, body, { encoding: 'utf8', mode: 0o600 })
     await rename(temp, this.file)

@@ -11,3 +11,6 @@ dist/
 *.key
 credentials*
 secrets*
+
+# Built extension bundles (npm run build:extensions)
+extensions/dist/

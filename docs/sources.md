@@ -9,6 +9,20 @@ Explore category) into albums/songs and turns a chosen album into a torrent to p
 | Torznab indexers (Jackett, Prowlarr, BitMagnet…) | Torznab XML API → magnet / `.torrent` | Popular audio, MP3, Lossless, Other audio (newest releases ranked by seeders) |
 | Extensions | Third-party JS modules in a sandbox → magnet / `.torrent` | Whatever the extension declares |
 
+**Bundled extensions** (TypeScript in `extensions/src/`, embedded at build time by `src/main/extensions/defaults.ts`, installed on
+first launch, updated when the shipped code changes, never reinstalled once you remove one):
+
+| Extension | Catalogue | Explore categories |
+|---|---|---|
+| Live Music Archive | Trade-friendly concert recordings (etree) | Trending, recently added, all-time |
+| Jamendo | ~300k Creative Commons albums | Trending, most played, electronic, rock, hip-hop |
+| Free Music Archive | Curated free/CC independent music | Trending, most played, recently added |
+| Netlabels | CC releases from online labels | Trending, most played, ambient, techno & house, experimental |
+| Great 78 Project | 78 rpm records, 1898–1950s | Trending, jazz, blues, country, opera & classical |
+| Public Domain Classical | Musopen and public-domain classical | Trending, most played, Musopen, piano |
+
+All are mirrored on the Internet Archive, so their torrents carry web seeds and play without peers.
+
 ## How other apps do it: Hayase
 
 [Hayase](https://github.com/hayase-app) (formerly Miru), a WebTorrent-based anime streaming app, ships **no
@@ -21,8 +35,8 @@ extension types.
 
 Chomusuke follows the same model:
 
-- **Extensions** — `src/main/extensions/`. Format documented at the top of `manifest.ts`; example in
-  `extensions/` (Live Music Archive). Each extension runs in its own hidden, sandboxed Electron window with an
+- **Extensions** — `src/main/extensions/`. Format documented at the top of `manifest.ts`; sources in
+  `extensions/src/`. Each extension runs in its own hidden, sandboxed Electron window with an
   in-memory session; its code is loaded into a module Web Worker. The session only lets it reach `https://` on
   the hosts its manifest declares (everything else, including loopback/LAN and plain http, is cancelled), and
   CORS headers are added for those hosts. Results are re-validated in the main process; `.torrent` downloads may
@@ -53,6 +67,23 @@ From FMHY (`docs/audio.md` → *Audio Torrenting*, *Concerts*; `docs/torrenting.
 
 Chomusuke does not ship integrations for specific trackers; connect them through Torznab or an extension you
 choose. Only download what you have the right to.
+
+## Writing an extension
+
+Extensions are written in TypeScript:
+
+1. Add `extensions/src/<id>.ts` whose default export implements `Extension` from `extensions/src/sdk.ts`
+   (`search`, optional `browse` and `test`). For an Internet Archive collection, `archiveCollection()` in
+   `extensions/src/lib/` does it in a few lines.
+2. Add its manifest entry to `extensions/index.json` (`"code": "<id>.js"`, the hosts it may reach, categories,
+   options). To ship it with the app, also add it to `src/main/extensions/defaults.ts`.
+3. `npm run build:extensions` bundles each source into one standalone ES module in `extensions/dist/` (git-ignored;
+   `npm run dev`/`build`/`start` run it automatically). `npm run typecheck` checks extensions against the
+   Web Worker environment they run in (no DOM, no Node).
+
+To publish third-party extensions, host `index.json` plus the built `.js` files over https and import the
+manifest URL under *Sources*. The sandbox runs JavaScript, so a repository serves the compiled output — the same
+as Hayase's "must be bundled" rule.
 
 ## Adding a built-in provider
 

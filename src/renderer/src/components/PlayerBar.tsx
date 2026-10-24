@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useEffect, useRef, type CSSProperties } from 'react'
 import type { TorrentStats } from '../../../shared/types'
 import { formatSpeed, formatTime, plural } from '../format'
 import type { Player } from '../usePlayer'
@@ -12,7 +12,25 @@ interface Props {
 }
 
 export function PlayerBar({ player, stats, onOpenAlbum }: Props) {
-  const { state, track } = player
+  const { state, track, audio } = player
+  const progressRef = useRef<HTMLDivElement>(null)
+
+  // `timeupdate` only fires ~4×/s, which makes the bar step. While playing, follow the audio clock every
+  // frame and write the position straight to a CSS variable (no React re-render per frame).
+  useEffect(() => {
+    const element = progressRef.current
+    if (!element) return
+    let frame = 0
+    const paint = () => {
+      const total = audio.duration
+      const ratio = Number.isFinite(total) && total > 0 ? Math.min(1, audio.currentTime / total) : 0
+      element.style.setProperty('--played', `${ratio * 100}%`)
+      if (!audio.paused) frame = requestAnimationFrame(paint)
+    }
+    paint()
+    return () => cancelAnimationFrame(frame)
+  }, [audio, state.isPlaying, state.currentTime, state.index])
+
   if (!track || !state.album) return null
 
   const { currentTime, duration, bufferedEnd } = state
@@ -23,7 +41,7 @@ export function PlayerBar({ player, stats, onOpenAlbum }: Props) {
 
   return (
     <footer className="player">
-      <div className="progress" style={{ '--played': pct(currentTime), '--buffered': pct(bufferedEnd) } as CSSProperties}>
+      <div className="progress" ref={progressRef} style={{ '--buffered': pct(bufferedEnd) } as CSSProperties}>
         <div className="progress__track">
           <div className="progress__buffered" />
           <div className="progress__played" />

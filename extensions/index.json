@@ -7,12 +7,24 @@
     "version": "1.0.0",
     "type": "torrent",
     "code": "live-music-archive.js",
-    "hosts": ["archive.org", "*.archive.org"],
+    "hosts": [
+      "archive.org",
+      "*.archive.org"
+    ],
     "layout": "cards",
     "categories": [
-      { "id": "week", "name": "Trending this week" },
-      { "id": "recent", "name": "Recently added" },
-      { "id": "all-time", "name": "All-time favourites" }
+      {
+        "id": "week",
+        "name": "Trending this week"
+      },
+      {
+        "id": "recent",
+        "name": "Recently added"
+      },
+      {
+        "id": "all-time",
+        "name": "All-time favourites"
+      }
     ],
     "options": {
       "soundboardOnly": {
@@ -22,5 +34,173 @@
         "default": false
       }
     }
+  },
+  {
+    "manifestVersion": 1,
+    "id": "jamendo",
+    "name": "Jamendo",
+    "description": "Nearly 300,000 Creative Commons albums from independent artists, mirrored from Jamendo.",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "jamendo.js",
+    "hosts": [
+      "archive.org",
+      "*.archive.org"
+    ],
+    "layout": "cards",
+    "categories": [
+      {
+        "id": "week",
+        "name": "Trending this week"
+      },
+      {
+        "id": "all-time",
+        "name": "Most played"
+      },
+      {
+        "id": "electronic",
+        "name": "Electronic"
+      },
+      {
+        "id": "rock",
+        "name": "Rock"
+      },
+      {
+        "id": "hiphop",
+        "name": "Hip-hop"
+      }
+    ]
+  },
+  {
+    "manifestVersion": 1,
+    "id": "free-music-archive",
+    "name": "Free Music Archive",
+    "description": "The Free Music Archive catalogue: curated, freely licensed independent music.",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "free-music-archive.js",
+    "hosts": [
+      "archive.org",
+      "*.archive.org"
+    ],
+    "layout": "cards",
+    "categories": [
+      {
+        "id": "week",
+        "name": "Trending this week"
+      },
+      {
+        "id": "all-time",
+        "name": "Most played"
+      },
+      {
+        "id": "recent",
+        "name": "Recently added"
+      }
+    ]
+  },
+  {
+    "manifestVersion": 1,
+    "id": "netlabels",
+    "name": "Netlabels",
+    "description": "Releases from hundreds of online record labels that publish under Creative Commons.",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "netlabels.js",
+    "hosts": [
+      "archive.org",
+      "*.archive.org"
+    ],
+    "layout": "cards",
+    "categories": [
+      {
+        "id": "week",
+        "name": "Trending this week"
+      },
+      {
+        "id": "all-time",
+        "name": "Most played"
+      },
+      {
+        "id": "ambient",
+        "name": "Ambient"
+      },
+      {
+        "id": "techno",
+        "name": "Techno & house"
+      },
+      {
+        "id": "experimental",
+        "name": "Experimental"
+      }
+    ]
+  },
+  {
+    "manifestVersion": 1,
+    "id": "great-78",
+    "name": "Great 78 Project",
+    "description": "Digitised 78 rpm records from 1898 to the 1950s, preserved by the Great 78 Project.",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "great-78.js",
+    "hosts": [
+      "archive.org",
+      "*.archive.org"
+    ],
+    "layout": "cards",
+    "categories": [
+      {
+        "id": "week",
+        "name": "Trending this week"
+      },
+      {
+        "id": "jazz",
+        "name": "Jazz"
+      },
+      {
+        "id": "blues",
+        "name": "Blues"
+      },
+      {
+        "id": "country",
+        "name": "Country"
+      },
+      {
+        "id": "opera",
+        "name": "Opera & classical"
+      }
+    ]
+  },
+  {
+    "manifestVersion": 1,
+    "id": "public-domain-classical",
+    "name": "Public Domain Classical",
+    "description": "Classical recordings released into the public domain, including the Musopen collection.",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "public-domain-classical.js",
+    "hosts": [
+      "archive.org",
+      "*.archive.org"
+    ],
+    "layout": "cards",
+    "categories": [
+      {
+        "id": "week",
+        "name": "Trending this week"
+      },
+      {
+        "id": "all-time",
+        "name": "Most played"
+      },
+      {
+        "id": "musopen",
+        "name": "Musopen"
+      },
+      {
+        "id": "piano",
+        "name": "Piano"
+      }
+    ]
   }
 ]

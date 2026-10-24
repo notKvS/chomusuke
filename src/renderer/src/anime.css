@@ -1,0 +1,908 @@
+/* ==========================================================================
+   Anime theme: night-sky palette, rounded type, sakura, and Chomu the mascot.
+   Loaded after styles.css; overrides its look without touching layout logic.
+   ========================================================================== */
+
+body {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(138, 107, 255, 0.18), transparent 60%),
+    radial-gradient(900px 500px at 110% 110%, rgba(255, 92, 138, 0.14), transparent 60%),
+    var(--bg);
+}
+
+h1,
+h2,
+.shelf__title,
+.search__title,
+.album__title,
+.card__title,
+.player__title,
+.brand__name {
+  font-family: var(--font-display);
+}
+
+::selection {
+  background: rgba(255, 92, 138, 0.4);
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  scrollbar-color: rgba(201, 184, 255, 0.3) transparent;
+}
+
+/* ---------- Brand / animated logo ---------- */
+
+.topbar {
+  position: relative;
+  z-index: 3;
+  background: linear-gradient(180deg, rgba(13, 10, 26, 0.96), rgba(13, 10, 26, 0.75));
+  backdrop-filter: blur(12px);
+}
+
+.brand {
+  gap: 6px;
+  letter-spacing: 0;
+}
+
+.brand__mascot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 60%, rgba(255, 92, 138, 0.25), transparent 70%);
+  transition: transform 0.2s;
+}
+
+.brand:hover .brand__mascot {
+  transform: rotate(-8deg) scale(1.08);
+}
+
+.brand:active .brand__mascot {
+  transform: scale(0.9);
+}
+
+.brand__word {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.brand__name {
+  font-size: 21px;
+  font-weight: 800;
+  background: var(--gradient);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer-text 6s ease-in-out infinite;
+}
+
+.brand__kana {
+  margin-top: 3px;
+  color: var(--text-3);
+  font-size: 10px;
+  letter-spacing: 3px;
+}
+
+.brand__bubble {
+  position: absolute;
+  top: 2px;
+  left: 44px;
+  padding: 4px 10px;
+  border-radius: 12px 12px 12px 2px;
+  color: #1a1030;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: var(--glow);
+  animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 5;
+}
+
+@keyframes shimmer-text {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* ---------- Search box ---------- */
+
+.source-form {
+  height: 42px;
+  border: 1px solid rgba(201, 184, 255, 0.18);
+  border-radius: 21px;
+  background: rgba(39, 29, 71, 0.55);
+}
+
+.source-form:focus-within {
+  border-color: rgba(255, 92, 138, 0.6);
+  background: rgba(28, 21, 51, 0.95);
+  box-shadow: var(--glow);
+}
+
+.source-form__icon {
+  color: var(--accent);
+}
+
+/* ---------- Sidebar ---------- */
+
+.sidebar {
+  position: relative;
+  z-index: 2;
+}
+
+.nav-item {
+  position: relative;
+  border-radius: 14px;
+  transition:
+    background 0.15s,
+    transform 0.15s;
+}
+
+.nav-item:not(:disabled):hover {
+  transform: translateX(3px);
+}
+
+.nav-item.is-active {
+  background: linear-gradient(90deg, rgba(255, 92, 138, 0.22), rgba(138, 107, 255, 0.12));
+}
+
+.nav-item.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 4px;
+  border-radius: 4px;
+  background: var(--gradient);
+  box-shadow: var(--glow);
+}
+
+.nav-item.is-active svg {
+  color: var(--accent);
+}
+
+.nav-item__label {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.nav-item__label small {
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.pill-button {
+  border: 1px dashed rgba(255, 143, 177, 0.4);
+  background: rgba(255, 92, 138, 0.08);
+}
+
+.pill-button:hover {
+  background: rgba(255, 92, 138, 0.18);
+}
+
+.sidebar-album .cover {
+  border-radius: 10px;
+}
+
+/* ---------- Buttons, chips, switches ---------- */
+
+.solid-button,
+.big-play {
+  color: #fff;
+  background: var(--gradient);
+  box-shadow: var(--glow);
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+    filter 0.15s;
+}
+
+.solid-button:hover,
+.big-play:hover {
+  background: var(--gradient);
+  filter: brightness(1.12);
+  transform: translateY(-1px) scale(1.04);
+}
+
+.big-play {
+  width: 64px;
+  height: 64px;
+}
+
+.ghost-button {
+  border-color: rgba(201, 184, 255, 0.3);
+}
+
+.chip {
+  border-radius: 999px;
+  border-color: rgba(201, 184, 255, 0.18);
+}
+
+.chip.is-active {
+  color: #fff;
+  border-color: transparent;
+  background: var(--gradient);
+  box-shadow: var(--glow);
+}
+
+.switch[aria-checked='true'] {
+  background: var(--gradient);
+}
+
+.icon-button:not(:disabled):hover {
+  background: rgba(255, 92, 138, 0.15);
+}
+
+/* ---------- Page headings ---------- */
+
+.page-kana,
+.shelf__eyebrow,
+.hero__jp,
+.error-page__jp {
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 3px;
+}
+
+.page-kana {
+  margin: 8px 0 2px;
+  font-size: 13px;
+}
+
+.search__title {
+  font-size: 34px;
+  background: linear-gradient(90deg, #fff, #ffd1e0 60%, #c9b8ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.shelf__eyebrow {
+  text-transform: none;
+  font-size: 12px;
+}
+
+.shelf__title {
+  font-weight: 800;
+}
+
+/* ---------- Home hero ---------- */
+
+.hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+  margin: 8px 0 40px;
+  padding: 28px 36px;
+  border: 1px solid rgba(255, 143, 177, 0.2);
+  border-radius: 24px;
+  background:
+    radial-gradient(500px 200px at 85% 120%, rgba(255, 92, 138, 0.35), transparent 70%),
+    radial-gradient(400px 220px at 0% 0%, rgba(138, 107, 255, 0.35), transparent 70%),
+    linear-gradient(120deg, #1c1238, #2a1650 60%, #3a1846);
+}
+
+.hero::after {
+  content: '✦ ✧ ✦';
+  position: absolute;
+  top: 14px;
+  right: 230px;
+  color: rgba(255, 246, 200, 0.6);
+  letter-spacing: 18px;
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+.hero__jp {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+
+.hero__title {
+  margin: 0 0 8px;
+  font-size: 40px;
+  font-weight: 800;
+}
+
+.hero__line {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 16px;
+}
+
+.hero__mascot {
+  margin: -20px -6px -36px 0;
+  filter: drop-shadow(0 10px 30px rgba(255, 92, 138, 0.35));
+}
+
+/* ---------- Cards & rows ---------- */
+
+.card__art {
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s;
+}
+
+.card:hover .card__art {
+  transform: translateY(-6px) rotate(-1.2deg);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.45),
+    0 0 0 2px rgba(255, 92, 138, 0.55),
+    var(--glow);
+}
+
+.card:nth-child(even):hover .card__art {
+  transform: translateY(-6px) rotate(1.2deg);
+}
+
+.card__play {
+  background: var(--gradient);
+  box-shadow: var(--glow);
+}
+
+.card__play:hover {
+  background: var(--gradient);
+  filter: brightness(1.15);
+}
+
+.card__badge,
+.track__format {
+  border-color: rgba(255, 143, 177, 0.35);
+  color: #ffb3cc;
+  border-radius: 999px;
+}
+
+.cover {
+  background: linear-gradient(135deg, #2a1d4d, #1a1230);
+}
+
+.track,
+.song-row {
+  border-bottom-color: rgba(201, 184, 255, 0.08);
+  border-radius: 12px;
+  transition: background 0.12s;
+}
+
+.track.is-current,
+.song-row.is-current {
+  background: linear-gradient(90deg, rgba(255, 92, 138, 0.18), rgba(138, 107, 255, 0.08));
+}
+
+.track.is-current .track__title {
+  color: #ffb3cc;
+}
+
+.eq i {
+  background: var(--accent);
+}
+
+.album__cover {
+  border-radius: 22px;
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    var(--glow);
+}
+
+.release-row__icon {
+  border-radius: 12px;
+  color: var(--accent);
+  background: rgba(255, 92, 138, 0.12);
+}
+
+.source-row__icon {
+  color: var(--accent);
+  background: rgba(255, 92, 138, 0.12);
+}
+
+.torznab-form,
+.hint {
+  border: 1px solid rgba(201, 184, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(39, 29, 71, 0.35);
+}
+
+/* ---------- Player bar ---------- */
+
+.player {
+  z-index: 3;
+  margin: 0 12px 12px;
+  border: 1px solid rgba(201, 184, 255, 0.14);
+  border-radius: 22px;
+  background: rgba(28, 21, 51, 0.85);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.35);
+}
+
+.progress {
+  left: 22px;
+  right: 22px;
+}
+
+.progress__track {
+  border-radius: 4px;
+  overflow: visible;
+}
+
+.progress__played {
+  border-radius: 4px;
+  background: var(--gradient);
+  box-shadow: 0 0 10px rgba(255, 92, 138, 0.6);
+}
+
+.progress__thumb {
+  width: 16px;
+  height: 16px;
+  border: 3px solid #fff;
+  background: var(--accent);
+}
+
+.player__mascot {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex: none;
+}
+
+.player__play svg {
+  color: #fff;
+}
+
+.volume input {
+  background: linear-gradient(to right, var(--accent) var(--level), rgba(255, 255, 255, 0.2) var(--level));
+}
+
+.app.has-player {
+  grid-template-rows: var(--topbar-height) minmax(0, 1fr) calc(var(--player-height) + 12px);
+}
+
+/* ---------- Toast & error states ---------- */
+
+.toast {
+  padding: 6px 10px 6px 6px;
+  border: 1px solid rgba(255, 143, 177, 0.35);
+  border-radius: 18px;
+  background: rgba(28, 21, 51, 0.95);
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.5),
+    var(--glow);
+  animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.error-page h1 {
+  font-size: 26px;
+}
+
+.error-page__jp {
+  margin: 4px 0 0;
+  font-size: 15px;
+}
+
+.search__message p {
+  font-size: 15px;
+}
+
+/* ---------- Chomusuke the mascot (artwork + CSS motion) ---------- */
+
+.chomu {
+  position: relative;
+  display: inline-block;
+  flex: none;
+}
+
+.chomu__art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  pointer-events: none;
+}
+
+/* Face crops (dedicated square images) for the logo, player bar and toasts. */
+.chomu.is-head .chomu__art {
+  object-position: center;
+}
+
+.chomu.is-awake .chomu__art {
+  animation:
+    chomu-float 3.2s ease-in-out infinite,
+    chomu-flame 1.6s ease-in-out infinite alternate;
+}
+
+.chomu.is-asleep .chomu__art {
+  transform-origin: 50% 100%;
+  animation: chomu-breathe 3.4s ease-in-out infinite;
+}
+
+.chomu.is-dancing .chomu__art {
+  transform-origin: 50% 100%;
+  animation:
+    chomu-dance 0.55s ease-in-out infinite alternate,
+    chomu-flame 0.8s ease-in-out infinite alternate;
+}
+
+.chomu--sad .chomu__art {
+  filter: saturate(0.6) brightness(0.9);
+}
+
+.chomu__badge {
+  position: absolute;
+  top: 2%;
+  right: 4%;
+  color: #ffd25c;
+  font-family: var(--font-display);
+  font-size: clamp(11px, 0.18em + 14%, 28px);
+  font-weight: 800;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  animation: chomu-badge 2.4s ease-in-out infinite;
+}
+
+.chomu.is-head .chomu__badge {
+  top: -2px;
+  right: -2px;
+  font-size: 12px;
+}
+
+.chomu--sleep .chomu__badge {
+  color: #c9b8ff;
+}
+
+.chomu--sad .chomu__badge {
+  top: 30%;
+  right: 30%;
+}
+
+@keyframes chomu-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-6%) rotate(1.5deg);
+  }
+}
+
+@keyframes chomu-flame {
+  from {
+    filter: drop-shadow(0 0 6px rgba(255, 190, 70, 0.35));
+  }
+  to {
+    filter: drop-shadow(0 0 18px rgba(255, 150, 40, 0.75));
+  }
+}
+
+@keyframes chomu-breathe {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.02, 0.97);
+  }
+}
+
+@keyframes chomu-dance {
+  from {
+    transform: rotate(-6deg) translateY(0) scale(1.02, 0.98);
+  }
+  to {
+    transform: rotate(6deg) translateY(-5%) scale(0.98, 1.03);
+  }
+}
+
+@keyframes chomu-badge {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+  30%,
+  70% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.9);
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6) translateY(6px);
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ---------- Loader scene (fiery Chomusuke artwork) ---------- */
+
+.loader-scene {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  border-radius: 24px;
+  background: #000;
+  isolation: isolate;
+}
+
+.loader-scene.is-compact {
+  height: min(62vh, 520px);
+  border: 1px solid rgba(255, 190, 70, 0.25);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
+}
+
+.loader-scene__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 45%;
+  animation:
+    scene-zoom 14s ease-in-out infinite alternate,
+    scene-flicker 2.2s ease-in-out infinite alternate;
+}
+
+.loader-scene__glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255, 170, 60, 0.18), transparent 38%),
+    radial-gradient(ellipse at 50% 120%, rgba(255, 92, 138, 0.25), transparent 55%),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.75));
+  animation: glow-pulse 2.4s ease-in-out infinite alternate;
+}
+
+.loader-scene__embers span {
+  position: absolute;
+  bottom: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff3c4, #ffb347 60%, transparent 70%);
+  box-shadow: 0 0 8px #ffb347;
+  animation-name: ember-rise;
+  animation-timing-function: ease-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes scene-zoom {
+  from {
+    transform: scale(1.02);
+  }
+  to {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes scene-flicker {
+  from {
+    filter: brightness(0.95) saturate(1);
+  }
+  to {
+    filter: brightness(1.08) saturate(1.15);
+  }
+}
+
+@keyframes glow-pulse {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ember-rise {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(1);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(40px, -70vh) scale(0.4);
+  }
+}
+
+.loader-scene__caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6%;
+  text-align: center;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85);
+}
+
+.loader-scene__title {
+  margin: 0;
+  color: #ffd25c;
+  font-family: var(--font-display);
+  font-size: clamp(26px, 4vw, 44px);
+  font-weight: 800;
+  letter-spacing: 6px;
+}
+
+.is-compact .loader-scene__title {
+  font-size: 28px;
+}
+
+.loader-scene__subtitle {
+  margin: 4px 0 0;
+  color: #ffe2a8;
+  font-weight: 700;
+}
+
+.loader-scene__quip {
+  margin: 6px 0 0;
+  color: var(--text-2);
+  animation: quip-in 0.5s ease-out;
+}
+
+@keyframes quip-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.loader-dots {
+  display: inline-flex;
+  gap: 5px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.loader-dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffb347;
+  animation: dot-hop 1s ease-in-out infinite;
+}
+
+.loader-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+  background: #ff8a3d;
+}
+
+.loader-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+  background: #ff5c8a;
+}
+
+@keyframes dot-hop {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-8px);
+  }
+}
+
+.page.album.is-loading {
+  padding-top: 32px;
+}
+
+/* ---------- Splash ---------- */
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--bg);
+  transition: opacity 0.6s ease;
+  cursor: pointer;
+}
+
+.splash .loader-scene {
+  border-radius: 0;
+}
+
+.splash.is-fading {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------- Sakura ---------- */
+
+.sakura {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.sakura__petal {
+  position: absolute;
+  top: -20px;
+  border-radius: 80% 0 80% 0;
+  background: linear-gradient(135deg, #ffe3ee, #ff8fb1);
+  opacity: 0.22;
+  animation-name: sakura-fall, var(--sway, sakura-sway-a);
+  animation-timing-function: linear, ease-in-out;
+  animation-iteration-count: infinite, infinite;
+  animation-direction: normal, alternate;
+}
+
+.sakura__petal.sakura-sway-a {
+  --sway: sakura-sway-a;
+}
+
+.sakura__petal.sakura-sway-b {
+  --sway: sakura-sway-b;
+}
+
+@keyframes sakura-fall {
+  from {
+    top: -20px;
+  }
+  to {
+    top: 105%;
+  }
+}
+
+@keyframes sakura-sway-a {
+  from {
+    transform: translateX(-30px) rotate(0deg);
+  }
+  to {
+    transform: translateX(40px) rotate(220deg);
+  }
+}
+
+@keyframes sakura-sway-b {
+  from {
+    transform: translateX(30px) rotate(40deg);
+  }
+  to {
+    transform: translateX(-40px) rotate(-180deg);
+  }
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .sakura {
+    display: none;
+  }
+
+  .chomu *,
+  .chomu,
+  .loader-scene *,
+  .brand__name {
+    animation: none !important;
+  }
+}

@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, safeStorage, session, type IpcMain
 import { mkdir, readFile, rm, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { TorrentEngine } from './engine.ts'
+import { BUNDLED_REPOSITORY, bundledExtensions } from './extensions/defaults.ts'
 import { ExtensionHost, hostPage } from './extensions/host.ts'
 import { ExtensionError, parseRepository, type ExtensionManifest } from './extensions/manifest.ts'
 import { testExtension } from './extensions/provider.ts'
@@ -93,6 +94,8 @@ async function downloadRepository(rawUrl: unknown): Promise<{ url: string; insta
   }
 }
 
+// Own taskbar identity on Windows, so the icon isn't taken from (or cached as) the generic electron.exe.
+if (process.platform === 'win32') app.setAppUserModelId('com.chomusuke.app')
 if (!app.requestSingleInstanceLock()) app.quit()
 
 app.on('second-instance', () => {
@@ -117,11 +120,13 @@ function createWindow(): BrowserWindow {
     minWidth: 940,
     minHeight: 600,
     show: false,
-    backgroundColor: '#030303',
+    backgroundColor: '#0d0a1a',
     title: 'Chomusuke',
+    // .ico carries 16–256px sizes so the taskbar and title bar get a crisp icon on Windows.
+    icon: path.join(import.meta.dirname, process.platform === 'win32' ? '../../build/icon.ico' : '../../build/icon.png'),
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#030303', symbolColor: '#ffffff', height: 64 },
+    titleBarOverlay: { color: '#0d0a1a', symbolColor: '#f7f2ff', height: 68 },
     webPreferences: {
       preload: path.join(import.meta.dirname, '../preload/index.cjs'),
       sandbox: true,
@@ -357,6 +362,11 @@ app.whenReady().then(async () => {
 
   const settings = new ProviderSettingsStore(path.join(app.getPath('userData'), 'providers.json'), secretBox)
   await settings.load()
+  try {
+    await settings.syncBundled(BUNDLED_REPOSITORY, bundledExtensions())
+  } catch (err) {
+    console.error('[settings] could not install the bundled extensions:', err instanceof Error ? err.message : err)
+  }
 
   let torrents: TorrentEngine | null = null
   streamServer = await startStreamServer((infoHash, fileIndex) => torrents?.resolveFile(infoHash, fileIndex))

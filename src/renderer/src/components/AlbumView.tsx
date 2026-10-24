@@ -2,6 +2,8 @@ import type { Album, TorrentStats } from '../../../shared/types'
 import { formatBytes, formatSpeed, formatTime, plural } from '../format'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
+import { Chomu } from './mascot/Chomu'
+import { LoaderScene } from './mascot/LoaderScene'
 
 interface Props {
   album: Album
@@ -100,24 +102,10 @@ function SwarmStatus({ stats }: { stats?: TorrentStats }) {
   )
 }
 
-export function AlbumLoading({ title, artist, artwork }: { title?: string; artist?: string; artwork?: string }) {
+export function AlbumLoading({ title, artist }: { title?: string; artist?: string; artwork?: string }) {
   return (
     <div className="page album is-loading">
-      <header className="album__header">
-        <Cover src={artwork} className="album__cover skeleton" />
-        <div className="album__meta">
-          <h1 className="album__title">{title ?? 'Opening torrent…'}</h1>
-          {artist && <p className="album__subtitle">Album • {artist}</p>}
-          <p className="album__details loading-line">
-            <span className="spinner" /> Fetching torrent info and finding peers…
-          </p>
-        </div>
-      </header>
-      <div className="tracklist">
-        {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className="track skeleton-row" />
-        ))}
-      </div>
+      <LoaderScene compact title="Loading" subtitle={[title ?? 'Opening torrent', artist].filter(Boolean).join(' — ')} />
     </div>
   )
 }
@@ -125,8 +113,8 @@ export function AlbumLoading({ title, artist, artwork }: { title?: string; artis
 export function AlbumError({ message, onRetry, onHome }: { message: string; onRetry?: () => void; onHome: () => void }) {
   return (
     <div className="page error-page">
-      <Icon name="error" size={48} />
-      <h1>Couldn't open that torrent</h1>
+      <Chomu mood="sad" size={280} />
+      <h1>Nyaa… couldn't open that torrent</h1>
       <p>{message}</p>
       <div className="error-page__actions">
         {onRetry && (
