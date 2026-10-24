@@ -35,8 +35,15 @@ Other scripts: `npm run build` (production bundle in `out/`), `npm start` (run t
     Torznab, so you can search whichever trackers you've configured there. API keys are encrypted with the OS
     credential store (Electron `safeStorage`) and never reach the renderer.
 
+  - **Extensions** (Hayase-style): import a repository manifest URL under *Sources*; each extension runs in an
+    isolated sandbox that can only reach the https hosts it declares. Example: [`extensions/`](extensions/).
+
   Results come back as opaque ids; opening one turns it into a magnet or `.torrent` in the main process.
-  See [docs/sources.md](docs/sources.md) for adding providers and a list of candidates.
+- **Explore** browses every source by category (trending this week, live concerts, MP3/Lossless from your
+  indexers, whatever an extension offers).
+
+See [docs/sources.md](docs/sources.md) for how this compares to Hayase, well-known audio trackers and how to reach
+them, and how to add providers or write extensions.
 
 Downloaded pieces live in a session cache under the OS temp folder, wiped on launch and on quit.
 

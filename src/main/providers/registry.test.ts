@@ -72,3 +72,20 @@ test('results from removed providers can no longer be opened', async () => {
   registry.setProviders([])
   await assert.rejects(registry.open(sections[0].albums[0].id), /expired/)
 })
+
+test('explore lists browsable providers and browse remembers results', async () => {
+  const registry = new ProviderRegistry()
+  const browsable = fakeProvider('archive', {
+    categories: [{ id: 'trending', name: 'Trending' }],
+    browse: async () => ({ albums: [album('hot-locator', 'Hot')], songs: [] })
+  })
+  registry.setProviders([browsable, fakeProvider('torznab-1')])
+  assert.deepEqual(registry.explore(), [{ id: 'archive', name: 'ARCHIVE', layout: 'cards', categories: [{ id: 'trending', name: 'Trending' }] }])
+
+  const section = await registry.browse('archive', 'trending', new AbortController().signal)
+  assert.equal(section.albums[0].title, 'Hot')
+  await registry.open(section.albums[0].id)
+  assert.deepEqual(browsable.opened, ['hot-locator'])
+  await assert.rejects(registry.browse('archive', 'nope', new AbortController().signal), SourceError)
+  await assert.rejects(registry.browse('torznab-1', 'trending', new AbortController().signal), SourceError)
+})

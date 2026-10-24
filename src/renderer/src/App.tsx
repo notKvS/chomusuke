@@ -7,6 +7,7 @@ import { PlayerBar } from './components/PlayerBar'
 import { SearchView, type SearchState } from './components/SearchView'
 import { Sidebar } from './components/Sidebar'
 import { SourcesView } from './components/SourcesView'
+import { ExploreView } from './components/ExploreView'
 import { TopBar } from './components/TopBar'
 import { looksLikeSource } from './source'
 import { usePlayer } from './usePlayer'
@@ -15,6 +16,7 @@ type View =
   | { kind: 'home' }
   | { kind: 'search' }
   | { kind: 'sources' }
+  | { kind: 'explore' }
   | { kind: 'loading'; title?: string; artist?: string; artwork?: string }
   | { kind: 'album'; infoHash: string }
   | { kind: 'error'; message: string; retry?: () => void }
@@ -209,8 +211,13 @@ export function App() {
     setView({ kind: 'sources' })
   }, [])
 
+  const goExplore = useCallback(() => {
+    requestId.current++
+    setView({ kind: 'explore' })
+  }, [])
+
   const playingHash = player.state.album?.infoHash ?? null
-  const activeKey = view.kind === 'album' ? view.infoHash : ['home', 'search', 'sources'].includes(view.kind) ? view.kind : ''
+  const activeKey = view.kind === 'album' ? view.infoHash : ['home', 'search', 'sources', 'explore'].includes(view.kind) ? view.kind : ''
 
   let page
   switch (view.kind) {
@@ -237,6 +244,9 @@ export function App() {
       break
     case 'sources':
       page = <SourcesView />
+      break
+    case 'explore':
+      page = <ExploreView onOpenAlbum={openSearchAlbum} onManageSources={goSources} />
       break
     case 'loading':
       page = <AlbumLoading title={view.title} artist={view.artist} artwork={view.artwork} />
@@ -272,6 +282,7 @@ export function App() {
         onHome={goHome}
         onSearch={goSearch}
         onSources={goSources}
+        onExplore={goExplore}
         onOpenAlbum={openAlbum}
         onOpenFile={openFile}
       />

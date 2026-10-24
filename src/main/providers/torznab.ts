@@ -1,5 +1,6 @@
 import { XMLParser } from 'fast-xml-parser'
 import { FetchError, fetchBodyOrMagnet, fetchText } from '../http.ts'
+import { isPrivateHost, sanitizeThirdPartyMagnet, stripPrivateEndpoints } from '../net.ts'
 import { parseSource, SourceError } from '../source.ts'
 import type { MusicProvider, Playable, ProviderAlbum, ProviderResults } from './types.ts'
 
@@ -33,6 +34,14 @@ export interface TorznabItem {
 export class TorznabError extends Error {
   name = 'TorznabError'
 }
+
+/** Standard Newznab/Torznab audio categories every indexer manager maps its trackers onto. */
+export const TORZNAB_CATEGORIES = [
+  { id: '3000', name: 'Popular audio' },
+  { id: '3010', name: 'MP3' },
+  { id: '3040', name: 'Lossless' },
+  { id: '3050', name: 'Other audio' }
+]
 
 const AUDIO_CATEGORY = 3000 // Newznab/Torznab "Audio"; 3010 MP3, 3040 Lossless, … all sit in 3000–3999
 const MAX_RESULTS = 50
@@ -77,21 +86,6 @@ const httpUrl = (value: unknown): string | undefined => {
   } catch {
     return undefined
   }
-}
-
-/**
- * Hosts where plain http is acceptable for a self-hosted indexer: loopback, private/link-local addresses
- * and LAN-style names. Anything else must use https, since the API key travels in the query string.
- */
-export function isPrivateHost(hostname: string): boolean {
-  const host = hostname.toLowerCase().replace(/^\[|\]$/g, '')
-  if (host === 'localhost' || host === '::1' || /^f[cd][0-9a-f]{2}:/.test(host) || /^fe80:/.test(host)) return true
-  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host)
-  if (ipv4) {
-    const [a, b] = [Number(ipv4[1]), Number(ipv4[2])]
-    return a === 10 || a === 127 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254)
-  }
-  return !host.includes('.') || /\.(local|lan|home\.arpa|internal)$/.test(host)
 }
 
 /** Parses a Torznab search response into items; throws TorznabError for protocol errors. */
@@ -179,9 +173,9 @@ function describeFetchError(err: unknown, name: string): Error {
 }
 
 export function createTorznabProvider(config: TorznabConfig): MusicProvider {
-  const indexerHost = new URL(config.url).hostname
-  // Plain http only to the configured indexer itself, and only if it lives on a private network.
-  const allowHttp = (hostname: string) => hostname === indexerHost && isPrivateHost(hostname)
+  const indexerOrigin = new URL(config.url).origin
+  // Plain http only to the configured indexer itself (same scheme, host and port), on a private network.
+  const allowHttp = (url: URL) => url.origin === indexerOrigin && isPrivateHost(url.hostname)
 
   const request = async (params: Record<string, string>, signal?: AbortSignal) => {
     try {
@@ -189,6 +183,16 @@ export function createTorznabProvider(config: TorznabConfig): MusicProvider {
     } catch (err) {
       throw describeFetchError(err, config.name)
     }
+  }
+
+  const releases = async (params: Record<string, string>, signal: AbortSignal): Promise<ProviderResults> => {
+    const albums = parseTorznab(await request(params, signal))
+      .filter(isAudio)
+      .sort((a, b) => (b.seeders ?? -1) - (a.seeders ?? -1))
+      .map(toAlbum)
+      .filter((album): album is ProviderAlbum => album !== undefined)
+      .slice(0, MAX_RESULTS)
+    return { albums, songs: [] }
   }
 
   return {
@@ -199,14 +203,15 @@ export function createTorznabProvider(config: TorznabConfig): MusicProvider {
     async search(query, signal): Promise<ProviderResults> {
       const q = query.replace(/[\p{Cc}]/gu, ' ').trim().slice(0, MAX_QUERY_LENGTH)
       if (!q) return { albums: [], songs: [] }
-      const xml = await request({ t: 'search', q, cat: String(AUDIO_CATEGORY), limit: String(MAX_RESULTS), extended: '1' }, signal)
-      const albums = parseTorznab(xml)
-        .filter(isAudio)
-        .sort((a, b) => (b.seeders ?? -1) - (a.seeders ?? -1))
-        .map(toAlbum)
-        .filter((album): album is ProviderAlbum => album !== undefined)
-        .slice(0, MAX_RESULTS)
-      return { albums, songs: [] }
+      return releases({ t: 'search', q, cat: String(AUDIO_CATEGORY), limit: String(MAX_RESULTS), extended: '1' }, signal)
+    },
+
+    categories: TORZNAB_CATEGORIES.map(({ id, name }) => ({ id, name })),
+
+    // An empty query returns the indexer's newest releases (its RSS feed); ranked by seeders that's "what's hot".
+    browse(categoryId, signal) {
+      if (!TORZNAB_CATEGORIES.some(c => c.id === categoryId)) throw new TorznabError('Unknown category.')
+      return releases({ t: 'search', cat: categoryId, limit: String(MAX_RESULTS), extended: '1' }, signal)
     },
 
     async open(album, signal): Promise<Playable> {
@@ -226,7 +231,10 @@ export function createTorznabProvider(config: TorznabConfig): MusicProvider {
             allowHttp,
             signal
           })
-          return { kind: 'torrent', torrent: result.kind === 'magnet' ? magnetOrThrow(result.uri) : result.body }
+          return {
+            kind: 'torrent',
+            torrent: result.kind === 'magnet' ? magnetOrThrow(result.uri) : await stripPrivateEndpoints(result.body)
+          }
         } catch (err) {
           throw new SourceError(describeFetchError(err, config.name).message)
         }
@@ -240,7 +248,7 @@ export function createTorznabProvider(config: TorznabConfig): MusicProvider {
 function magnetOrThrow(uri: string): string {
   const source = parseSource(uri)
   if (source.kind !== 'magnet') throw new SourceError('The indexer returned an invalid magnet link.')
-  return source.uri
+  return sanitizeThirdPartyMagnet(source.uri)
 }
 
 /** Checks the endpoint answers Torznab capabilities with this key. */
@@ -251,7 +259,7 @@ export async function testTorznab(config: TorznabConfig, signal?: AbortSignal): 
     const xml = await fetchText(url, {
       maxBytes: SEARCH_MAX_BYTES,
       timeoutMs: TIMEOUT_MS,
-      allowHttp: host => host === url.hostname && isPrivateHost(host),
+      allowHttp: target => target.origin === url.origin && isPrivateHost(target.hostname),
       signal
     })
     if (/<!DOCTYPE|<!ENTITY/i.test(xml)) throw new TorznabError('The indexer sent an unsupported response.')

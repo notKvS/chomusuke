@@ -88,13 +88,13 @@ export function buildQueries(tokens: string[]): { strict: string; broad: string;
   }
 }
 
-export function searchUrl(query: string, rows: number): URL {
+export function searchUrl(query: string, rows: number, sort = 'downloads desc'): URL {
   const url = new URL('/advancedsearch.php', ARCHIVE_ORIGIN)
   url.searchParams.set('q', query)
   for (const field of ['identifier', 'title', 'creator', 'year', 'date', 'downloads', 'licenseurl']) {
     url.searchParams.append('fl[]', field)
   }
-  url.searchParams.append('sort[]', 'downloads desc')
+  url.searchParams.append('sort[]', sort)
   url.searchParams.set('rows', String(rows))
   url.searchParams.set('output', 'json')
   return url
@@ -299,6 +299,23 @@ export async function fetchArchiveTrackInfo(id: string, fetchJson: JsonFetcher):
   return new Map(files.map(info => [info.key, info]))
 }
 
+/** Explore categories: collections/subjects, ranked by downloads in the last week. */
+export const ARCHIVE_CATEGORIES = [
+  { id: 'trending', name: 'Trending this week', query: 'collection:(audio_music OR etree OR netlabels)' },
+  { id: 'live', name: 'Live concerts', query: 'collection:(etree)' },
+  { id: 'netlabels', name: 'Netlabels', query: 'collection:(netlabels)' },
+  { id: '78rpm', name: '78 RPM records', query: 'collection:(78rpm)' },
+  { id: 'classical', name: 'Classical', query: 'subject:(classical)' },
+  { id: 'jazz', name: 'Jazz', query: 'subject:(jazz)' }
+] as const
+
+export async function browseArchive(categoryId: string, fetchJson: JsonFetcher): Promise<ProviderResults> {
+  const category = ARCHIVE_CATEGORIES.find(c => c.id === categoryId)
+  if (!category) throw new Error('Unknown category')
+  const json = await fetchJson(searchUrl(`${category.query} AND ${FILTER}`, ALBUM_ROWS, 'week desc'), SEARCH_MAX_BYTES)
+  return { albums: parseAlbums(json), songs: [] }
+}
+
 /** Tag-derived track details for an archive.org item torrent URL, or null when it isn't one / the lookup fails. */
 export async function annotationsForTorrentUrl(url: string, fetchJson: JsonFetcher): Promise<Map<string, TrackAnnotation> | null> {
   const id = archiveIdFromTorrentUrl(url)
@@ -315,6 +332,8 @@ export function createArchiveProvider(deps: {
     name: 'Internet Archive',
     layout: 'cards',
     search: (query, signal) => searchArchive(query, (url, maxBytes) => deps.fetchJson(url, maxBytes, signal)),
+    categories: ARCHIVE_CATEGORIES.map(({ id, name }) => ({ id, name })),
+    browse: (categoryId, signal) => browseArchive(categoryId, (url, maxBytes) => deps.fetchJson(url, maxBytes, signal)),
     async open(album, signal) {
       if (!IDENTIFIER.test(album.ref)) throw new Error('Invalid archive.org identifier')
       // Fetch tags in parallel with the torrent; they only improve titles, so failures are ignored.

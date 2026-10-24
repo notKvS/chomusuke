@@ -1,0 +1,26 @@
+[
+  {
+    "manifestVersion": 1,
+    "id": "live-music-archive",
+    "name": "Live Music Archive",
+    "description": "Concert recordings from bands that allow taping and trading (etree.org), hosted by the Internet Archive.",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "live-music-archive.js",
+    "hosts": ["archive.org", "*.archive.org"],
+    "layout": "cards",
+    "categories": [
+      { "id": "week", "name": "Trending this week" },
+      { "id": "recent", "name": "Recently added" },
+      { "id": "all-time", "name": "All-time favourites" }
+    ],
+    "options": {
+      "soundboardOnly": {
+        "type": "boolean",
+        "label": "Soundboard recordings only",
+        "description": "Skip audience recordings",
+        "default": false
+      }
+    }
+  }
+]

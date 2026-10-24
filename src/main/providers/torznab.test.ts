@@ -2,10 +2,17 @@ import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import http from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { createTorznabProvider, isPrivateHost, parseTorznab, testTorznab, TorznabError } from './torznab.ts'
+import parseTorrent, { toTorrentFile } from 'parse-torrent'
+import { createTorznabProvider, parseTorznab, testTorznab, TorznabError } from './torznab.ts'
 
 const HASH = 'c9e15763f722f23e98a29decdfae341b98d53056'
 const MAGNET = `magnet:?xt=urn:btih:${HASH}&dn=Album&tr=udp%3A%2F%2Ftracker.example%3A1337`
+const TORRENT = toTorrentFile({
+  infoHash: '',
+  info: { name: new TextEncoder().encode('Album'), 'piece length': 16384, pieces: new Uint8Array(20), length: 1 },
+  announce: ['udp://tracker.example.org:1337', 'http://192.168.1.1/announce'],
+  urlList: ['https://cdn.example.org/', 'http://127.0.0.1:631/']
+})
 
 const feed = (items: string) => `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:torznab="http://torznab.com/schemas/2015/feed">
@@ -49,7 +56,7 @@ before(async () => {
     }
     if (url.pathname === '/dl/1') {
       res.writeHead(200, { 'Content-Type': 'application/x-bittorrent' })
-      return res.end(Buffer.from('d4:infod4:name1:xee'))
+      return res.end(Buffer.from(TORRENT))
     }
     if (url.pathname === '/dl/2') {
       res.writeHead(302, { Location: MAGNET })
@@ -90,7 +97,11 @@ test('open resolves magnets, downloads .torrent links and follows magnet redirec
   const [linked, redirected, magnet] = albums
   const linkedPlayable = await provider.open(linked)
   assert.ok(linkedPlayable.torrent instanceof Uint8Array)
-  assert.equal(Buffer.from(linkedPlayable.torrent).toString(), 'd4:infod4:name1:xee')
+  const [original, opened] = await Promise.all([parseTorrent(TORRENT), parseTorrent(linkedPlayable.torrent)])
+  assert.equal(opened.infoHash, original.infoHash)
+  // LAN trackers / web seeds from a third-party .torrent are dropped.
+  assert.deepEqual(opened.announce, ['udp://tracker.example.org:1337'])
+  assert.deepEqual(opened.urlList, ['https://cdn.example.org/'])
   assert.equal((await provider.open(redirected)).torrent, MAGNET)
   assert.equal((await provider.open(magnet)).torrent, MAGNET)
 })
@@ -119,13 +130,4 @@ test('parseTorznab rejects DTDs and non-feeds', () => {
   assert.throws(() => parseTorznab('<!DOCTYPE x [<!ENTITY a "aaaa">]><rss/>'), TorznabError)
   assert.throws(() => parseTorznab('<html><body>login</body></html>'), /Torznab feed/)
   assert.deepEqual(parseTorznab(feed('')), [])
-})
-
-test('isPrivateHost', () => {
-  for (const host of ['localhost', '127.0.0.1', '192.168.1.20', '10.0.0.5', '172.20.1.1', '[::1]', 'nas', 'jackett.local', 'box.home.arpa']) {
-    assert.equal(isPrivateHost(host), true, host)
-  }
-  for (const host of ['example.com', '8.8.8.8', '172.32.0.1', 'tracker.io']) {
-    assert.equal(isPrivateHost(host), false, host)
-  }
 })

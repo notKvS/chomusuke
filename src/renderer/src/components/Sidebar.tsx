@@ -10,16 +10,21 @@ interface Props {
   onHome: () => void
   onSearch: () => void
   onSources: () => void
+  onExplore: () => void
   onOpenAlbum: (infoHash: string) => void
   onOpenFile: () => void
 }
 
-export function Sidebar({ active, albums, playingAlbum, hasSearch, onHome, onSearch, onSources, onOpenAlbum, onOpenFile }: Props) {
+export function Sidebar({ active, albums, playingAlbum, hasSearch, onHome, onSearch, onSources, onExplore, onOpenAlbum, onOpenFile }: Props) {
   return (
     <nav className="sidebar">
       <button type="button" className={`nav-item ${active === 'home' ? 'is-active' : ''}`} onClick={onHome}>
         <Icon name="home" />
         <span>Home</span>
+      </button>
+      <button type="button" className={`nav-item ${active === 'explore' ? 'is-active' : ''}`} onClick={onExplore}>
+        <Icon name="explore" />
+        <span>Explore</span>
       </button>
       <button
         type="button"

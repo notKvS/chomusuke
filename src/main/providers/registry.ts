@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { SourceError } from '../source.ts'
-import type { ProviderSection, SearchAlbum, SearchResults, SearchSong } from '../../shared/types.ts'
+import type { ExploreSource, ProviderSection, SearchAlbum, SearchResults, SearchSong } from '../../shared/types.ts'
 import { TorznabError } from './torznab.ts'
 import type { MusicProvider, Playable, ProviderAlbum } from './types.ts'
 
@@ -54,6 +54,29 @@ export class ProviderRegistry {
       }
     })
     return { query, songs, sections }
+  }
+
+  /** Providers that can be browsed, with their categories, for the Explore page. */
+  explore(): ExploreSource[] {
+    return this.providers
+      .filter(p => p.browse && p.categories?.length)
+      .map(p => ({ id: p.id, name: p.name, layout: p.layout, categories: p.categories ?? [] }))
+  }
+
+  async browse(providerId: unknown, categoryId: unknown, signal: AbortSignal): Promise<ProviderSection> {
+    const provider = this.providers.find(p => p.id === providerId)
+    if (!provider?.browse || !provider.categories?.some(c => c.id === categoryId)) {
+      throw new SourceError('That source can no longer be browsed.')
+    }
+    const section: ProviderSection = { id: provider.id, name: provider.name, layout: provider.layout, albums: [] }
+    try {
+      const results = await provider.browse(categoryId as string, AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)]))
+      section.albums = results.albums.map(album => this.remember(provider, album))
+    } catch (err) {
+      console.error(`[explore] ${provider.id} failed:`, err instanceof Error ? err.message : err)
+      section.error = userMessage(err, provider.name)
+    }
+    return section
   }
 
   async open(albumId: unknown, signal?: AbortSignal): Promise<Playable> {

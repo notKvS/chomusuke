@@ -109,3 +109,83 @@ test('validateTorznabUrl', () => {
     assert.throws(() => validateTorznabUrl(bad), SettingsError, String(bad))
   }
 })
+
+test('a saved key is only reused for the same server', () =>
+  withStore(async store => {
+    await store.saveTorznab(form)
+    const id = store.list()[1].id
+    assert.throws(() => store.resolveTorznab({ id, name: 'x', url: 'https://attacker.example/api', apiKey: '' }), /Re-enter the API key/)
+    assert.throws(() => store.resolveTorznab({ id, name: 'x', url: 'http://localhost:9999/api', apiKey: '' }), /Re-enter/)
+    assert.equal(store.resolveTorznab({ id, name: 'x', url: 'http://localhost:9117/other/path', apiKey: '' }).apiKey, 'abc123')
+  }))
+
+test('installs extensions, verifies their code on load, and keeps secrets encrypted', () =>
+  withStore(async (store, file) => {
+    const { parseRepository } = await import('../extensions/manifest.ts')
+    const [manifest] = parseRepository(
+      [
+        {
+          manifestVersion: 1,
+          id: 'demo',
+          name: 'Demo',
+          version: '1.0.0',
+          type: 'torrent',
+          code: 'demo.js',
+          hosts: ['example.org'],
+          options: { token: { type: 'string', label: 'Token', secret: true }, lossless: { type: 'boolean', label: 'Lossless', default: true } }
+        }
+      ],
+      'https://example.org/index.json'
+    )
+    const code = 'export default { search: () => [] }'
+    await store.installExtensions('https://example.org/index.json', [{ manifest, code }])
+    await store.setExtensionOptions('ext-demo', { token: 'tok-123', lossless: false })
+    await assert.rejects(store.setExtensionOptions('ext-demo', { lossless: 'yes' }), /wrong type/)
+
+    assert.doesNotMatch(await readFile(file, 'utf8'), /tok-123/)
+    const view = store.list().find(p => p.id === 'ext-demo')
+    assert.deepEqual(view?.options, [
+      { key: 'token', type: 'string', label: 'Token', description: undefined, secret: true, hasValue: true },
+      { key: 'lossless', type: 'boolean', label: 'Lossless', description: undefined, secret: false, value: false }
+    ])
+    assert.deepEqual(store.extensionConfig('ext-demo').options, { token: 'tok-123', lossless: false })
+
+    // Reload: same code passes, tampered code is dropped.
+    const reloaded = new ProviderSettingsStore(file, box)
+    await reloaded.load()
+    assert.equal(reloaded.extensionConfig('ext-demo').code, code)
+    await writeFile(path.join(path.dirname(file), 'extensions', 'demo.js'), 'export default { search: () => steal() }')
+    const tampered = new ProviderSettingsStore(file, box)
+    await tampered.load()
+    assert.equal(tampered.list().some(p => p.id === 'ext-demo'), false)
+
+    await store.remove('ext-demo')
+    assert.equal(store.list().some(p => p.id === 'ext-demo'), false)
+  }))
+
+test('validateRepositoryUrl', async () => {
+  const { validateRepositoryUrl } = await import('./settings.ts')
+  assert.deepEqual(validateRepositoryUrl('https://x.github.io/repo/index.json'), { url: 'https://x.github.io/repo/index.json', privateHttp: false })
+  assert.equal(validateRepositoryUrl('http://127.0.0.1:8000/index.json').privateHttp, true)
+  assert.throws(() => validateRepositoryUrl('http://example.com/index.json'), /https/)
+  assert.throws(() => validateRepositoryUrl('file:///C:/x.json'), /https/)
+})
+
+test('a same-id extension from another repository or with other hosts does not inherit secrets', () =>
+  withStore(async store => {
+    const { parseRepository } = await import('../extensions/manifest.ts')
+    const make = (repo: string, hosts: string[]) =>
+      parseRepository(
+        [{ manifestVersion: 1, id: 'demo', name: 'Demo', version: '1', type: 'torrent', code: 'd.js', hosts, options: { token: { type: 'string', label: 'T', secret: true } } }],
+        repo
+      )[0]
+    const code = 'export default { search: () => [] }'
+    await store.installExtensions('https://good.example/index.json', [{ manifest: make('https://good.example/index.json', ['good.example']), code }])
+    await store.setExtensionOptions('ext-demo', { token: 'secret' })
+    // Update from the same repository with the same hosts keeps it…
+    await store.installExtensions('https://good.example/index.json', [{ manifest: make('https://good.example/index.json', ['good.example']), code }])
+    assert.equal(store.extensionConfig('ext-demo').options.token, 'secret')
+    // …a hostile repository reusing the id does not.
+    await store.installExtensions('https://evil.example/index.json', [{ manifest: make('https://evil.example/index.json', ['evil.example']), code }])
+    assert.equal(store.extensionConfig('ext-demo').options.token, '')
+  }))

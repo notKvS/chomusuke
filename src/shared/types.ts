@@ -84,15 +84,48 @@ export interface SearchResults {
 
 export type SearchResponse = { ok: true; results: SearchResults } | { ok: false; error: string }
 
+/** A category a source can be browsed by (Explore page), e.g. "Trending this week" or "Lossless". */
+export interface SourceCategory {
+  id: string
+  name: string
+}
+
+export interface ExploreSource {
+  id: string
+  name: string
+  layout: 'cards' | 'list'
+  categories: SourceCategory[]
+}
+
+export type BrowseResponse = { ok: true; section: ProviderSection } | { ok: false; error: string }
+
+/** A user-configurable extension option. Secret values never leave the main process. */
+export interface ExtensionOptionView {
+  key: string
+  type: 'string' | 'boolean'
+  label: string
+  description?: string
+  secret: boolean
+  /** Current value (omitted for secrets) */
+  value?: string | boolean
+  /** For secrets: whether a value is saved */
+  hasValue?: boolean
+}
+
 /** A configured source as the UI sees it. Secrets (API keys) never leave the main process. */
 export interface ProviderSettingsView {
   id: string
-  type: 'archive' | 'torznab'
+  type: 'archive' | 'torznab' | 'extension'
   name: string
   enabled: boolean
   builtIn: boolean
   url?: string
   hasApiKey?: boolean
+  /** Extensions only */
+  version?: string
+  description?: string
+  hosts?: string[]
+  options?: ExtensionOptionView[]
 }
 
 export interface TorznabForm {
@@ -117,5 +150,10 @@ export interface ChomusukeApi {
   testTorznab(form: TorznabForm): Promise<TestResponse>
   setProviderEnabled(id: string, enabled: boolean): Promise<ProvidersResponse>
   removeProvider(id: string): Promise<ProvidersResponse>
+  importExtensions(repositoryUrl: string): Promise<ProvidersResponse>
+  setExtensionOptions(id: string, values: Record<string, string | boolean>): Promise<ProvidersResponse>
+  testExtension(id: string): Promise<TestResponse>
+  exploreSources(): Promise<ExploreSource[]>
+  browse(sourceId: string, categoryId: string): Promise<BrowseResponse>
   onStats(listener: (stats: TorrentStats[]) => void): () => void
 }

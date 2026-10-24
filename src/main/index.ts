@@ -2,21 +2,37 @@ import { app, BrowserWindow, dialog, ipcMain, safeStorage, session, type IpcMain
 import { mkdir, readFile, rm, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { TorrentEngine } from './engine.ts'
+import { ExtensionHost, hostPage } from './extensions/host.ts'
+import { ExtensionError, parseRepository, type ExtensionManifest } from './extensions/manifest.ts'
+import { testExtension } from './extensions/provider.ts'
+import { FetchError, fetchJson, fetchText } from './http.ts'
 import { annotationsForTorrentUrl } from './providers/archive.ts'
 import { archiveJsonFetcher, buildProviders } from './providers/index.ts'
 import { ProviderRegistry } from './providers/registry.ts'
-import { ProviderSettingsStore, SettingsError, type SecretBox } from './providers/settings.ts'
+import { ProviderSettingsStore, SettingsError, validateRepositoryUrl, type SecretBox } from './providers/settings.ts'
 import { testTorznab, TorznabError } from './providers/torznab.ts'
 import type { Playable } from './providers/types.ts'
 import { parseSource, SourceError } from './source.ts'
 import { startStreamServer, type StreamServer } from './stream-server.ts'
 import { fetchTorrentFile } from './torrent-fetch.ts'
-import type { Album, LoadResult, ProvidersResponse, SearchResponse, SourceHints, TestResponse } from '../shared/types.ts'
+import type {
+  Album,
+  BrowseResponse,
+  ExploreSource,
+  LoadResult,
+  ProvidersResponse,
+  SearchResponse,
+  SourceHints,
+  TestResponse
+} from '../shared/types.ts'
 
 const MAX_TORRENT_FILE_BYTES = 10 * 1024 * 1024
 const MAX_HINT_LENGTH = 200
 const MAX_QUERY_LENGTH = 200
 const STATS_INTERVAL_MS = 1000
+const REPOSITORY_MAX_BYTES = 512 * 1024
+const EXTENSION_CODE_MAX_BYTES = 2 * 1024 * 1024
+const EXTENSION_FETCH_TIMEOUT_MS = 20_000
 
 /** API keys are encrypted with the OS credential store (DPAPI on Windows, Keychain on macOS, libsecret on Linux). */
 const secretBox: SecretBox = {
@@ -31,6 +47,51 @@ const cacheDir = path.join(app.getPath('temp'), 'chomusuke-cache')
 let mainWindow: BrowserWindow | null = null
 let engine: TorrentEngine | null = null
 let streamServer: StreamServer | null = null
+
+/** One sandbox per installed extension, kept while its code is unchanged and torn down otherwise. */
+const extensionHosts = new Map<string, { sha: string; host: ExtensionHost }>()
+
+function extensionRuntime(manifest: ExtensionManifest, code: string, codeSha256: string): ExtensionHost {
+  const existing = extensionHosts.get(manifest.id)
+  if (existing?.sha === codeSha256) return existing.host
+  existing?.host.dispose()
+  const host = new ExtensionHost(manifest, code, codeSha256, hostPage(process.env.ELECTRON_RENDERER_URL, app.isPackaged, import.meta.dirname))
+  extensionHosts.set(manifest.id, { sha: codeSha256, host })
+  return host
+}
+
+function disposeUnusedHosts(activeIds: Set<string>): void {
+  for (const [id, entry] of extensionHosts) {
+    if (activeIds.has(id)) continue
+    entry.host.dispose()
+    extensionHosts.delete(id)
+  }
+}
+
+/** Downloads a repository manifest and every extension's code it lists. */
+async function downloadRepository(rawUrl: unknown): Promise<{ url: string; installs: Array<{ manifest: ExtensionManifest; code: string }> }> {
+  const { url, privateHttp } = validateRepositoryUrl(rawUrl)
+  const origin = new URL(url).origin
+  const policy = {
+    timeoutMs: EXTENSION_FETCH_TIMEOUT_MS,
+    // Plain http only for a repository on your own network, and only on its own origin.
+    allowHttp: (target: URL) => privateHttp && target.origin === origin
+  }
+  try {
+    const manifests = parseRepository(await fetchJson(url, { ...policy, maxBytes: REPOSITORY_MAX_BYTES }), url, privateHttp)
+    const installs = await Promise.all(
+      manifests.map(async manifest => ({
+        manifest,
+        code: await fetchText(manifest.codeUrl, { ...policy, maxBytes: EXTENSION_CODE_MAX_BYTES, accept: 'text/javascript, */*;q=0.5' })
+      }))
+    )
+    return { url, installs }
+  } catch (err) {
+    if (err instanceof ExtensionError || err instanceof SettingsError) throw new SettingsError(err.message)
+    if (err instanceof FetchError) throw new SettingsError(`Couldn’t download the repository (${err.kind === 'status' ? `HTTP ${err.status}` : err.kind}).`)
+    throw err
+  }
+}
 
 if (!app.requestSingleInstanceLock()) app.quit()
 
@@ -121,7 +182,11 @@ async function toResult(work: () => Promise<Album>): Promise<LoadResult> {
 }
 
 function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settings: ProviderSettingsStore): void {
-  const rebuildProviders = () => registry.setProviders(buildProviders(settings.enabled()))
+  const rebuildProviders = () => {
+    const enabled = settings.enabled()
+    registry.setProviders(buildProviders(enabled, { extensionRuntime }))
+    disposeUnusedHosts(new Set(enabled.flatMap(p => (p.type === 'extension' ? [p.manifest.id] : []))))
+  }
   rebuildProviders()
 
   ipcMain.handle('source:load', (event, rawSource: unknown, rawHints: unknown) => {
@@ -191,6 +256,52 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
     }, settings)
   })
 
+  ipcMain.handle('extensions:import', (event, repositoryUrl: unknown) => {
+    assertTrustedSender(event)
+    return settingsResult(async () => {
+      const { url, installs } = await downloadRepository(repositoryUrl)
+      await settings.installExtensions(url, installs)
+      rebuildProviders()
+    }, settings)
+  })
+
+  ipcMain.handle('extensions:set-options', (event, id: unknown, values: unknown) => {
+    assertTrustedSender(event)
+    return settingsResult(async () => {
+      await settings.setExtensionOptions(id, values)
+      rebuildProviders()
+    }, settings)
+  })
+
+  ipcMain.handle('extensions:test', async (event, id: unknown): Promise<TestResponse> => {
+    assertTrustedSender(event)
+    try {
+      const config = settings.extensionConfig(id)
+      const runtime = extensionRuntime(config.manifest, config.code, config.codeSha256)
+      return { ok: true, message: await testExtension(config.manifest, runtime, config.options) }
+    } catch (err) {
+      if (err instanceof SettingsError || err instanceof ExtensionError) return { ok: false, error: err.message }
+      console.error('[extensions] test failed:', err instanceof Error ? err.message : err)
+      return { ok: false, error: 'The extension isn’t working.' }
+    }
+  })
+
+  ipcMain.handle('explore:sources', (event): ExploreSource[] => {
+    assertTrustedSender(event)
+    return registry.explore()
+  })
+
+  ipcMain.handle('explore:browse', async (event, sourceId: unknown, categoryId: unknown): Promise<BrowseResponse> => {
+    assertTrustedSender(event)
+    try {
+      return { ok: true, section: await registry.browse(sourceId, categoryId, AbortSignal.timeout(30_000)) }
+    } catch (err) {
+      if (err instanceof SourceError) return { ok: false, error: err.message }
+      console.error('[explore] failed:', err instanceof Error ? err.message : err)
+      return { ok: false, error: 'Couldn’t load that category.' }
+    }
+  })
+
   ipcMain.handle('providers:test-torznab', async (event, form: unknown): Promise<TestResponse> => {
     assertTrustedSender(event)
     try {
@@ -221,6 +332,7 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
 }
 
 async function shutdown(): Promise<void> {
+  for (const { host } of extensionHosts.values()) host.dispose()
   await Promise.allSettled([engine?.destroy(), streamServer?.close()])
   await rm(cacheDir, { recursive: true, force: true }).catch(() => {})
 }
@@ -252,7 +364,11 @@ app.whenReady().then(async () => {
   registerIpc(torrents, new ProviderRegistry(), settings)
 
   mainWindow = createWindow()
-  mainWindow.on('closed', () => (mainWindow = null))
+  mainWindow.on('closed', () => {
+    mainWindow = null
+    // Hidden extension sandboxes are windows too; closing the player window means quitting.
+    app.quit()
+  })
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
     console.error('[window] renderer gone:', details.reason)
     if (details.reason !== 'clean-exit') mainWindow?.reload()

@@ -1,4 +1,4 @@
-import type { SourceHints } from '../../shared/types.ts'
+import type { SourceCategory, SourceHints } from '../../shared/types.ts'
 import type { TrackAnnotation } from '../engine.ts'
 
 /**
@@ -18,6 +18,9 @@ export interface MusicProvider {
   readonly layout: 'cards' | 'list'
   search(query: string, signal: AbortSignal): Promise<ProviderResults>
   open(album: ProviderAlbum, signal?: AbortSignal): Promise<Playable>
+  /** Categories for the Explore page (trending, genres, formats…). Omit if the source can't be browsed. */
+  readonly categories?: SourceCategory[]
+  browse?(categoryId: string, signal: AbortSignal): Promise<ProviderResults>
 }
 
 export interface ProviderAlbum {

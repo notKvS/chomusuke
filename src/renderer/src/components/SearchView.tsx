@@ -118,8 +118,17 @@ function Section({ section, onOpenAlbum }: { section: ProviderSection; onOpenAlb
   if (!section.error && section.albums.length === 0) return null
   return (
     <section className="shelf">
-      <p className="shelf__eyebrow">{section.layout === 'list' ? 'Torrent indexer' : 'Albums'}</p>
+      <p className="shelf__eyebrow">{section.layout === 'list' ? 'Torrents' : 'Albums'}</p>
       <h2 className="shelf__title">{section.name}</h2>
+      <SectionBody section={section} onOpenAlbum={onOpenAlbum} />
+    </section>
+  )
+}
+
+/** A provider's albums: artwork cards, or torrent-release rows. Shared by Search and Explore. */
+export function SectionBody({ section, onOpenAlbum }: { section: ProviderSection; onOpenAlbum: Props['onOpenAlbum'] }) {
+  return (
+    <>
       {section.error && (
         <p className="section-error">
           <Icon name="error" size={18} />
@@ -179,6 +188,6 @@ function Section({ section, onOpenAlbum }: { section: ProviderSection; onOpenAlb
           ))}
         </ol>
       )}
-    </section>
+    </>
   )
 }

@@ -26,8 +26,8 @@ export interface CappedFetchOptions {
   accept?: string
   /** Every hop (including redirects) must land on an allowed host. */
   allowHost?: (hostname: string) => boolean
-  /** Plain http is refused unless this approves the host (e.g. a self-hosted indexer on the LAN). */
-  allowHttp?: (hostname: string) => boolean
+  /** Plain http is refused unless this approves the URL (e.g. a self-hosted indexer on the LAN). */
+  allowHttp?: (url: URL) => boolean
   signal?: AbortSignal
 }
 
@@ -46,7 +46,7 @@ export async function fetchBodyOrMagnet(url: string | URL, options: CappedFetchO
   let current = new URL(url)
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const plainHttpAllowed = current.protocol === 'http:' && allowHttp?.(current.hostname) === true
+    const plainHttpAllowed = current.protocol === 'http:' && allowHttp?.(current) === true
     if (current.protocol !== 'https:' && !plainHttpAllowed) {
       throw new FetchError('insecure-redirect', `Refusing insecure URL scheme ${current.protocol}`)
     }

@@ -12,6 +12,11 @@ const api: ChomusukeApi = {
   testTorznab: form => ipcRenderer.invoke('providers:test-torznab', form),
   setProviderEnabled: (id, enabled) => ipcRenderer.invoke('providers:set-enabled', id, enabled),
   removeProvider: id => ipcRenderer.invoke('providers:remove', id),
+  importExtensions: repositoryUrl => ipcRenderer.invoke('extensions:import', repositoryUrl),
+  setExtensionOptions: (id, values) => ipcRenderer.invoke('extensions:set-options', id, values),
+  testExtension: id => ipcRenderer.invoke('extensions:test', id),
+  exploreSources: () => ipcRenderer.invoke('explore:sources'),
+  browse: (sourceId, categoryId) => ipcRenderer.invoke('explore:browse', sourceId, categoryId),
   onStats: listener => {
     const handler = (_event: IpcRendererEvent, stats: TorrentStats[]) => listener(stats)
     ipcRenderer.on('torrent:stats', handler)

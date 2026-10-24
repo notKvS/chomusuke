@@ -35,7 +35,8 @@ export function SourcesView() {
   }
 
   const builtIn = providers?.filter(p => p.builtIn) ?? []
-  const indexers = providers?.filter(p => !p.builtIn) ?? []
+  const indexers = providers?.filter(p => p.type === 'torznab') ?? []
+  const extensions = providers?.filter(p => p.type === 'extension') ?? []
 
   return (
     <div className="page sources">
@@ -99,7 +100,159 @@ export function SourcesView() {
           </button>
         )}
       </section>
+
+      <ExtensionsSection
+        extensions={extensions}
+        apply={apply}
+        onToggle={provider => void toggle(provider)}
+        onRemove={provider => void remove(provider)}
+      />
     </div>
+  )
+}
+
+interface ExtensionsProps {
+  extensions: ProviderSettingsView[]
+  apply: (response: ProvidersResponse) => boolean
+  onToggle: (provider: ProviderSettingsView) => void
+  onRemove: (provider: ProviderSettingsView) => void
+}
+
+/** Hayase-style extensions: third-party sources installed from a repository manifest, run in a sandbox. */
+function ExtensionsSection({ extensions, apply, onToggle, onRemove }: ExtensionsProps) {
+  const [url, setUrl] = useState('')
+  const [status, setStatus] = useState<Status>(null)
+  const [configuring, setConfiguring] = useState<string | null>(null)
+  const [tests, setTests] = useState<Record<string, Status>>({})
+
+  const importRepository = async (event: FormEvent) => {
+    event.preventDefault()
+    setStatus({ kind: 'busy', text: 'Installing…' })
+    const response = await window.chomusuke.importExtensions(url)
+    if (apply(response)) {
+      setStatus({ kind: 'ok', text: 'Installed.' })
+      setUrl('')
+    } else if (!response.ok) setStatus({ kind: 'error', text: response.error })
+  }
+
+  const test = async (provider: ProviderSettingsView) => {
+    setTests(prev => ({ ...prev, [provider.id]: { kind: 'busy', text: 'Testing…' } }))
+    const result = await window.chomusuke.testExtension(provider.id)
+    setTests(prev => ({
+      ...prev,
+      [provider.id]: result.ok ? { kind: 'ok', text: result.message } : { kind: 'error', text: result.error }
+    }))
+  }
+
+  return (
+    <section className="shelf">
+      <h2 className="shelf__title">Extensions</h2>
+      <p className="sources__help">
+        Like Hayase, Chomusuke ships without tracker integrations: extensions add them. Paste the URL of an extension
+        repository (a JSON manifest) to install its extensions. Each one runs in an isolated sandbox and can only reach
+        the websites it declares. Only install repositories you trust, and only use sources you have the right to
+        download from.
+      </p>
+
+      {extensions.map(provider => (
+        <div key={provider.id}>
+          <SourceRow
+            provider={provider}
+            description={`v${provider.version} • ${provider.hosts?.join(', ')}`}
+            onToggle={() => onToggle(provider)}
+            onTest={() => void test(provider)}
+            onEdit={provider.options?.length ? () => setConfiguring(configuring === provider.id ? null : provider.id) : undefined}
+            onRemove={() => onRemove(provider)}
+          />
+          {tests[provider.id] && <StatusLine status={tests[provider.id] as NonNullable<Status>} />}
+          {configuring === provider.id && (
+            <ExtensionOptionsForm
+              provider={provider}
+              onDone={response => {
+                if (apply(response)) setConfiguring(null)
+              }}
+            />
+          )}
+        </div>
+      ))}
+
+      <form className="import-form" onSubmit={importRepository}>
+        <input
+          value={url}
+          onChange={e => setUrl(e.target.value)}
+          placeholder="https://example.github.io/my-extensions/index.json"
+          spellCheck={false}
+          maxLength={2048}
+          aria-label="Extension repository URL"
+          required
+        />
+        <button type="submit" className="solid-button" disabled={status?.kind === 'busy'}>
+          Install
+        </button>
+      </form>
+      {status && <StatusLine status={status} />}
+    </section>
+  )
+}
+
+function StatusLine({ status }: { status: NonNullable<Status> }) {
+  return (
+    <span className={`torznab-form__status is-${status.kind}`} role="status">
+      {status.kind === 'ok' && <Icon name="check" size={18} />}
+      {status.kind === 'error' && <Icon name="error" size={18} />}
+      {status.text}
+    </span>
+  )
+}
+
+function ExtensionOptionsForm({ provider, onDone }: { provider: ProviderSettingsView; onDone: (r: ProvidersResponse) => void }) {
+  const options = provider.options ?? []
+  const [values, setValues] = useState<Record<string, string | boolean>>(() =>
+    Object.fromEntries(options.map(o => [o.key, o.secret ? '' : (o.value ?? (o.type === 'boolean' ? false : ''))]))
+  )
+  const [error, setError] = useState<string | null>(null)
+
+  const save = async (event: FormEvent) => {
+    event.preventDefault()
+    const response = await window.chomusuke.setExtensionOptions(provider.id, values)
+    if (!response.ok) setError(response.error)
+    onDone(response)
+  }
+
+  return (
+    <form className="torznab-form" onSubmit={save}>
+      {options.map(option =>
+        option.type === 'boolean' ? (
+          <label key={option.key} className="checkbox">
+            <input
+              type="checkbox"
+              checked={values[option.key] === true}
+              onChange={e => setValues(prev => ({ ...prev, [option.key]: e.target.checked }))}
+            />
+            <span>{option.label}</span>
+          </label>
+        ) : (
+          <label key={option.key}>
+            <span>{option.label}</span>
+            <input
+              type={option.secret ? 'password' : 'text'}
+              value={values[option.key] as string}
+              onChange={e => setValues(prev => ({ ...prev, [option.key]: e.target.value }))}
+              placeholder={option.secret && option.hasValue ? 'Saved — leave blank to keep' : option.description}
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={500}
+            />
+          </label>
+        )
+      )}
+      <div className="torznab-form__actions">
+        <button type="submit" className="solid-button">
+          Save
+        </button>
+        {error && <StatusLine status={{ kind: 'error', text: error }} />}
+      </div>
+    </form>
   )
 }
 
@@ -107,20 +260,26 @@ interface RowProps {
   provider: ProviderSettingsView
   description: string
   onToggle: () => void
+  onTest?: () => void
   onEdit?: () => void
   onRemove?: () => void
 }
 
-function SourceRow({ provider, description, onToggle, onEdit, onRemove }: RowProps) {
+function SourceRow({ provider, description, onToggle, onTest, onEdit, onRemove }: RowProps) {
   return (
     <div className={`source-row ${provider.enabled ? '' : 'is-off'}`}>
       <span className="source-row__icon">
-        <Icon name={provider.builtIn ? 'music' : 'download'} />
+        <Icon name={provider.builtIn ? 'music' : provider.type === 'extension' ? 'extension' : 'download'} />
       </span>
       <span className="source-row__text">
         <span className="source-row__name">{provider.name}</span>
         <span className="source-row__sub">{description}</span>
       </span>
+      {onTest && (
+        <button type="button" className="ghost-button" onClick={onTest}>
+          Test
+        </button>
+      )}
       {onEdit && (
         <button type="button" className="icon-button" onClick={onEdit} aria-label={`Edit ${provider.name}`}>
           <Icon name="edit" size={20} />
@@ -203,7 +362,7 @@ function TorznabEditor({ initial, onCancel, onSaved }: EditorProps) {
       </label>
       <p className="torznab-form__note">
         The key is encrypted with your system’s credential store and never shown again. Plain http is only allowed for
-        indexers on your own network.
+        indexers on your own network, and sends the key unencrypted over it.
       </p>
       <div className="torznab-form__actions">
         <button type="button" className="ghost-button" onClick={() => void test()} disabled={status?.kind === 'busy'}>
