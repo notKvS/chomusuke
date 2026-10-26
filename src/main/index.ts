@@ -1,21 +1,6 @@
-import { app, BrowserWindow, dialog, ipcMain, safeStorage, session, type IpcMainInvokeEvent } from 'electron'
 import { mkdir, readFile, rm, stat } from 'node:fs/promises'
 import path from 'node:path'
-import { TorrentEngine } from './engine.ts'
-import { BUNDLED_REPOSITORY, bundledExtensions } from './extensions/defaults.ts'
-import { ExtensionHost, hostPage } from './extensions/host.ts'
-import { ExtensionError, parseRepository, type ExtensionManifest } from './extensions/manifest.ts'
-import { testExtension } from './extensions/provider.ts'
-import { FetchError, fetchJson, fetchText } from './http.ts'
-import { annotationsForTorrentUrl } from './providers/archive.ts'
-import { archiveJsonFetcher, buildProviders } from './providers/index.ts'
-import { ProviderRegistry } from './providers/registry.ts'
-import { ProviderSettingsStore, SettingsError, validateRepositoryUrl, type SecretBox } from './providers/settings.ts'
-import { testTorznab, TorznabError } from './providers/torznab.ts'
-import type { Playable } from './providers/types.ts'
-import { parseSource, SourceError } from './source.ts'
-import { startStreamServer, type StreamServer } from './stream-server.ts'
-import { fetchTorrentFile } from './torrent-fetch.ts'
+import { app, BrowserWindow, dialog, type IpcMainInvokeEvent, ipcMain, safeStorage, session } from 'electron'
 import type {
   Album,
   BrowseResponse,
@@ -26,6 +11,21 @@ import type {
   SourceHints,
   TestResponse
 } from '../shared/types.ts'
+import { TorrentEngine } from './engine.ts'
+import { BUNDLED_REPOSITORY, bundledExtensions } from './extensions/defaults.ts'
+import { ExtensionHost, hostPage } from './extensions/host.ts'
+import { ExtensionError, type ExtensionManifest, parseRepository } from './extensions/manifest.ts'
+import { testExtension } from './extensions/provider.ts'
+import { FetchError, fetchJson, fetchText } from './http.ts'
+import { annotationsForTorrentUrl } from './providers/archive.ts'
+import { archiveJsonFetcher, buildProviders } from './providers/index.ts'
+import { ProviderRegistry } from './providers/registry.ts'
+import { ProviderSettingsStore, type SecretBox, SettingsError, validateRepositoryUrl } from './providers/settings.ts'
+import { TorznabError, testTorznab } from './providers/torznab.ts'
+import type { Playable } from './providers/types.ts'
+import { parseSource, SourceError } from './source.ts'
+import { type StreamServer, startStreamServer } from './stream-server.ts'
+import { fetchTorrentFile } from './torrent-fetch.ts'
 
 const MAX_TORRENT_FILE_BYTES = 10 * 1024 * 1024
 const MAX_HINT_LENGTH = 200
@@ -34,6 +34,15 @@ const STATS_INTERVAL_MS = 1000
 const REPOSITORY_MAX_BYTES = 512 * 1024
 const EXTENSION_CODE_MAX_BYTES = 2 * 1024 * 1024
 const EXTENSION_FETCH_TIMEOUT_MS = 20_000
+/** Height of the renderer's top bar at 100% zoom. */
+const TITLE_BAR_HEIGHT = 68
+
+/**
+ * Height of the native window-controls overlay: the top bar minus its bottom border line, so the theme's
+ * border runs the full width under the minimise/maximise/close buttons instead of stopping at them.
+ */
+const overlayHeight = (zoom: number) => Math.round(TITLE_BAR_HEIGHT * zoom) - Math.ceil(zoom)
+const HEX_COLOR = /^#[0-9a-f]{6}$/i
 
 /** API keys are encrypted with the OS credential store (DPAPI on Windows, Keychain on macOS, libsecret on Linux). */
 const secretBox: SecretBox = {
@@ -56,7 +65,12 @@ function extensionRuntime(manifest: ExtensionManifest, code: string, codeSha256:
   const existing = extensionHosts.get(manifest.id)
   if (existing?.sha === codeSha256) return existing.host
   existing?.host.dispose()
-  const host = new ExtensionHost(manifest, code, codeSha256, hostPage(process.env.ELECTRON_RENDERER_URL, app.isPackaged, import.meta.dirname))
+  const host = new ExtensionHost(
+    manifest,
+    code,
+    codeSha256,
+    hostPage(process.env.ELECTRON_RENDERER_URL, app.isPackaged, import.meta.dirname)
+  )
   extensionHosts.set(manifest.id, { sha: codeSha256, host })
   return host
 }
@@ -70,7 +84,9 @@ function disposeUnusedHosts(activeIds: Set<string>): void {
 }
 
 /** Downloads a repository manifest and every extension's code it lists. */
-async function downloadRepository(rawUrl: unknown): Promise<{ url: string; installs: Array<{ manifest: ExtensionManifest; code: string }> }> {
+async function downloadRepository(
+  rawUrl: unknown
+): Promise<{ url: string; installs: Array<{ manifest: ExtensionManifest; code: string }> }> {
   const { url, privateHttp } = validateRepositoryUrl(rawUrl)
   const origin = new URL(url).origin
   const policy = {
@@ -79,17 +95,28 @@ async function downloadRepository(rawUrl: unknown): Promise<{ url: string; insta
     allowHttp: (target: URL) => privateHttp && target.origin === origin
   }
   try {
-    const manifests = parseRepository(await fetchJson(url, { ...policy, maxBytes: REPOSITORY_MAX_BYTES }), url, privateHttp)
+    const manifests = parseRepository(
+      await fetchJson(url, { ...policy, maxBytes: REPOSITORY_MAX_BYTES }),
+      url,
+      privateHttp
+    )
     const installs = await Promise.all(
       manifests.map(async manifest => ({
         manifest,
-        code: await fetchText(manifest.codeUrl, { ...policy, maxBytes: EXTENSION_CODE_MAX_BYTES, accept: 'text/javascript, */*;q=0.5' })
+        code: await fetchText(manifest.codeUrl, {
+          ...policy,
+          maxBytes: EXTENSION_CODE_MAX_BYTES,
+          accept: 'text/javascript, */*;q=0.5'
+        })
       }))
     )
     return { url, installs }
   } catch (err) {
     if (err instanceof ExtensionError || err instanceof SettingsError) throw new SettingsError(err.message)
-    if (err instanceof FetchError) throw new SettingsError(`Couldn’t download the repository (${err.kind === 'status' ? `HTTP ${err.status}` : err.kind}).`)
+    if (err instanceof FetchError)
+      throw new SettingsError(
+        `Couldn’t download the repository (${err.kind === 'status' ? `HTTP ${err.status}` : err.kind}).`
+      )
     throw err
   }
 }
@@ -123,10 +150,13 @@ function createWindow(): BrowserWindow {
     backgroundColor: '#0d0a1a',
     title: 'Chomusuke',
     // .ico carries 16–256px sizes so the taskbar and title bar get a crisp icon on Windows.
-    icon: path.join(import.meta.dirname, process.platform === 'win32' ? '../../build/icon.ico' : '../../build/icon.png'),
+    icon: path.join(
+      import.meta.dirname,
+      process.platform === 'win32' ? '../../build/icon.ico' : '../../build/icon.png'
+    ),
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#0d0a1a', symbolColor: '#f7f2ff', height: 68 },
+    titleBarOverlay: { color: '#0d0a1a', symbolColor: '#f7f2ff', height: overlayHeight(1) },
     webPreferences: {
       preload: path.join(import.meta.dirname, '../preload/index.cjs'),
       sandbox: true,
@@ -202,7 +232,12 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
       if (source.kind === 'magnet') return torrents.load(source.uri, hints)
       // Internet Archive items carry real song titles and durations in their tags; fetch them in parallel.
       const annotations = annotationsForTorrentUrl(source.url, archiveJsonFetcher)
-      return playableToAlbum(torrents, { kind: 'torrent', torrent: await fetchTorrentFile(source.url), hints, annotations })
+      return playableToAlbum(torrents, {
+        kind: 'torrent',
+        torrent: await fetchTorrentFile(source.url),
+        hints,
+        annotations
+      })
     })
   })
 
@@ -319,9 +354,35 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
     }
   })
 
-  ipcMain.handle('source:open-file', async event => {
+  // Theme-driven window chrome: zoom (the "interface size" setting) and the title-bar overlay colours.
+  ipcMain.handle('ui:set-window-appearance', (event, raw: unknown) => {
     assertTrustedSender(event)
-    const picked = await dialog.showOpenDialog(mainWindow!, {
+    if (!raw || typeof raw !== 'object' || !mainWindow) return
+    const { zoom, titleBarColor, titleBarSymbolColor } = raw as Record<string, unknown>
+    const factor = typeof zoom === 'number' && Number.isFinite(zoom) ? Math.min(1.3, Math.max(0.8, zoom)) : 1
+    mainWindow.webContents.setZoomFactor(factor)
+    if (
+      typeof titleBarColor === 'string' &&
+      HEX_COLOR.test(titleBarColor) &&
+      typeof titleBarSymbolColor === 'string' &&
+      HEX_COLOR.test(titleBarSymbolColor)
+    ) {
+      mainWindow.setBackgroundColor(titleBarColor)
+      // Only Windows and Linux draw an overlay; macOS uses traffic lights.
+      if (process.platform !== 'darwin') {
+        mainWindow.setTitleBarOverlay({
+          color: titleBarColor,
+          symbolColor: titleBarSymbolColor,
+          height: overlayHeight(factor)
+        })
+      }
+    }
+  })
+
+  ipcMain.handle('source:open-file', async event => {
+    assertTrustedSender(event) // also guarantees mainWindow is set
+    if (!mainWindow) return null
+    const picked = await dialog.showOpenDialog(mainWindow, {
       title: 'Open a .torrent file',
       properties: ['openFile'],
       filters: [{ name: 'Torrent files', extensions: ['torrent'] }]
@@ -330,7 +391,8 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
     if (picked.canceled || !filePath) return null
     return toResult(async () => {
       const info = await stat(filePath)
-      if (!info.isFile() || info.size > MAX_TORRENT_FILE_BYTES) throw new SourceError('That file is not a usable .torrent file.')
+      if (!info.isFile() || info.size > MAX_TORRENT_FILE_BYTES)
+        throw new SourceError('That file is not a usable .torrent file.')
       return torrents.load(await readFile(filePath))
     })
   })

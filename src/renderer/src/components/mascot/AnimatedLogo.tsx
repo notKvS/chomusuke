@@ -18,7 +18,12 @@ export function AnimatedLogo({ playing, onHome }: { playing: boolean; onHome: ()
   }
 
   return (
-    <button type="button" className={`brand ${playing ? 'is-playing' : ''}`} onClick={click} aria-label="Chomusuke home">
+    <button
+      type="button"
+      className={`brand ${playing ? 'is-playing' : ''}`}
+      onClick={click}
+      aria-label="Chomusuke home"
+    >
       <span className="brand__mascot">
         <Chomu headOnly size={42} mood={playing ? 'listening' : 'idle'} dancing={playing} />
         {bubble && (

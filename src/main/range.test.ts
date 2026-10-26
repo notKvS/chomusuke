@@ -1,5 +1,5 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { parseRange } from './range.ts'
 
 test('no header means the whole file', () => {

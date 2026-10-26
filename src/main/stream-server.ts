@@ -1,7 +1,7 @@
-import http from 'node:http'
 import { randomBytes, timingSafeEqual } from 'node:crypto'
-import { Readable, pipeline } from 'node:stream'
+import http from 'node:http'
 import type { AddressInfo } from 'node:net'
+import { pipeline, Readable } from 'node:stream'
 import { parseRange } from './range.ts'
 
 export interface StreamableFile {

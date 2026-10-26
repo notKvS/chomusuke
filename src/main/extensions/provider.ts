@@ -2,7 +2,7 @@ import { FetchError, fetchBodyOrMagnet } from '../http.ts'
 import { sanitizeThirdPartyMagnet, stripPrivateEndpoints } from '../net.ts'
 import type { MusicProvider, Playable, ProviderResults } from '../providers/types.ts'
 import { parseSource, SourceError } from '../source.ts'
-import { ExtensionError, hostAllowed, sanitizeResults, type ExtensionManifest } from './manifest.ts'
+import { ExtensionError, type ExtensionManifest, hostAllowed, sanitizeResults } from './manifest.ts'
 
 export type ExtensionMethod = 'test' | 'search' | 'browse'
 
@@ -27,7 +27,11 @@ export function createExtensionProvider(
   runtime: ExtensionRuntime,
   options: Record<string, string | boolean>
 ): MusicProvider {
-  const results = async (method: ExtensionMethod, args: Record<string, unknown>, signal: AbortSignal): Promise<ProviderResults> => ({
+  const results = async (
+    method: ExtensionMethod,
+    args: Record<string, unknown>,
+    signal: AbortSignal
+  ): Promise<ProviderResults> => ({
     albums: sanitizeResults(await runtime.call(method, { ...args, options }, signal), manifest),
     songs: []
   })
@@ -48,7 +52,12 @@ export function createExtensionProvider(
       } catch {
         throw new SourceError('That result is no longer available.')
       }
-      if (ref.link?.startsWith('magnet:')) return { kind: 'torrent', torrent: magnetOrThrow(ref.link), hints: { title: album.title, artist: album.artist } }
+      if (ref.link?.startsWith('magnet:'))
+        return {
+          kind: 'torrent',
+          torrent: magnetOrThrow(ref.link),
+          hints: { title: album.title, artist: album.artist }
+        }
       if (ref.link) {
         try {
           // Only the hosts the extension declared, https only.
@@ -59,7 +68,8 @@ export function createExtensionProvider(
             allowHost: host => hostAllowed(host, manifest.hosts),
             signal
           })
-          const torrent = result.kind === 'magnet' ? magnetOrThrow(result.uri) : await stripPrivateEndpoints(result.body)
+          const torrent =
+            result.kind === 'magnet' ? magnetOrThrow(result.uri) : await stripPrivateEndpoints(result.body)
           return { kind: 'torrent', torrent, hints: { title: album.title, artist: album.artist } }
         } catch (err) {
           if (err instanceof SourceError) throw err
@@ -76,7 +86,11 @@ export function createExtensionProvider(
 }
 
 /** Runs the extension's own self-test; returns a user-facing message. */
-export async function testExtension(manifest: ExtensionManifest, runtime: ExtensionRuntime, options: Record<string, string | boolean>): Promise<string> {
+export async function testExtension(
+  manifest: ExtensionManifest,
+  runtime: ExtensionRuntime,
+  options: Record<string, string | boolean>
+): Promise<string> {
   const result = await runtime.call('test', { options })
   if (result !== true) throw new ExtensionError(`${manifest.name} reported a problem.`)
   return `${manifest.name} is working.`

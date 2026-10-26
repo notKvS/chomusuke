@@ -1,7 +1,7 @@
-import { BrowserWindow, ipcMain, session, type Session } from 'electron'
-import { pathToFileURL } from 'node:url'
 import path from 'node:path'
-import { ExtensionError, hostAllowed, type ExtensionManifest } from './manifest.ts'
+import { pathToFileURL } from 'node:url'
+import { BrowserWindow, ipcMain, type Session, session } from 'electron'
+import { ExtensionError, type ExtensionManifest, hostAllowed } from './manifest.ts'
 import type { ExtensionMethod, ExtensionRuntime } from './provider.ts'
 
 /**
@@ -72,7 +72,10 @@ function configureSession(ses: Session, hosts: string[], pageUrl: string): void 
     headers['Access-Control-Allow-Origin'] = ['*']
     headers['Access-Control-Allow-Headers'] = ['*']
     headers['Access-Control-Allow-Methods'] = ['GET, POST, OPTIONS']
-    callback({ responseHeaders: headers, ...(details.method === 'OPTIONS' && { statusLine: 'HTTP/1.1 204 No Content' }) })
+    callback({
+      responseHeaders: headers,
+      ...(details.method === 'OPTIONS' && { statusLine: 'HTTP/1.1 204 No Content' })
+    })
   })
 }
 
@@ -128,8 +131,14 @@ export class ExtensionHost implements ExtensionRuntime {
         this.dispose()
       }, CALL_TIMEOUT_MS)
       this.pending.set(id, {
-        resolve: value => (finish(), resolve(value)),
-        reject: error => (finish(), reject(error)),
+        resolve: value => {
+          finish()
+          resolve(value)
+        },
+        reject: error => {
+          finish()
+          reject(error)
+        },
         timer
       })
       signal?.addEventListener('abort', onAbort, { once: true })
@@ -166,7 +175,10 @@ export class ExtensionHost implements ExtensionRuntime {
     if (this.window && !this.window.isDestroyed()) {
       hostsByContents.delete(this.window.webContents.id)
       this.window.destroy()
-      void session.fromPartition(this.partition).clearStorageData().catch(() => {})
+      void session
+        .fromPartition(this.partition)
+        .clearStorageData()
+        .catch(() => {})
     }
     this.window = null
     this.started = null
@@ -206,8 +218,14 @@ export class ExtensionHost implements ExtensionRuntime {
       }, START_TIMEOUT_MS)
       this.startTimer = timer
       this.onLoaded = {
-        resolve: () => (clearTimeout(timer), resolve()),
-        reject: error => (clearTimeout(timer), reject(error))
+        resolve: () => {
+          clearTimeout(timer)
+          resolve()
+        },
+        reject: error => {
+          clearTimeout(timer)
+          reject(error)
+        }
       }
     })
     this.started.catch(() => {}) // surfaced to callers of call()

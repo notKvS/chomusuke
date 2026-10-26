@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
-import { SourceError } from '../source.ts'
 import type { ExploreSource, ProviderSection, SearchAlbum, SearchResults, SearchSong } from '../../shared/types.ts'
+import { SourceError } from '../source.ts'
 import { TorznabError } from './torznab.ts'
 import type { MusicProvider, Playable, ProviderAlbum } from './types.ts'
 
@@ -44,13 +44,23 @@ export class ProviderRegistry {
       sections.push(section)
       if (outcome.status === 'rejected') {
         section.error = userMessage(outcome.reason, provider.name)
-        console.error(`[search] ${provider.id} failed:`, outcome.reason instanceof Error ? outcome.reason.message : outcome.reason)
+        console.error(
+          `[search] ${provider.id} failed:`,
+          outcome.reason instanceof Error ? outcome.reason.message : outcome.reason
+        )
         return
       }
       section.albums = outcome.value.albums.map(album => this.remember(provider, album))
       for (const song of outcome.value.songs) {
         const album = this.remember(provider, song.album)
-        songs.push({ id: `${album.id}/${song.key}`, key: song.key, title: song.title, artist: song.artist, duration: song.duration, album })
+        songs.push({
+          id: `${album.id}/${song.key}`,
+          key: song.key,
+          title: song.title,
+          artist: song.artist,
+          duration: song.duration,
+          album
+        })
       }
     })
     return { query, songs, sections }
@@ -70,7 +80,10 @@ export class ProviderRegistry {
     }
     const section: ProviderSection = { id: provider.id, name: provider.name, layout: provider.layout, albums: [] }
     try {
-      const results = await provider.browse(categoryId as string, AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)]))
+      const results = await provider.browse(
+        categoryId as string,
+        AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)])
+      )
       section.albums = results.albums.map(album => this.remember(provider, album))
     } catch (err) {
       console.error(`[explore] ${provider.id} failed:`, err instanceof Error ? err.message : err)

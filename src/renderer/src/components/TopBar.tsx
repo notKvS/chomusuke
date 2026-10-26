@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { type FormEvent, useState } from 'react'
 import { looksLikeSource } from '../source'
 import { Icon } from './Icon'
 import { AnimatedLogo } from './mascot/AnimatedLogo'
@@ -7,9 +7,13 @@ interface Props {
   onSubmit: (input: string) => void
   onHome: () => void
   playing: boolean
+  canGoBack: boolean
+  canGoForward: boolean
+  onBack: () => void
+  onForward: () => void
 }
 
-export function TopBar({ onSubmit, onHome, playing }: Props) {
+export function TopBar({ onSubmit, onHome, playing, canGoBack, canGoForward, onBack, onForward }: Props) {
   const [value, setValue] = useState('')
 
   const submit = (event: FormEvent) => {
@@ -24,6 +28,28 @@ export function TopBar({ onSubmit, onHome, playing }: Props) {
   return (
     <header className="topbar">
       <AnimatedLogo playing={playing} onHome={onHome} />
+      <div className="history-nav">
+        <button
+          type="button"
+          className="icon-button"
+          onClick={onBack}
+          disabled={!canGoBack}
+          aria-label="Back"
+          title="Back (Alt+←)"
+        >
+          <Icon name="back" size={20} />
+        </button>
+        <button
+          type="button"
+          className="icon-button"
+          onClick={onForward}
+          disabled={!canGoForward}
+          aria-label="Forward"
+          title="Forward (Alt+→)"
+        >
+          <Icon name="forward" size={20} />
+        </button>
+      </div>
       <form className="source-form" onSubmit={submit}>
         <Icon name="search" className="source-form__icon" />
         <input

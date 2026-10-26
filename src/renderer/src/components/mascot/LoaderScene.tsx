@@ -15,6 +15,7 @@ const QUIPS = [
 ]
 
 const EMBERS = Array.from({ length: 18 }, (_, i) => ({
+  id: i,
   left: 30 + ((i * 23) % 40),
   delay: (i * 0.45) % 6,
   duration: 4 + ((i * 7) % 5),
@@ -42,9 +43,9 @@ export function LoaderScene({ title = 'Loading', subtitle, compact = false }: Pr
       <img className="loader-scene__art" src={scene} alt="" draggable={false} />
       <div className="loader-scene__glow" aria-hidden="true" />
       <div className="loader-scene__embers" aria-hidden="true">
-        {EMBERS.map((ember, i) => (
+        {EMBERS.map(ember => (
           <span
-            key={i}
+            key={ember.id}
             style={{
               left: `${ember.left}%`,
               width: ember.size,

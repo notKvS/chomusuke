@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties } from 'react'
+import { type CSSProperties, useEffect, useRef } from 'react'
 import type { TorrentStats } from '../../../shared/types'
 import { formatSpeed, formatTime, plural } from '../format'
 import type { Player } from '../usePlayer'
@@ -17,6 +17,7 @@ export function PlayerBar({ player, stats, onOpenAlbum }: Props) {
 
   // `timeupdate` only fires ~4×/s, which makes the bar step. While playing, follow the audio clock every
   // frame and write the position straight to a CSS variable (no React re-render per frame).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: play/pause, seeks and track changes restart the loop
   useEffect(() => {
     const element = progressRef.current
     if (!element) return
@@ -84,9 +85,7 @@ export function PlayerBar({ player, stats, onOpenAlbum }: Props) {
         <Cover src={state.album.coverUrl} size={40} />
         <span className="player__text">
           <span className="player__title">{track.title}</span>
-          <span className="player__subtitle">
-            {[track.artist, state.album.title].filter(Boolean).join(' • ')}
-          </span>
+          <span className="player__subtitle">{[track.artist, state.album.title].filter(Boolean).join(' • ')}</span>
         </span>
       </button>
 
@@ -99,7 +98,12 @@ export function PlayerBar({ player, stats, onOpenAlbum }: Props) {
           </span>
         )}
         <div className="volume">
-          <button type="button" className="icon-button" onClick={player.toggleMute} aria-label={state.muted ? 'Unmute' : 'Mute'}>
+          <button
+            type="button"
+            className="icon-button"
+            onClick={player.toggleMute}
+            aria-label={state.muted ? 'Unmute' : 'Mute'}
+          >
             <Icon name={volumeIcon} />
           </button>
           <input

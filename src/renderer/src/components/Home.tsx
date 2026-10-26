@@ -84,8 +84,8 @@ export function Home({ albums, onOpenFeatured, onOpenAlbum }: Props) {
         <Icon name="link" />
         <p>
           Search the Internet Archive's free music from the bar above, or paste any magnet link, info hash or https{' '}
-          <code>.torrent</code> URL there. You can also open a <code>.torrent</code> file from the sidebar. Only the songs you
-          play get downloaded.
+          <code>.torrent</code> URL there. You can also open a <code>.torrent</code> file from the sidebar. Only the
+          songs you play get downloaded.
         </p>
       </section>
     </div>

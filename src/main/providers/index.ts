@@ -1,6 +1,6 @@
-import { fetchJson } from '../http.ts'
 import type { ExtensionManifest } from '../extensions/manifest.ts'
 import { createExtensionProvider, type ExtensionRuntime } from '../extensions/provider.ts'
+import { fetchJson } from '../http.ts'
 import { fetchTorrentFile } from '../torrent-fetch.ts'
 import { createArchiveProvider, isArchiveHost, type JsonFetcher } from './archive.ts'
 import type { EnabledProvider } from './settings.ts'
@@ -31,7 +31,13 @@ export function buildProviders(configs: EnabledProvider[], deps: ProviderDeps): 
       case 'torznab':
         return createTorznabProvider(config)
       case 'extension':
-        return createExtensionProvider(config.manifest, deps.extensionRuntime(config.manifest, config.code, config.codeSha256), config.options)
+        return createExtensionProvider(
+          config.manifest,
+          deps.extensionRuntime(config.manifest, config.code, config.codeSha256),
+          config.options
+        )
+      default:
+        throw new Error(`Unknown provider type: ${(config as { type: string }).type}`)
     }
   })
 }

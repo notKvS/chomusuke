@@ -138,14 +138,16 @@ export function buildLibrary(torrentName: string, files: TorrentFileInfo[]): Lib
         (a.trackNo ?? Infinity) - (b.trackNo ?? Infinity) ||
         naturalCompare(a.title, b.title)
     )
-    .map(({ file, title, trackNo }): LibraryTrack => ({
-      fileIndex: file.index,
-      key: file.key,
-      title,
-      trackNo,
-      format: file.ext.toUpperCase(),
-      size: file.length
-    }))
+    .map(
+      ({ file, title, trackNo }): LibraryTrack => ({
+        fileIndex: file.index,
+        key: file.key,
+        title,
+        trackNo,
+        format: file.ext.toUpperCase(),
+        size: file.length
+      })
+    )
 
   let artist: string | undefined
   const prefixes = new Set(tracks.map(t => (t.title.includes(' - ') ? t.title.split(' - ')[0].toLowerCase() : '')))

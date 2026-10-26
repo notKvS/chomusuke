@@ -1,11 +1,28 @@
 // LimeTorrents: HTML scraping of the Music category. Result rows usually carry the info hash (in their
 // itorrents .torrent link); rows without one fall back to the detail page's magnet link.
 // Template: off by default and not tested against the live site.
+
+import {
+  cleanQuery,
+  elements,
+  getText,
+  magnet,
+  mapLimit,
+  parseCount,
+  parseRelease,
+  parseSize,
+  siteOrigin,
+  stripTags
+} from './lib/torrent-kit.ts'
 import type { Extension, TorrentResult } from './sdk.ts'
-import { cleanQuery, elements, getText, magnet, mapLimit, parseCount, parseRelease, parseSize, siteOrigin, stripTags } from './lib/torrent-kit.ts'
 
 /** Must match "hosts" in index.json. LimeTorrents changes domain often; add the new one in both places. */
-export const MIRRORS = ['www.limetorrents.fun', 'www.limetorrents.lol', 'limetorrents.torrentbay.st', 'limetorrents.torrentsbay.org']
+export const MIRRORS = [
+  'www.limetorrents.fun',
+  'www.limetorrents.lol',
+  'limetorrents.torrentbay.st',
+  'limetorrents.torrentsbay.org'
+]
 const SITE = 'LimeTorrents'
 const RESOLVE = 10
 

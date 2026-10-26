@@ -12,7 +12,10 @@
     "start": "npm run build:extensions && electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.extensions.json",
     "test": "node --disable-warning=ExperimentalWarning --test \"src/**/*.test.ts\" \"extensions/test/*.test.ts\"",
-    "build:extensions": "node --disable-warning=ExperimentalWarning extensions/build.ts"
+    "build:extensions": "node --disable-warning=ExperimentalWarning extensions/build.ts",
+    "lint": "biome check .",
+    "fix": "biome check --write .",
+    "format": "biome format --write ."
   },
   "dependencies": {
     "@fontsource/m-plus-rounded-1c": "5.3.0",
@@ -22,6 +25,7 @@
     "webtorrent": "3.0.21"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.15",
     "@types/node": "24.19.1",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",

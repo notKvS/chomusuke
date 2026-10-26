@@ -1,31 +1,51 @@
 :root {
+  /* Theme tokens. These are the defaults ("Night Violet"); the Appearance page overrides them at run time
+     (src/renderer/src/theme/appearance.ts). Colours used with transparency come as "r g b" channel lists. */
+  --bg-rgb: 13 10 26;
+  --surface-rgb: 28 21 51;
+  --surface-raised-rgb: 39 29 71;
+  --accent-rgb: 255 92 138;
+  --accent-2-rgb: 138 107 255;
+  --accent-soft-rgb: 255 143 177;
+  --tint-rgb: 201 184 255;
+  --text-rgb: 236 228 255;
+  /* Overlays (hover fills, hairlines): white on dark themes, ink on light ones. */
+  --ink-rgb: 255 255 255;
   --bg: #0d0a1a;
   --bg-2: #120d24;
   --surface: #1c1533;
   --surface-raised: #271d47;
-  --hover: rgba(255, 143, 177, 0.1);
-  --pressed: rgba(255, 143, 177, 0.18);
-  --border: rgba(201, 184, 255, 0.12);
+  --hover: rgb(var(--accent-soft-rgb) / 0.1);
+  --pressed: rgb(var(--accent-soft-rgb) / 0.18);
+  --border: rgb(var(--tint-rgb) / 0.12);
   --text: #f7f2ff;
-  --text-2: rgba(236, 228, 255, 0.72);
-  --text-3: rgba(236, 228, 255, 0.48);
+  --text-2: rgb(var(--text-rgb) / 0.72);
+  --text-3: rgb(var(--text-rgb) / 0.48);
   --accent: #ff5c8a;
   --accent-2: #8a6bff;
   --accent-3: #5ce1e6;
+  --accent-light: #ffb3cc;
+  --on-accent: #fff;
+  --petal-light: #ffe3ee;
+  --hero-a: #1c1238;
+  --hero-b: #2a1650;
+  --hero-c: #3a1846;
   --gold: #ffd25c;
   --ok: #6ee7b7;
   --gradient: linear-gradient(120deg, #ff5c8a 0%, #c86bff 55%, #6b8cff 100%);
-  --glow: 0 0 24px rgba(255, 92, 138, 0.35);
+  --glow: 0 0 24px rgb(var(--accent-rgb) / 0.35);
   --radius: 16px;
+  --btn-radius: 999px;
   --sidebar-width: 248px;
   --topbar-height: 68px;
   --player-height: 80px;
   /* Room for the native window controls drawn by titleBarOverlay. */
   --window-controls: 150px;
+  --font-body: 'Nunito', 'M PLUS Rounded 1c', 'Segoe UI', system-ui, sans-serif;
   --font-display: 'M PLUS Rounded 1c', 'Nunito', system-ui, sans-serif;
 
   color-scheme: dark;
-  font-family: 'Nunito', 'M PLUS Rounded 1c', 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 14px;
   color: var(--text);
   background: var(--bg);
@@ -88,7 +108,7 @@ code {
   grid-column: 2;
   grid-row: 2;
   overflow-y: auto;
-  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  scrollbar-color: rgb(var(--ink-rgb) / 0.25) transparent;
 }
 
 .page {
@@ -132,15 +152,17 @@ code {
   flex: 0 1 560px;
   height: 40px;
   padding: 0 4px 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgb(var(--ink-rgb) / 0.15);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  transition: background 0.15s, border-color 0.15s;
+  background: rgb(var(--ink-rgb) / 0.1);
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 }
 
 .source-form:focus-within {
   background: var(--surface);
-  border-color: rgba(255, 255, 255, 0.35);
+  border-color: rgb(var(--ink-rgb) / 0.35);
 }
 
 .source-form__icon {
@@ -321,11 +343,11 @@ code {
 }
 
 .solid-button:hover {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgb(var(--ink-rgb) / 0.85);
 }
 
 .ghost-button {
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgb(var(--ink-rgb) / 0.25);
 }
 
 .ghost-button:hover {
@@ -336,7 +358,7 @@ code {
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.25);
+  border: 2px solid rgb(var(--ink-rgb) / 0.25);
   border-top-color: var(--text);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -486,7 +508,7 @@ code {
   padding: 20px 24px;
   border-radius: 12px;
   color: var(--text-2);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgb(var(--ink-rgb) / 0.05);
   line-height: 1.6;
 }
 
@@ -605,7 +627,7 @@ code {
 }
 
 .track.is-current {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgb(var(--ink-rgb) / 0.07);
 }
 
 .track__index {
@@ -793,7 +815,7 @@ code {
 }
 
 .song-row.is-current {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgb(var(--ink-rgb) / 0.07);
 }
 
 .song-row__art {
@@ -898,7 +920,7 @@ code {
 .chip {
   height: 32px;
   padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgb(var(--ink-rgb) / 0.1);
   border-radius: 8px;
   background: var(--hover);
   font-weight: 500;
@@ -926,7 +948,7 @@ code {
   flex: 1;
   height: 36px;
   padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgb(var(--ink-rgb) / 0.15);
   border-radius: 8px;
   outline: none;
   font: inherit;
@@ -1026,7 +1048,7 @@ code {
   width: 40px;
   height: 22px;
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgb(var(--ink-rgb) / 0.25);
   transition: background 0.15s;
 }
 
@@ -1056,7 +1078,7 @@ code {
   margin-top: 20px;
   padding: 20px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgb(var(--ink-rgb) / 0.05);
 }
 
 .torznab-form label {
@@ -1068,7 +1090,7 @@ code {
 .torznab-form input {
   height: 40px;
   padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgb(var(--ink-rgb) / 0.15);
   border-radius: 8px;
   outline: none;
   font: inherit;
@@ -1078,7 +1100,7 @@ code {
 }
 
 .torznab-form input:focus {
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: rgb(var(--ink-rgb) / 0.4);
 }
 
 .torznab-form__note {
@@ -1139,7 +1161,7 @@ code {
   position: relative;
   width: 100%;
   height: 2px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(var(--ink-rgb) / 0.1);
   transition: height 0.1s;
 }
 
@@ -1155,7 +1177,7 @@ code {
 
 .progress__buffered {
   width: var(--buffered);
-  background: rgba(255, 255, 255, 0.3);
+  background: rgb(var(--ink-rgb) / 0.3);
 }
 
 .progress__played {
@@ -1224,7 +1246,7 @@ code {
 }
 
 .player__now:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgb(var(--ink-rgb) / 0.05);
 }
 
 .player__now .cover {
@@ -1282,7 +1304,7 @@ code {
   margin: 0;
   border-radius: 2px;
   appearance: none;
-  background: linear-gradient(to right, var(--text) var(--level), rgba(255, 255, 255, 0.25) var(--level));
+  background: linear-gradient(to right, var(--text) var(--level), rgb(var(--ink-rgb) / 0.25) var(--level));
   cursor: pointer;
 }
 

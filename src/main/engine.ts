@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import WebTorrent, { type Torrent } from 'webtorrent'
+import type { Album, SourceHints, TorrentStats, Track } from '../shared/types.ts'
 import { buildLibrary } from './library.ts'
 import { SourceError } from './source.ts'
 import type { StreamableFile } from './stream-server.ts'
-import type { Album, SourceHints, TorrentStats, Track } from '../shared/types.ts'
 
 const MIME_TYPES: Record<string, string> = {
   mp3: 'audio/mpeg',

@@ -49,12 +49,30 @@ const SONG_LOOKUP_BUDGET_MS = 4000
 const MAX_TEXT = 200
 const LOW_BITRATE = /_(?:32|48|64|96)kbp?s?\.[a-z0-9]+$/i
 /** Too common to say anything about which song was meant; still required to match, just not scored. */
-const STOPWORDS = new Set(['a', 'an', 'and', 'by', 'de', 'el', 'feat', 'for', 'in', 'la', 'le', 'live', 'of', 'on', 'the', 'to'])
+const STOPWORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'by',
+  'de',
+  'el',
+  'feat',
+  'for',
+  'in',
+  'la',
+  'le',
+  'live',
+  'of',
+  'on',
+  'the',
+  'to'
+])
 
 const naturalCompare = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null
 
-export const isArchiveHost = (hostname: string): boolean => hostname === 'archive.org' || hostname.endsWith('.archive.org')
+export const isArchiveHost = (hostname: string): boolean =>
+  hostname === 'archive.org' || hostname.endsWith('.archive.org')
 
 /** Lower-case, accent-free, punctuation-free text for matching. */
 export function normalizeText(value: string): string {
@@ -71,8 +89,7 @@ export function tokenize(query: string): string[] {
   return [...new Set(normalizeText(query).split(' ').filter(Boolean))].slice(0, MAX_TOKENS)
 }
 
-const inTitleOrCreator = (tokens: string[]): string =>
-  tokens.map(t => `(title:(${t}) OR creator:(${t}))`).join(' AND ')
+const inTitleOrCreator = (tokens: string[]): string => tokens.map(t => `(title:(${t}) OR creator:(${t}))`).join(' AND ')
 
 /**
  * strict: every word in an item's title or creator (album/artist queries).
@@ -111,7 +128,10 @@ export function archiveIdFromTorrentUrl(url: string): string | undefined {
 
 function text(value: unknown, join = false): string | undefined {
   const raw = Array.isArray(value)
-    ? value.filter(v => typeof v === 'string').slice(0, join ? 3 : 1).join(', ')
+    ? value
+        .filter(v => typeof v === 'string')
+        .slice(0, join ? 3 : 1)
+        .join(', ')
     : value
   if (typeof raw !== 'string' && typeof raw !== 'number') return undefined
   const clean = String(raw).replace(/\s+/g, ' ').trim()
@@ -252,9 +272,13 @@ export async function searchArchive(query: string, fetchJson: JsonFetcher): Prom
   // Look inside the most relevant items for matching songs; lower tier = stronger match.
   const sources = uniqueById(
     [
-      ...value(strict).slice(0, 4).map(album => ({ album, tier: 0 })),
+      ...value(strict)
+        .slice(0, 4)
+        .map(album => ({ album, tier: 0 })),
       ...partials.flatMap(value).map(album => ({ album, tier: 1 })),
-      ...value(broad).slice(0, 3).map(album => ({ album, tier: 2 }))
+      ...value(broad)
+        .slice(0, 3)
+        .map(album => ({ album, tier: 2 }))
     ],
     s => s.album.ref
   ).slice(0, SONG_SOURCE_ITEMS)
@@ -289,12 +313,18 @@ export async function searchArchive(query: string, fetchJson: JsonFetcher): Prom
   }
 
   // Partial matches only earn an album slot when they actually contain a matching song.
-  const albums = uniqueById([...value(strict), ...songs.map(s => s.album), ...value(broad)], a => a.ref).slice(0, ALBUM_ROWS)
+  const albums = uniqueById([...value(strict), ...songs.map(s => s.album), ...value(broad)], a => a.ref).slice(
+    0,
+    ALBUM_ROWS
+  )
   return { songs, albums }
 }
 
 /** Tag-derived titles, artists and durations for an item's tracks, keyed by trackKey(). */
-export async function fetchArchiveTrackInfo(id: string, fetchJson: JsonFetcher): Promise<Map<string, ArchiveTrackInfo>> {
+export async function fetchArchiveTrackInfo(
+  id: string,
+  fetchJson: JsonFetcher
+): Promise<Map<string, ArchiveTrackInfo>> {
   const files = parseArchiveFiles(await fetchJson(filesUrl(id), FILES_MAX_BYTES))
   return new Map(files.map(info => [info.key, info]))
 }
@@ -317,7 +347,10 @@ export async function browseArchive(categoryId: string, fetchJson: JsonFetcher):
 }
 
 /** Tag-derived track details for an archive.org item torrent URL, or null when it isn't one / the lookup fails. */
-export async function annotationsForTorrentUrl(url: string, fetchJson: JsonFetcher): Promise<Map<string, TrackAnnotation> | null> {
+export async function annotationsForTorrentUrl(
+  url: string,
+  fetchJson: JsonFetcher
+): Promise<Map<string, TrackAnnotation> | null> {
   const id = archiveIdFromTorrentUrl(url)
   if (!id) return null
   return fetchArchiveTrackInfo(id, fetchJson).catch(() => null)
@@ -347,4 +380,3 @@ export function createArchiveProvider(deps: {
     }
   }
 }
-

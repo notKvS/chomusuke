@@ -55,7 +55,9 @@ export async function getText(url: string | URL, site: string, init?: RequestIni
   const res = await request(url, site, init)
   const body = await res.text()
   if (challenged(res, body)) {
-    throw new Error(`${site} is showing a bot check (Cloudflare). Try another mirror, or reach it through a Torznab indexer that can pass the check.`)
+    throw new Error(
+      `${site} is showing a bot check (Cloudflare). Try another mirror, or reach it through a Torznab indexer that can pass the check.`
+    )
   }
   if (!res.ok) throw new Error(`${site} answered ${res.status}`)
   return body
@@ -71,7 +73,11 @@ export async function getJson<T>(url: string | URL, site: string, init?: Request
 }
 
 /** Runs `task` over `items` with at most `limit` in flight; failed items are dropped. */
-export async function mapLimit<T, R>(items: readonly T[], limit: number, task: (item: T) => Promise<R | undefined>): Promise<R[]> {
+export async function mapLimit<T, R>(
+  items: readonly T[],
+  limit: number,
+  task: (item: T) => Promise<R | undefined>
+): Promise<R[]> {
   const results: Array<R | undefined> = new Array(items.length)
   let next = 0
   const worker = async () => {
@@ -93,7 +99,8 @@ const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"'
 export function decodeEntities(text: string): string {
   return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+\d*);/gi, (match, entity: string) => {
     if (entity[0] === '#') {
-      const code = entity[1] === 'x' || entity[1] === 'X' ? Number.parseInt(entity.slice(2), 16) : Number(entity.slice(1))
+      const code =
+        entity[1] === 'x' || entity[1] === 'X' ? Number.parseInt(entity.slice(2), 16) : Number(entity.slice(1))
       return Number.isFinite(code) && code > 0 && code < 0x110000 ? String.fromCodePoint(code) : match
     }
     return ENTITIES[entity.toLowerCase()] ?? match
@@ -102,7 +109,9 @@ export function decodeEntities(text: string): string {
 
 /** Visible text of an HTML fragment. */
 export function stripTags(html: string): string {
-  return decodeEntities(html.replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim()
+  return decodeEntities(html.replace(/<[^>]*>/g, ' '))
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 /** Contents of each `<tag …>…</tag>` (non-nested), e.g. table rows or cells. */
@@ -171,7 +180,9 @@ export function parseRelease(name: string): Pick<TorrentResult, 'title' | 'artis
   }
   if (!core) core = text
   const dash = /\s[-–—]\s/.exec(core)
-  const [artist, title] = dash ? [core.slice(0, dash.index).trim(), core.slice(dash.index + dash[0].length).trim()] : [undefined, core]
+  const [artist, title] = dash
+    ? [core.slice(0, dash.index).trim(), core.slice(dash.index + dash[0].length).trim()]
+    : [undefined, core]
   return { title: title || core, artist: artist || undefined, year: year?.[1], tags }
 }
 

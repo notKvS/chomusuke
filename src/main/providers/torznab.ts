@@ -50,7 +50,8 @@ const SEARCH_MAX_BYTES = 5 * 1024 * 1024
 const TORRENT_MAX_BYTES = 10 * 1024 * 1024
 const TIMEOUT_MS = 20_000
 const INFO_HASH = /^[a-f0-9]{40}$/i
-const TAG_PATTERN = /\b(FLAC|ALAC|MP3|AAC|OGG|OPUS|WAV|DSD|320|V0|V2|24[- ]?bit|16[- ]?bit|Lossless|Hi-?Res|WEB|CD|Vinyl)\b/gi
+const TAG_PATTERN =
+  /\b(FLAC|ALAC|MP3|AAC|OGG|OPUS|WAV|DSD|320|V0|V2|24[- ]?bit|16[- ]?bit|Lossless|Hi-?Res|WEB|CD|Vinyl)\b/gi
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null
 
@@ -99,7 +100,9 @@ export function parseTorznab(xml: string): TorznabItem[] {
   }
   if (!isRecord(doc)) throw new TorznabError("The indexer's response couldn't be read.")
   if (isRecord(doc.error)) {
-    throw new TorznabError(`The indexer said: ${text(doc.error.description, 160) ?? `error ${text(doc.error.code, 10)}`}`)
+    throw new TorznabError(
+      `The indexer said: ${text(doc.error.description, 160) ?? `error ${text(doc.error.code, 10)}`}`
+    )
   }
   const channel = isRecord(doc.rss) ? doc.rss.channel : undefined
   if (channel === '') return [] // <channel></channel>: no results
@@ -113,7 +116,8 @@ export function parseTorznab(xml: string): TorznabItem[] {
     if (!title) continue
     const attrs = new Map<string, string>()
     for (const attr of Array.isArray(item.attr) ? item.attr : []) {
-      if (isRecord(attr) && typeof attr.name === 'string' && typeof attr.value === 'string') attrs.set(attr.name.toLowerCase(), attr.value)
+      if (isRecord(attr) && typeof attr.name === 'string' && typeof attr.value === 'string')
+        attrs.set(attr.name.toLowerCase(), attr.value)
     }
     const magnet = attrs.get('magneturl')
     const infoHash = attrs.get('infohash')
@@ -166,7 +170,8 @@ function describeFetchError(err: unknown, name: string): Error {
   if (err instanceof FetchError) {
     if (err.status === 401 || err.status === 403) return new TorznabError(`${name} rejected the API key.`)
     if (err.kind === 'status') return new TorznabError(`${name} answered with HTTP ${err.status}.`)
-    if (err.kind === 'insecure-redirect') return new TorznabError(`${name} must use https unless it runs on your own network.`)
+    if (err.kind === 'insecure-redirect')
+      return new TorznabError(`${name} must use https unless it runs on your own network.`)
   }
   return new TorznabError(`Couldn't reach ${name}.`)
 }
@@ -178,7 +183,12 @@ export function createTorznabProvider(config: TorznabConfig): MusicProvider {
 
   const request = async (params: Record<string, string>, signal?: AbortSignal) => {
     try {
-      return await fetchText(searchUrl(config, params), { maxBytes: SEARCH_MAX_BYTES, timeoutMs: TIMEOUT_MS, allowHttp, signal })
+      return await fetchText(searchUrl(config, params), {
+        maxBytes: SEARCH_MAX_BYTES,
+        timeoutMs: TIMEOUT_MS,
+        allowHttp,
+        signal
+      })
     } catch (err) {
       throw describeFetchError(err, config.name)
     }
@@ -200,9 +210,15 @@ export function createTorznabProvider(config: TorznabConfig): MusicProvider {
     layout: 'list',
 
     async search(query, signal): Promise<ProviderResults> {
-      const q = query.replace(/[\p{Cc}]/gu, ' ').trim().slice(0, MAX_QUERY_LENGTH)
+      const q = query
+        .replace(/[\p{Cc}]/gu, ' ')
+        .trim()
+        .slice(0, MAX_QUERY_LENGTH)
       if (!q) return { albums: [], songs: [] }
-      return releases({ t: 'search', q, cat: String(AUDIO_CATEGORY), limit: String(MAX_RESULTS), extended: '1' }, signal)
+      return releases(
+        { t: 'search', q, cat: String(AUDIO_CATEGORY), limit: String(MAX_RESULTS), extended: '1' },
+        signal
+      )
     },
 
     categories: TORZNAB_CATEGORIES.map(({ id, name }) => ({ id, name })),
@@ -263,7 +279,8 @@ export async function testTorznab(config: TorznabConfig, signal?: AbortSignal): 
     })
     if (/<!DOCTYPE|<!ENTITY/i.test(xml)) throw new TorznabError('The indexer sent an unsupported response.')
     const doc: unknown = parser.parse(xml)
-    if (isRecord(doc) && isRecord(doc.error)) throw new TorznabError(`The indexer said: ${text(doc.error.description, 160) ?? 'error'}`)
+    if (isRecord(doc) && isRecord(doc.error))
+      throw new TorznabError(`The indexer said: ${text(doc.error.description, 160) ?? 'error'}`)
     if (!isRecord(doc) || !('caps' in doc)) throw new TorznabError("That doesn't look like a Torznab endpoint.")
   } catch (err) {
     throw describeFetchError(err, provider.name)

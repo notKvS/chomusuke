@@ -11,24 +11,33 @@ interface Props {
   onSearch: () => void
   onSources: () => void
   onExplore: () => void
+  onAppearance: () => void
   onOpenAlbum: (infoHash: string) => void
   onOpenFile: () => void
 }
 
-export function Sidebar({ active, albums, playingAlbum, hasSearch, onHome, onSearch, onSources, onExplore, onOpenAlbum, onOpenFile }: Props) {
+export function Sidebar({
+  active,
+  albums,
+  playingAlbum,
+  hasSearch,
+  onHome,
+  onSearch,
+  onSources,
+  onExplore,
+  onAppearance,
+  onOpenAlbum,
+  onOpenFile
+}: Props) {
   return (
     <nav className="sidebar">
       <button type="button" className={`nav-item ${active === 'home' ? 'is-active' : ''}`} onClick={onHome}>
         <Icon name="home" />
-        <span className="nav-item__label">
-          Home
-        </span>
+        <span className="nav-item__label">Home</span>
       </button>
       <button type="button" className={`nav-item ${active === 'explore' ? 'is-active' : ''}`} onClick={onExplore}>
         <Icon name="explore" />
-        <span className="nav-item__label">
-          Explore
-        </span>
+        <span className="nav-item__label">Explore</span>
       </button>
       <button
         type="button"
@@ -38,9 +47,7 @@ export function Sidebar({ active, albums, playingAlbum, hasSearch, onHome, onSea
         title={hasSearch ? 'Back to your last search' : 'Search from the bar above'}
       >
         <Icon name="search" />
-        <span className="nav-item__label">
-          Search
-        </span>
+        <span className="nav-item__label">Search</span>
       </button>
       <button
         type="button"
@@ -49,15 +56,15 @@ export function Sidebar({ active, albums, playingAlbum, hasSearch, onHome, onSea
         disabled={!playingAlbum}
       >
         <Icon name="nowPlaying" />
-        <span className="nav-item__label">
-          Now playing
-        </span>
+        <span className="nav-item__label">Now playing</span>
       </button>
       <button type="button" className={`nav-item ${active === 'sources' ? 'is-active' : ''}`} onClick={onSources}>
         <Icon name="tune" />
-        <span className="nav-item__label">
-          Sources
-        </span>
+        <span className="nav-item__label">Sources</span>
+      </button>
+      <button type="button" className={`nav-item ${active === 'appearance' ? 'is-active' : ''}`} onClick={onAppearance}>
+        <Icon name="palette" />
+        <span className="nav-item__label">Appearance</span>
       </button>
 
       <hr className="sidebar__divider" />
@@ -81,7 +88,9 @@ export function Sidebar({ active, albums, playingAlbum, hasSearch, onHome, onSea
                 <span className="sidebar-album__text">
                   <span className="sidebar-album__title">{album.title}</span>
                   <span className="sidebar-album__sub">
-                    {playingAlbum === album.infoHash && <Icon name="volume" size={12} className="sidebar-album__playing" />}
+                    {playingAlbum === album.infoHash && (
+                      <Icon name="volume" size={12} className="sidebar-album__playing" />
+                    )}
                     {album.artist ?? 'Torrent'}
                   </span>
                 </span>

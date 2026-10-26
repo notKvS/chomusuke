@@ -7,10 +7,7 @@
     "version": "1.0.0",
     "type": "torrent",
     "code": "live-music-archive.js",
-    "hosts": [
-      "archive.org",
-      "*.archive.org"
-    ],
+    "hosts": ["archive.org", "*.archive.org"],
     "layout": "cards",
     "categories": [
       {
@@ -43,10 +40,7 @@
     "version": "1.0.0",
     "type": "torrent",
     "code": "jamendo.js",
-    "hosts": [
-      "archive.org",
-      "*.archive.org"
-    ],
+    "hosts": ["archive.org", "*.archive.org"],
     "layout": "cards",
     "categories": [
       {
@@ -79,10 +73,7 @@
     "version": "1.0.0",
     "type": "torrent",
     "code": "free-music-archive.js",
-    "hosts": [
-      "archive.org",
-      "*.archive.org"
-    ],
+    "hosts": ["archive.org", "*.archive.org"],
     "layout": "cards",
     "categories": [
       {
@@ -107,10 +98,7 @@
     "version": "1.0.0",
     "type": "torrent",
     "code": "netlabels.js",
-    "hosts": [
-      "archive.org",
-      "*.archive.org"
-    ],
+    "hosts": ["archive.org", "*.archive.org"],
     "layout": "cards",
     "categories": [
       {
@@ -143,10 +131,7 @@
     "version": "1.0.0",
     "type": "torrent",
     "code": "great-78.js",
-    "hosts": [
-      "archive.org",
-      "*.archive.org"
-    ],
+    "hosts": ["archive.org", "*.archive.org"],
     "layout": "cards",
     "categories": [
       {
@@ -179,10 +164,7 @@
     "version": "1.0.0",
     "type": "torrent",
     "code": "public-domain-classical.js",
-    "hosts": [
-      "archive.org",
-      "*.archive.org"
-    ],
+    "hosts": ["archive.org", "*.archive.org"],
     "layout": "cards",
     "categories": [
       {
@@ -212,9 +194,7 @@
     "type": "torrent",
     "code": "the-pirate-bay.js",
     "enabledByDefault": false,
-    "hosts": [
-      "apibay.org"
-    ],
+    "hosts": ["apibay.org"],
     "layout": "list",
     "categories": [
       {
@@ -257,13 +237,7 @@
     "type": "torrent",
     "code": "1337x.js",
     "enabledByDefault": false,
-    "hosts": [
-      "1337x.to",
-      "1337x.st",
-      "x1337x.ws",
-      "x1337x.eu",
-      "x1337x.cc"
-    ],
+    "hosts": ["1337x.to", "1337x.st", "x1337x.ws", "x1337x.eu", "x1337x.cc"],
     "layout": "list",
     "categories": [
       {
@@ -301,9 +275,7 @@
     "type": "torrent",
     "code": "nyaa.js",
     "enabledByDefault": false,
-    "hosts": [
-      "nyaa.si"
-    ],
+    "hosts": ["nyaa.si"],
     "layout": "list",
     "categories": [
       {
@@ -342,9 +314,7 @@
     "type": "torrent",
     "code": "knaben.js",
     "enabledByDefault": false,
-    "hosts": [
-      "api.knaben.org"
-    ],
+    "hosts": ["api.knaben.org"],
     "layout": "list",
     "categories": [
       {

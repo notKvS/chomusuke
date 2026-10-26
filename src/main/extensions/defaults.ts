@@ -2,7 +2,7 @@
 // into extensions/dist, and embedded into the main bundle at build time.
 // Installed on first launch and refreshed when the bundled version changes; users can still disable or remove them.
 // The tracker templates (The Pirate Bay … LimeTorrents) install switched off: see docs/sources.md.
-import repository from '../../../extensions/index.json?raw'
+
 import x1337x from '../../../extensions/dist/1337x.js?raw'
 import freeMusicArchive from '../../../extensions/dist/free-music-archive.js?raw'
 import great78 from '../../../extensions/dist/great-78.js?raw'
@@ -14,7 +14,8 @@ import netlabels from '../../../extensions/dist/netlabels.js?raw'
 import nyaa from '../../../extensions/dist/nyaa.js?raw'
 import publicDomainClassical from '../../../extensions/dist/public-domain-classical.js?raw'
 import thePirateBay from '../../../extensions/dist/the-pirate-bay.js?raw'
-import { parseRepository, type ExtensionManifest } from './manifest.ts'
+import repository from '../../../extensions/index.json?raw'
+import { type ExtensionManifest, parseRepository } from './manifest.ts'
 
 /** Pseudo repository URL for bundled extensions (`.invalid` never resolves, so it can't be fetched). */
 export const BUNDLED_REPOSITORY = 'https://bundled.chomusuke.invalid/extensions/index.json'

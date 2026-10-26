@@ -1,5 +1,5 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { ExtensionError, hostAllowed, parseRepository, sanitizeResults } from './manifest.ts'
 
 const REPO = 'https://example.github.io/chomusuke-ext/index.json'
@@ -12,7 +12,10 @@ const valid = {
   code: 'live.js',
   hosts: ['archive.org', '*.archive.org'],
   layout: 'cards',
-  categories: [{ id: 'week', name: 'This week' }, { id: '../bad', name: 'x' }],
+  categories: [
+    { id: 'week', name: 'This week' },
+    { id: '../bad', name: 'x' }
+  ],
   options: {
     apiKey: { type: 'string', label: 'API key', secret: true, default: 'leak' },
     lossless: { type: 'boolean', label: 'Lossless only', default: true },
@@ -63,13 +66,19 @@ test('sanitizeResults keeps only well-formed, allowed results', () => {
   const [manifest] = parseRepository([valid], REPO)
   const albums = sanitizeResults(
     [
-      { title: 'Good', link: 'https://archive.org/download/x/x_archive.torrent', seeders: 5, tags: ['FLAC', 7, ''], artwork: 'https://archive.org/services/img/x' },
-      { title: 'Magnet', link: 'magnet:?xt=urn:btih:' + 'a'.repeat(40) },
+      {
+        title: 'Good',
+        link: 'https://archive.org/download/x/x_archive.torrent',
+        seeders: 5,
+        tags: ['FLAC', 7, ''],
+        artwork: 'https://archive.org/services/img/x'
+      },
+      { title: 'Magnet', link: `magnet:?xt=urn:btih:${'a'.repeat(40)}` },
       { title: 'Hash only', hash: 'B'.repeat(40), size: -4 },
       { title: 'Other host', link: 'https://evil.example/x.torrent' },
       { title: 'File', link: 'file:///C:/Windows/win.ini' },
       { title: 'Plain http', link: 'http://archive.org/x.torrent', artwork: 'http://archive.org/img' },
-      { link: 'magnet:?xt=urn:btih:' + 'a'.repeat(40) },
+      { link: `magnet:?xt=urn:btih:${'a'.repeat(40)}` },
       'junk'
     ],
     manifest

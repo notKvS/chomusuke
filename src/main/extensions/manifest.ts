@@ -66,7 +66,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 function text(value: unknown, max: number): string | undefined {
   if (typeof value !== 'string' && typeof value !== 'number') return undefined
-  const clean = String(value).replace(/[\p{Cc}\s]+/gu, ' ').trim()
+  const clean = String(value)
+    .replace(/[\p{Cc}\s]+/gu, ' ')
+    .trim()
   return clean ? clean.slice(0, max) : undefined
 }
 
@@ -142,7 +144,8 @@ export function parseRepository(json: unknown, repositoryUrl: string, sameOrigin
   if (list.length > MAX_EXTENSIONS) throw new ExtensionError('That repository lists too many extensions.')
   const base = new URL(repositoryUrl)
   const manifests = list.map(item => parseOne(item, base, sameOriginHttp))
-  if (new Set(manifests.map(m => m.id)).size !== manifests.length) throw new ExtensionError('The repository lists an extension twice.')
+  if (new Set(manifests.map(m => m.id)).size !== manifests.length)
+    throw new ExtensionError('The repository lists an extension twice.')
   return manifests
 }
 
@@ -161,7 +164,8 @@ export function sanitizeResults(raw: unknown, manifest: ExtensionManifest): Prov
     else if (rawLink) {
       try {
         const url = new URL(rawLink)
-        if (url.protocol === 'https:' && url.port === '' && hostAllowed(url.hostname, manifest.hosts)) link = url.toString()
+        if (url.protocol === 'https:' && url.port === '' && hostAllowed(url.hostname, manifest.hosts))
+          link = url.toString()
       } catch {
         // ignore unusable links
       }
@@ -192,7 +196,10 @@ export function sanitizeResults(raw: unknown, manifest: ExtensionManifest): Prov
       peers: number(item.leechers),
       size: number(item.size),
       tags: Array.isArray(item.tags)
-        ? item.tags.map(t => text(t, 12)).filter((t): t is string => Boolean(t)).slice(0, 4)
+        ? item.tags
+            .map(t => text(t, 12))
+            .filter((t): t is string => Boolean(t))
+            .slice(0, 4)
         : undefined
     })
   }

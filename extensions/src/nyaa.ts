@@ -1,8 +1,9 @@
 // Nyaa: the big anime tracker; its Audio section is the place for anime OSTs, J-pop/J-rock and doujin music.
 // Uses the site's RSS feed (search and listings), which carries seeders, size and the info hash per item.
 // Template: off by default and not tested against the live site.
-import type { Extension, Options, TorrentResult } from './sdk.ts'
+
 import { cleanQuery, elements, getText, parseCount, parseRelease, parseSize, xmlText } from './lib/torrent-kit.ts'
+import type { Extension, Options, TorrentResult } from './sdk.ts'
 
 const ORIGIN = 'https://nyaa.si'
 const SITE = 'Nyaa'
@@ -30,7 +31,8 @@ export function parseFeed(xml: string): TorrentResult[] {
     try {
       // The .torrent download: same site, https only.
       const url = link ? new URL(link, ORIGIN) : undefined
-      if (url && url.hostname === 'nyaa.si' && url.pathname.endsWith('.torrent')) download = `https://nyaa.si${url.pathname}`
+      if (url && url.hostname === 'nyaa.si' && url.pathname.endsWith('.torrent'))
+        download = `https://nyaa.si${url.pathname}`
     } catch {
       // ignore
     }
@@ -45,7 +47,9 @@ export function parseFeed(xml: string): TorrentResult[] {
         size: parseSize(xmlText(item, 'nyaa:size') ?? ''),
         seeders: parseCount(xmlText(item, 'nyaa:seeders')),
         leechers: parseCount(xmlText(item, 'nyaa:leechers')),
-        tags: [...new Set([...(category ? [category] : []), ...(release.tags ?? []), ...(trusted ? ['Trusted'] : [])])].slice(0, 4)
+        tags: [
+          ...new Set([...(category ? [category] : []), ...(release.tags ?? []), ...(trusted ? ['Trusted'] : [])])
+        ].slice(0, 4)
       }
     ]
   })

@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { ExtensionOptionView, ProviderSettingsView } from '../../shared/types.ts'
-import { parseRepository, type ExtensionManifest } from '../extensions/manifest.ts'
+import { type ExtensionManifest, parseRepository } from '../extensions/manifest.ts'
 import { isPrivateHost } from '../net.ts'
 
 /** Encrypts secrets at rest; Electron's safeStorage (DPAPI / Keychain / libsecret) in the app, a fake in tests. */
@@ -33,14 +33,27 @@ interface StoredExtension {
 
 type StoredProvider =
   | { type: 'archive'; id: 'archive'; enabled: boolean }
-  | { type: 'torznab'; id: string; name: string; url: string; enabled: boolean; apiKey?: string /* SecretBox ciphertext */ }
+  | {
+      type: 'torznab'
+      id: string
+      name: string
+      url: string
+      enabled: boolean
+      apiKey?: string /* SecretBox ciphertext */
+    }
   | StoredExtension
 
 /** What the registry needs to build providers; only ever lives in the main process. */
 export type EnabledProvider =
   | { type: 'archive' }
   | { type: 'torznab'; id: string; name: string; url: string; apiKey: string }
-  | { type: 'extension'; manifest: ExtensionManifest; code: string; codeSha256: string; options: Record<string, string | boolean> }
+  | {
+      type: 'extension'
+      manifest: ExtensionManifest
+      code: string
+      codeSha256: string
+      options: Record<string, string | boolean>
+    }
 
 const FILE_VERSION = 1
 const MAX_TORZNAB = 20
@@ -54,7 +67,8 @@ const sha256 = (text: string) => createHash('sha256').update(text).digest('hex')
 
 /** Repositories may use plain http only on the user's own network. */
 export function validateRepositoryUrl(raw: unknown): { url: string; privateHttp: boolean } {
-  if (typeof raw !== 'string' || !raw.trim() || raw.length > 2048) throw new SettingsError('Enter the repository’s manifest URL.')
+  if (typeof raw !== 'string' || !raw.trim() || raw.length > 2048)
+    throw new SettingsError('Enter the repository’s manifest URL.')
   let url: URL
   try {
     url = new URL(raw.trim())
@@ -136,7 +150,9 @@ export class ProviderSettingsStore {
     }
     const list = isRecord(raw) && Array.isArray(raw.providers) ? raw.providers : []
     this.dismissed = new Set(
-      isRecord(raw) && Array.isArray(raw.dismissedExtensions) ? raw.dismissedExtensions.filter(v => typeof v === 'string') : []
+      isRecord(raw) && Array.isArray(raw.dismissedExtensions)
+        ? raw.dismissedExtensions.filter(v => typeof v === 'string')
+        : []
     )
     const entries: StoredProvider[] = []
     for (const item of list) {
@@ -169,9 +185,14 @@ export class ProviderSettingsStore {
   /** Re-validates a saved extension and checks its code file wasn't changed behind our back. */
   private async loadExtension(item: Record<string, unknown>): Promise<StoredExtension | undefined> {
     try {
-      if (typeof item.repository !== 'string' || !isRecord(item.manifest) || typeof item.codeSha256 !== 'string') return undefined
+      if (typeof item.repository !== 'string' || !isRecord(item.manifest) || typeof item.codeSha256 !== 'string')
+        return undefined
       const { url, privateHttp } = validateRepositoryUrl(item.repository)
-      const [manifest] = parseRepository([toRawManifest(item.manifest as unknown as ExtensionManifest)], url, privateHttp)
+      const [manifest] = parseRepository(
+        [toRawManifest(item.manifest as unknown as ExtensionManifest)],
+        url,
+        privateHttp
+      )
       const code = await readFile(this.codeFile(manifest), 'utf8')
       if (sha256(code) !== item.codeSha256) {
         console.error(`[settings] extension ${manifest.id} was modified on disk; skipping it`)
@@ -186,14 +207,26 @@ export class ProviderSettingsStore {
         if (option.secret && typeof secret === 'string') secrets[key] = secret
         if (!option.secret && typeof value === option.type) options[key] = value as string | boolean
       }
-      return { type: 'extension', id: `ext-${manifest.id}`, enabled: item.enabled !== false, repository: url, manifest, codeSha256: item.codeSha256, options, secrets }
+      return {
+        type: 'extension',
+        id: `ext-${manifest.id}`,
+        enabled: item.enabled !== false,
+        repository: url,
+        manifest,
+        codeSha256: item.codeSha256,
+        options,
+        secrets
+      }
     } catch {
       return undefined
     }
   }
 
   /** Installs or updates extensions from a repository (code already downloaded and validated). */
-  async installExtensions(repository: string, installs: Array<{ manifest: ExtensionManifest; code: string }>): Promise<void> {
+  async installExtensions(
+    repository: string,
+    installs: Array<{ manifest: ExtensionManifest; code: string }>
+  ): Promise<void> {
     // Check the limit for the whole batch before touching disk, so files and settings never diverge.
     const installed = new Set(this.entries.filter(e => e.type === 'extension').map(e => e.id))
     const added = installs.filter(({ manifest }) => !installed.has(`ext-${manifest.id}`)).length
@@ -222,7 +255,9 @@ export class ProviderSettingsStore {
         manifest,
         codeSha256: sha256(code),
         options: Object.fromEntries(Object.entries(kept?.options ?? {}).filter(([key]) => key in manifest.options)),
-        secrets: Object.fromEntries(Object.entries(kept?.secrets ?? {}).filter(([key]) => manifest.options[key]?.secret))
+        secrets: Object.fromEntries(
+          Object.entries(kept?.secrets ?? {}).filter(([key]) => manifest.options[key]?.secret)
+        )
       }
       if (index >= 0) this.entries[index] = entry
       else this.entries.push(entry)
@@ -246,13 +281,14 @@ export class ProviderSettingsStore {
   /** Saves option values; for secrets, an empty string keeps the saved value. */
   async setExtensionOptions(id: unknown, values: unknown): Promise<void> {
     const entry = this.entries.find(e => e.id === id)
-    if (!entry || entry.type !== 'extension') throw new SettingsError('That extension no longer exists.')
+    if (entry?.type !== 'extension') throw new SettingsError('That extension no longer exists.')
     if (!isRecord(values)) throw new SettingsError('Invalid options.')
     for (const [key, option] of Object.entries(entry.manifest.options)) {
       const value = values[key]
       if (value === undefined) continue
       if (typeof value !== option.type) throw new SettingsError(`“${option.label}” has the wrong type.`)
-      if (typeof value === 'string' && value.length > MAX_OPTION_LENGTH) throw new SettingsError(`“${option.label}” is too long.`)
+      if (typeof value === 'string' && value.length > MAX_OPTION_LENGTH)
+        throw new SettingsError(`“${option.label}” is too long.`)
       if (option.secret) {
         if (value === '') continue
         if (!this.box.available()) throw new SettingsError('Secure storage isn’t available, so secrets can’t be saved.')
@@ -266,7 +302,7 @@ export class ProviderSettingsStore {
 
   extensionConfig(id: unknown): Extract<EnabledProvider, { type: 'extension' }> {
     const entry = this.entries.find(e => e.id === id)
-    if (!entry || entry.type !== 'extension') throw new SettingsError('That extension no longer exists.')
+    if (entry?.type !== 'extension') throw new SettingsError('That extension no longer exists.')
     return this.extensionRuntimeConfig(entry)
   }
 
@@ -285,9 +321,18 @@ export class ProviderSettingsStore {
 
   list(): ProviderSettingsView[] {
     return this.entries.map((entry): ProviderSettingsView => {
-      if (entry.type === 'archive') return { id: entry.id, type: entry.type, name: 'Internet Archive', enabled: entry.enabled, builtIn: true }
+      if (entry.type === 'archive')
+        return { id: entry.id, type: entry.type, name: 'Internet Archive', enabled: entry.enabled, builtIn: true }
       if (entry.type === 'torznab') {
-        return { id: entry.id, type: entry.type, name: entry.name, enabled: entry.enabled, builtIn: false, url: entry.url, hasApiKey: !!entry.apiKey }
+        return {
+          id: entry.id,
+          type: entry.type,
+          name: entry.name,
+          enabled: entry.enabled,
+          builtIn: false,
+          url: entry.url,
+          hasApiKey: !!entry.apiKey
+        }
       }
       const options = Object.entries(entry.manifest.options).map(
         ([key, option]): ExtensionOptionView => ({
@@ -296,7 +341,9 @@ export class ProviderSettingsStore {
           label: option.label,
           description: option.description,
           secret: option.secret,
-          ...(option.secret ? { hasValue: Boolean(entry.secrets[key]) } : { value: entry.options[key] ?? option.default })
+          ...(option.secret
+            ? { hasValue: Boolean(entry.secrets[key]) }
+            : { value: entry.options[key] ?? option.default })
         })
       )
       return {
@@ -359,7 +406,8 @@ export class ProviderSettingsStore {
       entry.enabled = this.entries[index].enabled
       this.entries[index] = entry
     } else {
-      if (this.entries.filter(e => e.type === 'torznab').length >= MAX_TORZNAB) throw new SettingsError('That’s enough indexers.')
+      if (this.entries.filter(e => e.type === 'torznab').length >= MAX_TORZNAB)
+        throw new SettingsError('That’s enough indexers.')
       this.entries.push(entry)
     }
     await this.persist()
@@ -397,7 +445,13 @@ export class ProviderSettingsStore {
         }
       } else if (entry.apiKey) {
         try {
-          result.push({ type: 'torznab', id: entry.id, name: entry.name, url: entry.url, apiKey: this.box.decrypt(entry.apiKey) })
+          result.push({
+            type: 'torznab',
+            id: entry.id,
+            name: entry.name,
+            url: entry.url,
+            apiKey: this.box.decrypt(entry.apiKey)
+          })
         } catch {
           console.error(`[settings] couldn't decrypt the API key for ${entry.id}; skipping it`)
         }
@@ -407,7 +461,11 @@ export class ProviderSettingsStore {
   }
 
   private async persist(): Promise<void> {
-    const body = JSON.stringify({ version: FILE_VERSION, providers: this.entries, dismissedExtensions: [...this.dismissed] }, null, 2)
+    const body = JSON.stringify(
+      { version: FILE_VERSION, providers: this.entries, dismissedExtensions: [...this.dismissed] },
+      null,
+      2
+    )
     const temp = `${this.file}.tmp`
     await writeFile(temp, body, { encoding: 'utf8', mode: 0o600 })
     await rename(temp, this.file)

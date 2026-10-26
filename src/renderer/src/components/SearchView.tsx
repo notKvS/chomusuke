@@ -153,7 +153,12 @@ export function SectionBody({ section, onOpenAlbum }: { section: ProviderSection
         <ol className="song-list">
           {section.albums.map(album => (
             <li key={album.id} className="release">
-              <button type="button" className="song-row release-row" onClick={() => onOpenAlbum(album, false)} title={album.title}>
+              <button
+                type="button"
+                className="song-row release-row"
+                onClick={() => onOpenAlbum(album, false)}
+                title={album.title}
+              >
                 <span className="release-row__icon">
                   <Icon name="download" />
                 </span>

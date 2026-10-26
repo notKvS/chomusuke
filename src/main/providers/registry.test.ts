@@ -1,5 +1,5 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { SourceError } from '../source.ts'
 import { ProviderRegistry } from './registry.ts'
 import { TorznabError } from './torznab.ts'
@@ -14,7 +14,10 @@ function fakeProvider(id: string, behaviour: Partial<MusicProvider> = {}): Music
     name: id.toUpperCase(),
     layout: 'cards',
     opened,
-    search: async () => ({ albums: [album(`${id}-secret-locator`, 'An Album')], songs: [{ key: '01_song', title: 'Song', album: album(`${id}-other`) }] }),
+    search: async () => ({
+      albums: [album(`${id}-secret-locator`, 'An Album')],
+      songs: [{ key: '01_song', title: 'Song', album: album(`${id}-other`) }]
+    }),
     open: async a => {
       opened.push(a.ref)
       return { kind: 'torrent', torrent: `magnet:?xt=urn:btih:${'a'.repeat(40)}` }
@@ -28,10 +31,13 @@ test('merges providers into sections and songs; locators never reach the rendere
   registry.setProviders([fakeProvider('archive'), fakeProvider('torznab-1')])
   const results = await registry.search('q', new AbortController().signal)
 
-  assert.deepEqual(results.sections.map(s => [s.id, s.name, s.albums.length]), [
-    ['archive', 'ARCHIVE', 1],
-    ['torznab-1', 'TORZNAB-1', 1]
-  ])
+  assert.deepEqual(
+    results.sections.map(s => [s.id, s.name, s.albums.length]),
+    [
+      ['archive', 'ARCHIVE', 1],
+      ['torznab-1', 'TORZNAB-1', 1]
+    ]
+  )
   assert.equal(results.songs.length, 2)
   assert.doesNotMatch(JSON.stringify(results), /secret-locator|"ref"/)
   assert.match(results.sections[0].albums[0].id, /^archive:[a-f0-9]{24}$/)
@@ -80,7 +86,9 @@ test('explore lists browsable providers and browse remembers results', async () 
     browse: async () => ({ albums: [album('hot-locator', 'Hot')], songs: [] })
   })
   registry.setProviders([browsable, fakeProvider('torznab-1')])
-  assert.deepEqual(registry.explore(), [{ id: 'archive', name: 'ARCHIVE', layout: 'cards', categories: [{ id: 'trending', name: 'Trending' }] }])
+  assert.deepEqual(registry.explore(), [
+    { id: 'archive', name: 'ARCHIVE', layout: 'cards', categories: [{ id: 'trending', name: 'Trending' }] }
+  ])
 
   const section = await registry.browse('archive', 'trending', new AbortController().signal)
   assert.equal(section.albums[0].title, 'Hot')

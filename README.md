@@ -27,6 +27,14 @@ fish, in a night-violet anime theme.
     under *Sources* and press **Test**. You are responsible for what you stream.
 - **Player** — queue through an album, media keys and the OS media controls, remembered volume and a smooth
   seek bar.
+- **Appearance studio** (*Appearance* page) — nine ready-made themes (dark and light) or build your own:
+  accent and secondary colours (any colour), background (aurora, animated mesh, starfield, gradient, solid or
+  your own picture with blur/dim), panels (classic, glass, frosted, solid, outline) with blur and opacity, button
+  shape and style, corner radius, font, interface size, glow strength, sakura petals, mascot animation and the
+  splash screen. *Surprise me* rolls a random theme; themes can be shared as a code. Everything applies live
+  and is remembered.
+- **Back and forward** buttons next to the search box (also Alt+←/→ and the mouse's side buttons), with each
+  page's scroll position restored.
 - **Anime look** — animated mascot logo (click it), splash and loading scenes, drifting sakura petals; all
   motion respects the system's reduced-motion setting.
 
@@ -46,7 +54,13 @@ npm run dev      # dev mode with hot reload
 | `npm start` | Runs the built app |
 | `npm test` | Unit tests (Node's built-in runner), including offline tests for every bundled extension |
 | `npm run typecheck` | Type-checks the main process, the UI and the extensions |
+| `npm run lint` | Biome: formatting, lint rules and import order, without changing files |
+| `npm run fix` | Biome: formats every file and applies safe lint fixes |
+| `npm run format` | Biome: formatting only |
 | `npm run build:extensions` | Bundles `extensions/src/*.ts` into `extensions/dist/` (run automatically by dev/build/start) |
+
+In VS Code, install the recommended Biome extension: files are formatted, fixed and have their imports sorted on
+save (`.vscode/settings.json`, rules in `biome.json`).
 
 ## How it works
 
@@ -77,7 +91,7 @@ or add a provider.
 ```
 src/main/            Electron main process: torrent engine, stream server, providers, extension sandbox
 src/preload/         The narrow bridges exposed to the UI and to the extension sandbox
-src/renderer/        React UI, theme (styles.css, anime.css) and mascot artwork
+src/renderer/        React UI, styles (styles.css, anime.css, theme.css), theme engine (src/theme/), mascot artwork
 src/shared/          Types shared by main and renderer
 extensions/          Bundled extensions: index.json (manifests), src/ (TypeScript), test/ (offline tests)
 build/               App icons

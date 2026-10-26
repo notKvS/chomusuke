@@ -24,9 +24,7 @@ export function AlbumView({ album, stats, durations, currentTrackId, isPlaying, 
         <Cover src={album.coverUrl} className="album__cover" />
         <div className="album__meta">
           <h1 className="album__title">{album.title}</h1>
-          <p className="album__subtitle">
-            Album{album.artist && <> • {album.artist}</>}
-          </p>
+          <p className="album__subtitle">Album{album.artist && <> • {album.artist}</>}</p>
           <p className="album__details">
             {plural(album.tracks.length, 'song')} • {formatBytes(album.totalSize)}
           </p>
@@ -57,7 +55,7 @@ export function AlbumView({ album, stats, durations, currentTrackId, isPlaying, 
               >
                 <span className="track__index">
                   {isCurrent && isPlaying ? (
-                    <span className="eq" aria-label="Playing">
+                    <span className="eq" role="img" aria-label="Playing">
                       <i />
                       <i />
                       <i />
@@ -105,12 +103,24 @@ function SwarmStatus({ stats }: { stats?: TorrentStats }) {
 export function AlbumLoading({ title, artist }: { title?: string; artist?: string; artwork?: string }) {
   return (
     <div className="page album is-loading">
-      <LoaderScene compact title="Loading" subtitle={[title ?? 'Opening torrent', artist].filter(Boolean).join(' — ')} />
+      <LoaderScene
+        compact
+        title="Loading"
+        subtitle={[title ?? 'Opening torrent', artist].filter(Boolean).join(' — ')}
+      />
     </div>
   )
 }
 
-export function AlbumError({ message, onRetry, onHome }: { message: string; onRetry?: () => void; onHome: () => void }) {
+export function AlbumError({
+  message,
+  onRetry,
+  onHome
+}: {
+  message: string
+  onRetry?: () => void
+  onHome: () => void
+}) {
   return (
     <div className="page error-page">
       <Chomu mood="sad" size={200} />

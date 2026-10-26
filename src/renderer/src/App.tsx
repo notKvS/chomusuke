@@ -1,54 +1,81 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Album, LoadResult, SearchAlbum, SearchSong, SourceHints, TorrentStats } from '../../shared/types'
 import { AlbumError, AlbumLoading, AlbumView } from './components/AlbumView'
+import { AppearanceView } from './components/AppearanceView'
+import { ExploreView } from './components/ExploreView'
 import { Home } from './components/Home'
 import { Icon } from './components/Icon'
-import { PlayerBar } from './components/PlayerBar'
-import { SearchView, type SearchState } from './components/SearchView'
-import { Sidebar } from './components/Sidebar'
-import { SourcesView } from './components/SourcesView'
-import { ExploreView } from './components/ExploreView'
-import { TopBar } from './components/TopBar'
 import { Chomu } from './components/mascot/Chomu'
 import { Sakura } from './components/mascot/Sakura'
 import { Splash } from './components/mascot/Splash'
+import { PlayerBar } from './components/PlayerBar'
+import { type SearchState, SearchView } from './components/SearchView'
+import { Sidebar } from './components/Sidebar'
+import { SourcesView } from './components/SourcesView'
+import { TopBar } from './components/TopBar'
 import { looksLikeSource } from './source'
+import { useAppearance } from './theme/useAppearance'
 import { usePlayer } from './usePlayer'
 
-type View =
+/** Pages are what back/forward move between. */
+type Page =
   | { kind: 'home' }
-  | { kind: 'search' }
+  | { kind: 'search'; query: string }
   | { kind: 'sources' }
   | { kind: 'explore' }
-  | { kind: 'loading'; title?: string; artist?: string; artwork?: string }
+  | { kind: 'appearance' }
   | { kind: 'album'; infoHash: string }
+
+/** Shown in place of the current page while an album loads or fails to; not part of the history. */
+type Overlay =
+  | { kind: 'loading'; title?: string; artist?: string; artwork?: string }
   | { kind: 'error'; message: string; retry?: () => void }
+
+type View = Page | Overlay
 
 /** What to start once an album has loaded: nothing, its first track, or a specific song. */
 type Autoplay = boolean | { key: string }
 
 const TOAST_MS = 6000
+const MAX_HISTORY = 50
+const MAX_CACHED_SEARCHES = 20
+
+function samePage(a: Page, b: Page): boolean {
+  if (a.kind === 'album' && b.kind === 'album') return a.infoHash === b.infoHash
+  if (a.kind === 'search' && b.kind === 'search') return a.query === b.query
+  return a.kind === b.kind
+}
 
 export function App() {
   const [albums, setAlbums] = useState<Album[]>([])
-  const [view, setView] = useState<View>({ kind: 'home' })
-  const [search, setSearch] = useState<SearchState | null>(null)
+  const [history, setHistory] = useState<{ pages: Page[]; index: number }>({ pages: [{ kind: 'home' }], index: 0 })
+  const [overlay, setOverlay] = useState<Overlay | null>(null)
+  /** Results by query, so going back to a search shows it again without re-running it. */
+  const [searches, setSearches] = useState<Record<string, SearchState>>({})
+  const [lastQuery, setLastQuery] = useState<string | null>(null)
   const [stats, setStats] = useState<Record<string, TorrentStats>>({})
   const [toast, setToast] = useState<string | null>(null)
+  const looks = useAppearance()
+  // Decided once at launch: turning the setting on later shouldn't replay the splash.
+  const [showSplash] = useState(looks.appearance.splash)
   const player = usePlayer(setToast)
   const { playAt, toggle } = player
 
-  const viewRef = useRef(view)
+  const page = history.pages[history.index]
+  const view: View = overlay ?? page
+
   const requestId = useRef(0)
-  const searchId = useRef(0)
+  const searchIds = useRef(new Map<string, number>())
+  const nextSearchId = useRef(0)
   /** Loaded albums by the URL or search-result id they came from, so reopening is instant. */
   const sourceToHash = useRef(new Map<string, string>())
   const albumsRef = useRef(albums)
   const contentRef = useRef<HTMLElement>(null)
+  /** Scroll position per page, restored when going back or forward. */
+  const scrolls = useRef(new WeakMap<object, number>())
 
-  useEffect(() => {
-    viewRef.current = view
-    contentRef.current?.scrollTo({ top: 0 })
+  useLayoutEffect(() => {
+    contentRef.current?.scrollTo({ top: scrolls.current.get(view) ?? 0 })
   }, [view])
   useEffect(() => {
     albumsRef.current = albums
@@ -73,10 +100,54 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [toggle])
 
+  const navigate = useCallback((next: Page) => {
+    setOverlay(null)
+    setHistory(h => {
+      if (samePage(h.pages[h.index], next)) return h
+      const pages = [...h.pages.slice(0, h.index + 1), next].slice(-MAX_HISTORY)
+      return { pages, index: pages.length - 1 }
+    })
+  }, [])
+
+  const goBack = useCallback(() => {
+    requestId.current++ // abandon any album load in flight
+    if (overlay) return setOverlay(null)
+    setHistory(h => (h.index > 0 ? { ...h, index: h.index - 1 } : h))
+  }, [overlay])
+
+  const goForward = useCallback(() => {
+    requestId.current++
+    setOverlay(null)
+    setHistory(h => (h.index < h.pages.length - 1 ? { ...h, index: h.index + 1 } : h))
+  }, [])
+
+  const canGoBack = overlay !== null || history.index > 0
+  const canGoForward = history.index < history.pages.length - 1
+
+  // Mouse back/forward buttons and Alt+Left/Right, like a browser.
+  useEffect(() => {
+    const onMouse = (e: MouseEvent) => {
+      if (e.button === 3) goBack()
+      else if (e.button === 4) goForward()
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.altKey || e.ctrlKey || e.metaKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
+      e.preventDefault()
+      if (e.key === 'ArrowLeft') goBack()
+      else goForward()
+    }
+    window.addEventListener('mouseup', onMouse)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('mouseup', onMouse)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [goBack, goForward])
+
   const showAlbum = useCallback(
     (album: Album, autoplay: Autoplay) => {
       setAlbums(prev => (prev.some(a => a.infoHash === album.infoHash) ? prev : [album, ...prev]))
-      setView({ kind: 'album', infoHash: album.infoHash })
+      navigate({ kind: 'album', infoHash: album.infoHash })
       if (autoplay === true) playAt(album, 0)
       if (typeof autoplay === 'object') {
         const index = album.tracks.findIndex(t => t.key === autoplay.key)
@@ -84,24 +155,23 @@ export function App() {
         else setToast("That song isn't in this torrent's playable files — here's the rest of the album.")
       }
     },
-    [playAt]
+    [navigate, playAt]
   )
 
   const runLoad = useCallback(
     async (
       load: () => Promise<LoadResult | null>,
-      placeholder: Omit<Extract<View, { kind: 'loading' }>, 'kind'>,
+      placeholder: Omit<Extract<Overlay, { kind: 'loading' }>, 'kind'>,
       onLoaded: (album: Album) => void,
       retry: () => void
     ) => {
       const id = ++requestId.current
-      const before = viewRef.current
-      setView({ kind: 'loading', ...placeholder })
+      setOverlay({ kind: 'loading', ...placeholder })
       const result = await load()
-      if (id !== requestId.current) return // a newer request superseded this one
-      if (!result) setView(before)
+      if (id !== requestId.current) return // a newer request or a navigation superseded this one
+      if (!result) setOverlay(null)
       else if (result.ok) onLoaded(result.album)
-      else setView({ kind: 'error', message: result.error, retry })
+      else setOverlay({ kind: 'error', message: result.error, retry })
     },
     []
   )
@@ -128,19 +198,40 @@ export function App() {
     [runLoad, showAlbum]
   )
 
-  const runSearch = useCallback(async (query: string) => {
-    const id = ++searchId.current
-    requestId.current++ // cancel any album load in flight
-    setSearch({ query, status: 'loading' })
-    setView({ kind: 'search' })
-    const response = await window.chomusuke.search(query)
-    if (id !== searchId.current) return
-    setSearch(
-      response.ok
-        ? { query, status: 'done', results: response.results }
-        : { query, status: 'error', error: response.error }
-    )
-  }, [])
+  /** Runs a search and keeps its results; `show` also navigates to it. */
+  const runSearch = useCallback(
+    async (query: string, show = true) => {
+      const id = ++nextSearchId.current
+      searchIds.current.set(query, id)
+      const store = (state: SearchState) =>
+        setSearches(prev => {
+          const next = { ...prev, [query]: state }
+          const keys = Object.keys(next)
+          for (const key of keys.slice(0, Math.max(0, keys.length - MAX_CACHED_SEARCHES))) delete next[key]
+          return next
+        })
+      store({ query, status: 'loading' })
+      setLastQuery(query)
+      if (show) {
+        requestId.current++ // cancel any album load in flight
+        navigate({ kind: 'search', query })
+      }
+      const response = await window.chomusuke.search(query)
+      if (searchIds.current.get(query) !== id) return
+      store(
+        response.ok
+          ? { query, status: 'done', results: response.results }
+          : { query, status: 'error', error: response.error }
+      )
+    },
+    [navigate]
+  )
+
+  // Going back to a search whose results were dropped from the cache runs it again.
+  const shownQuery = page.kind === 'search' ? page.query : null
+  useEffect(() => {
+    if (shownQuery !== null && !searches[shownQuery]) void runSearch(shownQuery, false)
+  }, [shownQuery, searches, runSearch])
 
   const submitTopBar = useCallback(
     (input: string) => (looksLikeSource(input) ? loadSource(input) : void runSearch(input)),
@@ -199,67 +290,70 @@ export function App() {
     [showAlbum]
   )
 
-  const goHome = useCallback(() => {
-    requestId.current++
-    setView({ kind: 'home' })
-  }, [])
-
+  const goTo = useCallback(
+    (next: Page) => {
+      requestId.current++
+      navigate(next)
+    },
+    [navigate]
+  )
+  const goHome = useCallback(() => goTo({ kind: 'home' }), [goTo])
+  const goSources = useCallback(() => goTo({ kind: 'sources' }), [goTo])
+  const goExplore = useCallback(() => goTo({ kind: 'explore' }), [goTo])
+  const goAppearance = useCallback(() => goTo({ kind: 'appearance' }), [goTo])
   const goSearch = useCallback(() => {
-    requestId.current++
-    if (search) setView({ kind: 'search' })
-  }, [search])
-
-  const goSources = useCallback(() => {
-    requestId.current++
-    setView({ kind: 'sources' })
-  }, [])
-
-  const goExplore = useCallback(() => {
-    requestId.current++
-    setView({ kind: 'explore' })
-  }, [])
+    if (lastQuery !== null) goTo({ kind: 'search', query: lastQuery })
+  }, [goTo, lastQuery])
 
   const playingHash = player.state.album?.infoHash ?? null
-  const activeKey = view.kind === 'album' ? view.infoHash : ['home', 'search', 'sources', 'explore'].includes(view.kind) ? view.kind : ''
+  const activeKey =
+    view.kind === 'album' ? view.infoHash : view.kind === 'loading' || view.kind === 'error' ? '' : view.kind
 
-  let page
+  let content: ReactNode
   switch (view.kind) {
     case 'home':
-      page = (
+      content = (
         <Home
           albums={albums}
-          onOpenFeatured={(f, autoplay) => loadSource(f.source, { title: f.title, artist: f.artist }, f.artwork, autoplay)}
+          onOpenFeatured={(f, autoplay) =>
+            loadSource(f.source, { title: f.title, artist: f.artist }, f.artwork, autoplay)
+          }
           onOpenAlbum={openAlbum}
         />
       )
       break
-    case 'search':
-      page = search && (
+    case 'search': {
+      const search = searches[view.query] ?? { query: view.query, status: 'loading' }
+      content = (
         <SearchView
           search={search}
           isPlaying={isSongPlaying}
           onPlaySong={playSong}
           onOpenAlbum={openSearchAlbum}
-          onRetry={() => void runSearch(search.query)}
+          onRetry={() => void runSearch(view.query, false)}
           onManageSources={goSources}
         />
       )
       break
+    }
     case 'sources':
-      page = <SourcesView />
+      content = <SourcesView />
       break
     case 'explore':
-      page = <ExploreView onOpenAlbum={openSearchAlbum} onManageSources={goSources} />
+      content = <ExploreView onOpenAlbum={openSearchAlbum} onManageSources={goSources} />
+      break
+    case 'appearance':
+      content = <AppearanceView controls={looks} />
       break
     case 'loading':
-      page = <AlbumLoading title={view.title} artist={view.artist} artwork={view.artwork} />
+      content = <AlbumLoading title={view.title} artist={view.artist} artwork={view.artwork} />
       break
     case 'error':
-      page = <AlbumError message={view.message} onRetry={view.retry} onHome={goHome} />
+      content = <AlbumError message={view.message} onRetry={view.retry} onHome={goHome} />
       break
     case 'album': {
       const album = albums.find(a => a.infoHash === view.infoHash)
-      page = album ? (
+      content = album ? (
         <AlbumView
           album={album}
           stats={stats[album.infoHash]}
@@ -276,22 +370,31 @@ export function App() {
 
   return (
     <div className={`app ${player.track ? 'has-player' : ''}`}>
-      <Sakura />
-      <TopBar onSubmit={submitTopBar} onHome={goHome} playing={player.state.isPlaying} />
+      {looks.appearance.sakura && <Sakura count={looks.appearance.petals} />}
+      <TopBar
+        onSubmit={submitTopBar}
+        onHome={goHome}
+        playing={player.state.isPlaying}
+        canGoBack={canGoBack}
+        canGoForward={canGoForward}
+        onBack={goBack}
+        onForward={goForward}
+      />
       <Sidebar
         active={activeKey}
         albums={albums}
         playingAlbum={playingHash}
-        hasSearch={search !== null}
+        hasSearch={lastQuery !== null}
         onHome={goHome}
         onSearch={goSearch}
         onSources={goSources}
         onExplore={goExplore}
+        onAppearance={goAppearance}
         onOpenAlbum={openAlbum}
         onOpenFile={openFile}
       />
-      <main className="content" ref={contentRef}>
-        {page}
+      <main className="content" ref={contentRef} onScroll={e => scrolls.current.set(view, e.currentTarget.scrollTop)}>
+        {content}
       </main>
       <PlayerBar
         player={player}
@@ -307,7 +410,7 @@ export function App() {
           </button>
         </div>
       )}
-      <Splash />
+      {showSplash && <Splash />}
     </div>
   )
 }

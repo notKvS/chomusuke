@@ -1,9 +1,9 @@
-import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import http from 'node:http'
 import type { AddressInfo } from 'node:net'
+import { after, before, test } from 'node:test'
 import parseTorrent, { toTorrentFile } from 'parse-torrent'
-import { createTorznabProvider, parseTorznab, testTorznab, TorznabError } from './torznab.ts'
+import { createTorznabProvider, parseTorznab, TorznabError, testTorznab } from './torznab.ts'
 
 const HASH = 'c9e15763f722f23e98a29decdfae341b98d53056'
 const MAGNET = `magnet:?xt=urn:btih:${HASH}&dn=Album&tr=udp%3A%2F%2Ftracker.example%3A1337`
@@ -47,9 +47,17 @@ before(async () => {
       return res.end(
         feed(
           item('Some Band - Low Seeds (2001) [MP3 320]', { seeders: '3', magneturl: MAGNET, category: '3010' }) +
-            item('Some Band - Great Album (1999) [FLAC 24bit]', { seeders: '120', peers: '140', size: '734003200', category: '3040' }, `<link>${base}/dl/1</link>`) +
+            item(
+              'Some Band - Great Album (1999) [FLAC 24bit]',
+              { seeders: '120', peers: '140', size: '734003200', category: '3040' },
+              `<link>${base}/dl/1</link>`
+            ) +
             item('A Movie (2020) 1080p', { seeders: '999', infohash: HASH, category: '2040' }) +
-            item('Magnet via redirect &amp; friends', { seeders: '10' }, `<enclosure url="${base}/dl/2" length="1" type="application/x-bittorrent" />`) +
+            item(
+              'Magnet via redirect &amp; friends',
+              { seeders: '10' },
+              `<enclosure url="${base}/dl/2" length="1" type="application/x-bittorrent" />`
+            ) +
             item('No way to download', { seeders: '50' })
         )
       )

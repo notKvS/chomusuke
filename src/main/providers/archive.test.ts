@@ -1,17 +1,17 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import {
   archiveIdFromTorrentUrl,
   buildQueries,
   createArchiveProvider,
+  type JsonFetcher,
   licenseLabel,
   parseAlbums,
   parseArchiveFiles,
   parseLength,
   pickSongs,
   searchArchive,
-  tokenize,
-  type JsonFetcher
+  tokenize
 } from './archive.ts'
 
 const doc = (identifier: string, extra: Record<string, unknown> = {}) => ({ identifier, title: identifier, ...extra })
@@ -19,10 +19,25 @@ const searchResponse = (...docs: unknown[]) => ({ response: { numFound: docs.len
 
 const SLIP_FILES = {
   result: [
-    { name: '01_999999.flac', source: 'original', title: '999,999', creator: 'Nine Inch Nails', album: 'The Slip', track: '01', length: '85.4' },
+    {
+      name: '01_999999.flac',
+      source: 'original',
+      title: '999,999',
+      creator: 'Nine Inch Nails',
+      album: 'The Slip',
+      track: '01',
+      length: '85.4'
+    },
     { name: '01_999999.mp3', source: 'derivative', title: '999,999', creator: 'Nine Inch Nails', length: '01:25' },
     { name: '01_999999_64kb.mp3', source: 'derivative' },
-    { name: '04_discipline.mp3', title: 'Discipline', creator: 'Nine Inch Nails', album: 'The Slip', track: '04', length: '04:19' },
+    {
+      name: '04_discipline.mp3',
+      title: 'Discipline',
+      creator: 'Nine Inch Nails',
+      album: 'The Slip',
+      track: '04',
+      length: '04:19'
+    },
     { name: '04_discipline.png', format: 'PNG' },
     { name: '__MACOSX/._04_discipline.mp3' },
     { name: 'nine_inch_nails_the_slip_meta.xml' }
@@ -37,7 +52,10 @@ test('tokenize keeps only letters and digits, so Lucene syntax cannot be injecte
 
 test('buildQueries searches title/creator strictly, plus partial and broad fallbacks', () => {
   const q = buildQueries(['nine', 'inch', 'discipline'])
-  assert.match(q.strict, /^\(title:\(nine\) OR creator:\(nine\)\) AND \(title:\(inch\) OR creator:\(inch\)\) AND \(title:\(discipline\)/)
+  assert.match(
+    q.strict,
+    /^\(title:\(nine\) OR creator:\(nine\)\) AND \(title:\(inch\) OR creator:\(inch\)\) AND \(title:\(discipline\)/
+  )
   assert.match(q.strict, /mediatype:\(audio OR etree\)/)
   assert.match(q.broad, /^\(nine AND inch AND discipline\) AND /)
   assert.equal(q.partial.length, 2)
@@ -87,7 +105,9 @@ test('parseArchiveFiles: one entry per song, tags preferred, junk skipped', () =
 })
 
 test('pickSongs requires every word and counts title hits', () => {
-  const album = parseAlbums(searchResponse(doc('nine_inch_nails_the_slip', { title: 'The Slip', creator: 'Nine Inch Nails' })))[0]
+  const album = parseAlbums(
+    searchResponse(doc('nine_inch_nails_the_slip', { title: 'The Slip', creator: 'Nine Inch Nails' }))
+  )[0]
   const picked = pickSongs(album, SLIP_FILES, tokenize('nine inch nails discip'))
   assert.deepEqual(
     picked.map(p => [p.song.title, p.titleHits]),
@@ -105,15 +125,23 @@ test('searchArchive merges album tiers and ranks title matches first', async () 
       const q = url.searchParams.get('q') ?? ''
       if (q.includes('title:(discipline)')) return searchResponse() // strict: nothing has "discipline" in title/creator
       if (q.startsWith('(nine AND')) return searchResponse(doc('freemusiccharts2008', { downloads: 5 }))
-      return searchResponse(doc('nine_inch_nails_the_slip', { title: 'The Slip', creator: 'Nine Inch Nails', downloads: 9 }))
+      return searchResponse(
+        doc('nine_inch_nails_the_slip', { title: 'The Slip', creator: 'Nine Inch Nails', downloads: 9 })
+      )
     }
     if (url.pathname === '/metadata/nine_inch_nails_the_slip/files') return SLIP_FILES
     return { result: [] }
   }
 
   const results = await searchArchive('Nine Inch Nails Discipline', fetchJson)
-  assert.deepEqual(results.albums.map(a => a.ref), ['nine_inch_nails_the_slip', 'freemusiccharts2008'])
-  assert.deepEqual(results.songs.map(s => s.title), ['Discipline'])
+  assert.deepEqual(
+    results.albums.map(a => a.ref),
+    ['nine_inch_nails_the_slip', 'freemusiccharts2008']
+  )
+  assert.deepEqual(
+    results.songs.map(s => s.title),
+    ['Discipline']
+  )
   assert.equal(calls.filter(p => p === '/advancedsearch.php').length, 4)
 })
 
@@ -138,7 +166,12 @@ test('small helpers', () => {
 
 test('pickSongs marks songs matched only through the album title as indirect', () => {
   const album = parseAlbums(searchResponse(doc('sb-live', { title: 'Scarlet Begonias Live', creator: 'Some Band' })))[0]
-  const files = { result: [{ name: '01.mp3', title: 'Sugaree' }, { name: '02.mp3', title: 'Scarlet Begonias' }] }
+  const files = {
+    result: [
+      { name: '01.mp3', title: 'Sugaree' },
+      { name: '02.mp3', title: 'Scarlet Begonias' }
+    ]
+  }
   assert.deepEqual(
     pickSongs(album, files, tokenize('scarlet begonias')).map(p => [p.song.title, p.direct]),
     [
@@ -150,7 +183,12 @@ test('pickSongs marks songs matched only through the album title as indirect', (
 
 test('stopwords do not count as title hits', () => {
   const album = parseAlbums(searchResponse(doc('slip', { title: 'The Slip', creator: 'Nine Inch Nails' })))[0]
-  const files = { result: [{ name: '01.mp3', title: '999,999' }, { name: '09.mp3', title: 'Lights in the Sky' }] }
+  const files = {
+    result: [
+      { name: '01.mp3', title: '999,999' },
+      { name: '09.mp3', title: 'Lights in the Sky' }
+    ]
+  }
   assert.deepEqual(
     pickSongs(album, files, tokenize('the slip')).map(p => [p.song.title, p.titleHits]),
     [
@@ -170,7 +208,9 @@ test('archive provider opens an item as its torrent plus tag annotations', async
     }
   })
   const playable = await provider.open({ ref: 'nine_inch_nails_the_slip', title: 'The Slip' })
-  assert.deepEqual(fetched, ['https://archive.org/download/nine_inch_nails_the_slip/nine_inch_nails_the_slip_archive.torrent'])
+  assert.deepEqual(fetched, [
+    'https://archive.org/download/nine_inch_nails_the_slip/nine_inch_nails_the_slip_archive.torrent'
+  ])
   assert.equal((await playable.annotations)?.get('04_discipline')?.title, 'Discipline')
   await assert.rejects(provider.open({ ref: '../evil', title: 'x' }))
 })

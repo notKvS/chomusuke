@@ -1,6 +1,6 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildLibrary, isAudioFileName, titleFromFileName, trackKey, type TorrentFileInfo } from './library.ts'
+import { test } from 'node:test'
+import { buildLibrary, isAudioFileName, type TorrentFileInfo, titleFromFileName, trackKey } from './library.ts'
 
 const files = (torrentName: string, entries: Array<[string, number]>): TorrentFileInfo[] =>
   entries.map(([p, length]) => ({ path: `${torrentName}/${p}`, length }))
@@ -147,7 +147,13 @@ test('filename helpers', () => {
 })
 
 test('no playable audio yields no tracks', () => {
-  const lib = buildLibrary('movie', files('movie', [['movie.mkv', 1], ['subs.srt', 1]]))
+  const lib = buildLibrary(
+    'movie',
+    files('movie', [
+      ['movie.mkv', 1],
+      ['subs.srt', 1]
+    ])
+  )
   assert.equal(lib.tracks.length, 0)
   assert.equal(lib.coverIndex, undefined)
 })

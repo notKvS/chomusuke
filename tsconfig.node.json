@@ -1,14 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "lib": [
-      "ES2023"
-    ],
+    "lib": ["ES2023"],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "strict": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
@@ -24,6 +20,7 @@
     "src/preload/**/*",
     "src/shared/**/*",
     "extensions/build.ts",
-    "extensions/test/**/*"
+    "extensions/test/**/*",
+    "src/renderer/src/theme/*.test.ts"
   ]
 }

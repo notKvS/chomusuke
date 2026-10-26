@@ -1,5 +1,5 @@
-import fireFace from '../../assets/mascot/chomusuke-fire-face.png'
 import fireArt from '../../assets/mascot/chomusuke-fire.png'
+import fireFace from '../../assets/mascot/chomusuke-fire-face.png'
 
 export type ChomuMood = 'idle' | 'listening' | 'happy' | 'sad' | 'sleep' | 'confused'
 
@@ -32,9 +32,7 @@ export function Chomu({ mood = 'idle', size = 160, className = '', dancing = fal
     <span
       className={`chomu chomu--${mood} ${awake ? 'is-awake' : 'is-calm'} ${dancing ? 'is-dancing' : ''} ${headOnly ? 'is-head' : ''} ${className}`}
       style={{ width: size, height: headOnly ? size : size * 1.19 }}
-      role={title ? 'img' : undefined}
-      aria-label={title}
-      aria-hidden={title ? undefined : true}
+      {...(title ? { role: 'img', 'aria-label': title } : { 'aria-hidden': true })}
     >
       <img className="chomu__art" src={headOnly ? fireFace : fireArt} alt="" draggable={false} />
       {badge && <span className="chomu__badge">{badge}</span>}

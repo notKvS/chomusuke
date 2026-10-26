@@ -1,8 +1,9 @@
 // Knaben: a meta-search engine that indexes many public trackers (TPB, 1337x, Nyaa, LimeTorrents, …) behind one
 // JSON API, so one request covers them all. Template: off by default and not tested against the live site.
 // API: POST https://api.knaben.org/v1 with a JSON body.
-import type { Extension, Options, TorrentResult } from './sdk.ts'
+
 import { cleanQuery, getJson, magnet, parseRelease } from './lib/torrent-kit.ts'
+import type { Extension, Options, TorrentResult } from './sdk.ts'
 
 const API = 'https://api.knaben.org/v1'
 const SITE = 'Knaben'
@@ -43,10 +44,18 @@ export function toResults(hits: KnabenHit[], options: Options): TorrentResult[] 
     const ids = hit.categoryId ?? []
     if (options.includeAudiobooks !== true && ids.includes(AUDIOBOOK)) return []
     if (ids.includes(VIDEO)) return []
-    const link = hit.magnetUrl?.startsWith('magnet:?') ? hit.magnetUrl : hit.hash ? magnet(hit.hash, hit.title) : undefined
+    const link = hit.magnetUrl?.startsWith('magnet:?')
+      ? hit.magnetUrl
+      : hit.hash
+        ? magnet(hit.hash, hit.title)
+        : undefined
     if (!link) return []
     const release = parseRelease(hit.title)
-    const tags = [...(ids.includes(LOSSLESS) ? ['Lossless'] : []), ...(release.tags ?? []), ...(hit.tracker ? [hit.tracker] : [])]
+    const tags = [
+      ...(ids.includes(LOSSLESS) ? ['Lossless'] : []),
+      ...(release.tags ?? []),
+      ...(hit.tracker ? [hit.tracker] : [])
+    ]
     return [
       {
         ...release,
@@ -80,7 +89,14 @@ const extension: Extension = {
     const q = cleanQuery(text)
     if (!q) return []
     const categories = options.losslessOnly === true ? [LOSSLESS] : [AUDIO]
-    const hits = await query({ search_type: '100%', search_field: 'title', query: q, categories, order_by: 'seeders', order_direction: 'desc' })
+    const hits = await query({
+      search_type: '100%',
+      search_field: 'title',
+      query: q,
+      categories,
+      order_by: 'seeders',
+      order_direction: 'desc'
+    })
     return toResults(hits, options)
   },
 

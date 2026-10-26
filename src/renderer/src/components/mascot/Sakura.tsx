@@ -1,18 +1,23 @@
-// Drifting cherry-blossom petals behind the whole app. Purely decorative; disabled for reduced motion.
-const PETALS = Array.from({ length: 12 }, (_, i) => ({
-  left: (i * 37) % 100,
-  delay: (i * 1.7) % 14,
-  duration: 12 + ((i * 5) % 9),
-  size: 8 + ((i * 3) % 8),
-  sway: i % 2 === 0 ? 'sakura-sway-a' : 'sakura-sway-b'
-}))
+import { useMemo } from 'react'
 
-export function Sakura() {
+// Drifting cherry-blossom petals behind the whole app. Purely decorative; disabled for reduced motion.
+const petals = (count: number) =>
+  Array.from({ length: count }, (_, i) => ({
+    id: i,
+    left: (i * 37) % 100,
+    delay: (i * 1.7) % 14,
+    duration: 12 + ((i * 5) % 9),
+    size: 8 + ((i * 3) % 8),
+    sway: i % 2 === 0 ? 'sakura-sway-a' : 'sakura-sway-b'
+  }))
+
+export function Sakura({ count = 12 }: { count?: number }) {
+  const list = useMemo(() => petals(count), [count])
   return (
     <div className="sakura" aria-hidden="true">
-      {PETALS.map((p, i) => (
+      {list.map(p => (
         <span
-          key={i}
+          key={p.id}
           className={`sakura__petal ${p.sway}`}
           style={{
             left: `${p.left}%`,

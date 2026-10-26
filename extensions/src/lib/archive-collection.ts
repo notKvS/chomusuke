@@ -75,7 +75,10 @@ export function archiveCollection(config: CollectionConfig): Extension {
   async function find(clause: string, sort: string, options: Options): Promise<TorrentResult[]> {
     const extra = config.optionClause?.(options)
     const url = new URL('/advancedsearch.php', ORIGIN)
-    url.searchParams.set('q', `(${config.scope}) AND ${clause} AND ${mediatype} AND ${EXCLUDED}${extra ? ` AND ${extra}` : ''}`)
+    url.searchParams.set(
+      'q',
+      `(${config.scope}) AND ${clause} AND ${mediatype} AND ${EXCLUDED}${extra ? ` AND ${extra}` : ''}`
+    )
     for (const field of FIELDS) url.searchParams.append('fl[]', field)
     url.searchParams.append('sort[]', sort)
     url.searchParams.set('rows', '30')

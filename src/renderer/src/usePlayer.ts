@@ -153,7 +153,9 @@ export function usePlayer(onError: (message: string) => void) {
         if (!audio.src) return
         patch({ isPlaying: false, isBuffering: false })
         const title = current()?.title ?? 'this track'
-        onErrorRef.current(`Couldn't play “${title}”. The format may be unsupported, or no peers are sharing it right now.`)
+        onErrorRef.current(
+          `Couldn't play “${title}”. The format may be unsupported, or no peers are sharing it right now.`
+        )
       }
     }
     for (const [name, handler] of Object.entries(handlers)) audio.addEventListener(name, handler)
@@ -162,6 +164,7 @@ export function usePlayer(onError: (message: string) => void) {
     }
   }, [audio, patch, playAt])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new track restarts the stall timer
   useEffect(() => {
     if (!state.isBuffering) return
     const since = Date.now()

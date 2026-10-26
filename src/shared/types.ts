@@ -156,4 +156,14 @@ export interface ChomusukeApi {
   exploreSources(): Promise<ExploreSource[]>
   browse(sourceId: string, categoryId: string): Promise<BrowseResponse>
   onStats(listener: (stats: TorrentStats[]) => void): () => void
+  /** Window chrome that follows the theme: zoom factor and the native title-bar overlay colours. */
+  setWindowAppearance(appearance: WindowAppearance): Promise<void>
+}
+
+export interface WindowAppearance {
+  /** 0.8–1.3 */
+  zoom: number
+  /** #rrggbb */
+  titleBarColor: string
+  titleBarSymbolColor: string
 }

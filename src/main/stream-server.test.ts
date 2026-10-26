@@ -1,7 +1,7 @@
-import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { Readable } from 'node:stream'
-import { startStreamServer, type StreamServer } from './stream-server.ts'
+import { after, before, test } from 'node:test'
+import { type StreamServer, startStreamServer } from './stream-server.ts'
 
 const HASH = 'a'.repeat(40)
 const DATA = Buffer.from('0123456789abcdefghij')
@@ -61,10 +61,13 @@ test('rejects requests for a different Host (DNS rebinding)', async () => {
   const status = await new Promise<number>((resolve, reject) => {
     import('node:http').then(http =>
       http
-        .get({ host: '127.0.0.1', port: url.port, path: url.pathname, headers: { Host: `evil.example:${url.port}` } }, res => {
-          res.resume()
-          resolve(res.statusCode ?? 0)
-        })
+        .get(
+          { host: '127.0.0.1', port: url.port, path: url.pathname, headers: { Host: `evil.example:${url.port}` } },
+          res => {
+            res.resume()
+            resolve(res.statusCode ?? 0)
+          }
+        )
         .on('error', reject)
     )
   })

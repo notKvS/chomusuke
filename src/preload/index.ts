@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import { contextBridge, type IpcRendererEvent, ipcRenderer } from 'electron'
 import type { ChomusukeApi, TorrentStats } from '../shared/types'
 
 // The renderer only gets these narrow functions — never ipcRenderer itself.
@@ -17,6 +17,7 @@ const api: ChomusukeApi = {
   testExtension: id => ipcRenderer.invoke('extensions:test', id),
   exploreSources: () => ipcRenderer.invoke('explore:sources'),
   browse: (sourceId, categoryId) => ipcRenderer.invoke('explore:browse', sourceId, categoryId),
+  setWindowAppearance: appearance => ipcRenderer.invoke('ui:set-window-appearance', appearance),
   onStats: listener => {
     const handler = (_event: IpcRendererEvent, stats: TorrentStats[]) => listener(stats)
     ipcRenderer.on('torrent:stats', handler)

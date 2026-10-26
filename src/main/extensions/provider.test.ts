@@ -1,7 +1,7 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { parseRepository } from './manifest.ts'
-import { createExtensionProvider, testExtension, type ExtensionRuntime } from './provider.ts'
+import { createExtensionProvider, type ExtensionRuntime, testExtension } from './provider.ts'
 
 const [manifest] = parseRepository(
   [

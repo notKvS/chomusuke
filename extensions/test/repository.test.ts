@@ -4,8 +4,8 @@ import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { test } from 'node:test'
 import { parseRepository } from '../../src/main/extensions/manifest.ts'
-import { MIRRORS as LIME_MIRRORS } from '../src/limetorrents.ts'
 import { MIRRORS as X1337X_MIRRORS } from '../src/1337x.ts'
+import { MIRRORS as LIME_MIRRORS } from '../src/limetorrents.ts'
 
 const root = path.join(import.meta.dirname, '..')
 const raw = JSON.parse(readFileSync(path.join(root, 'index.json'), 'utf8'))
@@ -20,7 +20,8 @@ test('bundled manifests are valid and have sources', () => {
 })
 
 test('tracker templates install switched off; the Internet Archive collections stay on', () => {
-  for (const manifest of manifests) assert.equal(manifest.enabledByDefault, !TEMPLATES.includes(manifest.id), manifest.id)
+  for (const manifest of manifests)
+    assert.equal(manifest.enabledByDefault, !TEMPLATES.includes(manifest.id), manifest.id)
 })
 
 test('mirror lists in code match the hosts the sandbox allows', () => {

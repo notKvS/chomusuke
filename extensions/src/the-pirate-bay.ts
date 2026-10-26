@@ -1,7 +1,8 @@
 // The Pirate Bay through apibay.org, the JSON API its own web front end uses.
 // Template: off by default and not tested against the live site.
-import type { Extension, Options, TorrentResult } from './sdk.ts'
+
 import { cleanQuery, getJson, magnet, parseRelease } from './lib/torrent-kit.ts'
+import type { Extension, Options, TorrentResult } from './sdk.ts'
 
 const API = 'https://apibay.org'
 const SITE = 'The Pirate Bay'
@@ -57,7 +58,11 @@ export function toResults(items: ApibayItem[], categoryIds: string[]): TorrentRe
         size: Number(item.size) || undefined,
         seeders: Number(item.seeders),
         leechers: Number(item.leechers),
-        tags: [...(String(item.category) === '104' ? ['FLAC'] : []), ...(release.tags ?? []), ...(item.status === 'vip' || item.status === 'trusted' ? ['Trusted'] : [])]
+        tags: [
+          ...(String(item.category) === '104' ? ['FLAC'] : []),
+          ...(release.tags ?? []),
+          ...(item.status === 'vip' || item.status === 'trusted' ? ['Trusted'] : [])
+        ]
           .filter((tag, i, all) => all.indexOf(tag) === i)
           .slice(0, 4)
       }

@@ -1,5 +1,5 @@
-import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'node:test'
 import { parseSource, SourceError } from './source.ts'
 
 const HASH = 'c9e15763f722f23e98a29decdfae341b98d53056'

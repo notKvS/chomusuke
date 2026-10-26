@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 import type { ProviderSettingsView, ProvidersResponse, TorznabForm } from '../../../shared/types'
 import { Icon } from './Icon'
 
@@ -22,6 +22,7 @@ export function SourcesView() {
     return true
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: load once on mount; apply only calls state setters
   useEffect(() => {
     void window.chomusuke.listProviders().then(apply)
   }, [])
@@ -146,10 +147,10 @@ function ExtensionsSection({ extensions, apply, onToggle, onRemove }: Extensions
     <section className="shelf">
       <h2 className="shelf__title">Extensions</h2>
       <p className="sources__help">
-        Extensions add sources. The Internet Archive collections come switched on; the tracker templates
-        (The Pirate Bay, 1337x, Nyaa, Knaben, LimeTorrents) come switched off — turn one on and press Test to use it.
-        To add more, paste the URL of an extension repository (a JSON manifest). Each extension runs in an isolated
-        sandbox and can only reach the websites it declares. Only install repositories you trust.
+        Extensions add sources. The Internet Archive collections come switched on; the tracker templates (The Pirate
+        Bay, 1337x, Nyaa, Knaben, LimeTorrents) come switched off — turn one on and press Test to use it. To add more,
+        paste the URL of an extension repository (a JSON manifest). Each extension runs in an isolated sandbox and can
+        only reach the websites it declares. Only install repositories you trust.
       </p>
 
       {extensions.map(provider => (
@@ -160,7 +161,11 @@ function ExtensionsSection({ extensions, apply, onToggle, onRemove }: Extensions
             note={provider.description}
             onToggle={() => onToggle(provider)}
             onTest={() => void test(provider)}
-            onEdit={provider.options?.length ? () => setConfiguring(configuring === provider.id ? null : provider.id) : undefined}
+            onEdit={
+              provider.options?.length
+                ? () => setConfiguring(configuring === provider.id ? null : provider.id)
+                : undefined
+            }
             onRemove={() => onRemove(provider)}
           />
           {tests[provider.id] && <StatusLine status={tests[provider.id] as NonNullable<Status>} />}
@@ -204,7 +209,13 @@ function StatusLine({ status }: { status: NonNullable<Status> }) {
   )
 }
 
-function ExtensionOptionsForm({ provider, onDone }: { provider: ProviderSettingsView; onDone: (r: ProvidersResponse) => void }) {
+function ExtensionOptionsForm({
+  provider,
+  onDone
+}: {
+  provider: ProviderSettingsView
+  onDone: (r: ProvidersResponse) => void
+}) {
   const options = provider.options ?? []
   const [values, setValues] = useState<Record<string, string | boolean>>(() =>
     Object.fromEntries(options.map(o => [o.key, o.secret ? '' : (o.value ?? (o.type === 'boolean' ? false : ''))]))
@@ -336,7 +347,13 @@ function TorznabEditor({ initial, onCancel, onSaved }: EditorProps) {
     <form className="torznab-form" onSubmit={save}>
       <label>
         <span>Name</span>
-        <input value={form.name} onChange={e => set('name')(e.target.value)} placeholder="My indexer" maxLength={60} required />
+        <input
+          value={form.name}
+          onChange={e => set('name')(e.target.value)}
+          placeholder="My indexer"
+          maxLength={60}
+          required
+        />
       </label>
       <label>
         <span>Torznab URL</span>
