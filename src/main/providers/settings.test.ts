@@ -155,7 +155,7 @@ test('a saved key is only reused for the same server', () =>
 
 test('installs extensions, verifies their code on load, and keeps secrets encrypted', () =>
   withStore(async (store, file) => {
-    const { parseRepository } = await import('../extensions/manifest.ts')
+    const { parseRepository } = await import('../extension-host/manifest.ts')
     const [manifest] = parseRepository(
       [
         {
@@ -219,7 +219,7 @@ test('validateRepositoryUrl', async () => {
 
 test('a same-id extension from another repository or with other hosts does not inherit secrets', () =>
   withStore(async store => {
-    const { parseRepository } = await import('../extensions/manifest.ts')
+    const { parseRepository } = await import('../extension-host/manifest.ts')
     const make = (repo: string, hosts: string[]) =>
       parseRepository(
         [
@@ -255,7 +255,7 @@ test('a same-id extension from another repository or with other hosts does not i
 
 test('bundled extensions install once, update when changed, and stay removed', () =>
   withStore(async (store, file) => {
-    const { parseRepository } = await import('../extensions/manifest.ts')
+    const { parseRepository } = await import('../extension-host/manifest.ts')
     const repo = 'https://bundled.chomusuke.invalid/extensions/index.json'
     const manifest = parseRepository(
       [
@@ -291,7 +291,7 @@ test('bundled extensions install once, update when changed, and stay removed', (
 
 test('extensions marked enabledByDefault: false install switched off and keep the user’s choice', () =>
   withStore(async (store, file) => {
-    const { parseRepository } = await import('../extensions/manifest.ts')
+    const { parseRepository } = await import('../extension-host/manifest.ts')
     const repo = 'https://bundled.chomusuke.invalid/extensions/index.json'
     const raw = {
       manifestVersion: 1,

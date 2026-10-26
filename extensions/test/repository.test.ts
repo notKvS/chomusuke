@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { test } from 'node:test'
-import { parseRepository } from '../../src/main/extensions/manifest.ts'
+import { parseRepository } from '../../src/main/extension-host/manifest.ts'
 import { MIRRORS as X1337X_MIRRORS } from '../src/1337x.ts'
 import { MIRRORS as LIME_MIRRORS } from '../src/limetorrents.ts'
 

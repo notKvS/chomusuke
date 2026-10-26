@@ -11,7 +11,7 @@ Explore category) into albums/songs, and turns a chosen album into a torrent to 
 
 ## Bundled extensions
 
-Written in TypeScript in `extensions/src/`, embedded at build time by `src/main/extensions/defaults.ts`, installed
+Written in TypeScript in `extensions/src/`, embedded at build time by `src/main/extension-host/defaults.ts`, installed
 on first launch, updated when the shipped code changes, and never reinstalled once you remove one.
 
 ### On by default
@@ -62,12 +62,12 @@ search, and the template's categories appear in *Explore*. You are responsible f
 
 **Removing them for a release:** delete the five entries from `extensions/index.json`, their files in
 `extensions/src/` (plus `lib/torrent-kit.ts` if nothing else uses it), their imports in
-`src/main/extensions/defaults.ts`, and their tests in `extensions/test/`. Users who already installed them keep
+`src/main/extension-host/defaults.ts`, and their tests in `extensions/test/`. Users who already installed them keep
 them until they remove them.
 
 ## The extension sandbox
 
-`src/main/extensions/` — format documented at the top of `manifest.ts`.
+`src/main/extension-host/` — format documented at the top of `manifest.ts`.
 
 - Each extension runs in its own hidden, sandboxed Electron window with an in-memory session; its code is
   loaded into a module Web Worker (no DOM, no Node, no access to the app).
@@ -91,7 +91,7 @@ them until they remove them.
      HTML/RSS parsing without a DOM, release-name parsing, mirrors, magnets and friendly error messages.
 2. Add its manifest entry to `extensions/index.json`: `"code": "<id>.js"`, the hosts it may reach, categories,
    options, and `"enabledByDefault": false` if it should install switched off. To ship it with the app, also
-   add it to `src/main/extensions/defaults.ts`.
+   add it to `src/main/extension-host/defaults.ts`.
 3. `npm run build:extensions` bundles each source into one standalone ES module in `extensions/dist/`
    (git-ignored; `npm run dev`/`build`/`start` run it automatically). `npm run typecheck` checks extensions
    against the Web Worker environment they run in. Put offline tests in `extensions/test/`.

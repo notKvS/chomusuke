@@ -5,6 +5,7 @@ import { AppearanceView } from './components/AppearanceView'
 import { ExploreView } from './components/ExploreView'
 import { Home } from './components/Home'
 import { Icon } from './components/Icon'
+import { LibraryView } from './components/LibraryView'
 import { Chomu } from './components/mascot/Chomu'
 import { Sakura } from './components/mascot/Sakura'
 import { Splash } from './components/mascot/Splash'
@@ -24,6 +25,7 @@ type Page =
   | { kind: 'sources' }
   | { kind: 'explore' }
   | { kind: 'appearance' }
+  | { kind: 'library' }
   | { kind: 'album'; infoHash: string }
 
 /** Shown in place of the current page while an album loads or fails to; not part of the history. */
@@ -282,6 +284,20 @@ export function App() {
     )
   }, [runLoad, showAlbum])
 
+  const openLibraryAlbum = useCallback(
+    (infoHash: string) => {
+      const loaded = albumsRef.current.find(a => a.infoHash === infoHash)
+      if (loaded) return showAlbum(loaded, false)
+      void runLoad(
+        () => window.chomusuke.openLibraryAlbum(infoHash),
+        {},
+        album => showAlbum(album, false),
+        () => openLibraryAlbum(infoHash)
+      )
+    },
+    [runLoad, showAlbum]
+  )
+
   const openAlbum = useCallback(
     (infoHash: string, autoplay = false) => {
       const album = albumsRef.current.find(a => a.infoHash === infoHash)
@@ -301,6 +317,7 @@ export function App() {
   const goSources = useCallback(() => goTo({ kind: 'sources' }), [goTo])
   const goExplore = useCallback(() => goTo({ kind: 'explore' }), [goTo])
   const goAppearance = useCallback(() => goTo({ kind: 'appearance' }), [goTo])
+  const goLibrary = useCallback(() => goTo({ kind: 'library' }), [goTo])
   const goSearch = useCallback(() => {
     if (lastQuery !== null) goTo({ kind: 'search', query: lastQuery })
   }, [goTo, lastQuery])
@@ -344,6 +361,9 @@ export function App() {
       break
     case 'appearance':
       content = <AppearanceView controls={looks} />
+      break
+    case 'library':
+      content = <LibraryView onOpen={openLibraryAlbum} />
       break
     case 'loading':
       content = <AlbumLoading title={view.title} artist={view.artist} artwork={view.artwork} />
@@ -390,6 +410,7 @@ export function App() {
         onSources={goSources}
         onExplore={goExplore}
         onAppearance={goAppearance}
+        onLibrary={goLibrary}
         onOpenAlbum={openAlbum}
         onOpenFile={openFile}
       />

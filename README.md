@@ -27,6 +27,15 @@ fish, in a night-violet anime theme.
     under *Sources* and press **Test**. You are responsible for what you stream.
 - **Player** — queue through an album, media keys and the OS media controls, remembered volume and a smooth
   seek bar.
+- **See the torrent** — the *Torrent* button on an album shows its name, info hash, size, pieces, trackers,
+  files with download progress and live transfer; save the `.torrent` file or copy the magnet link.
+- **Keep & seed** — keep an album to download it in full into your library (*Library* page). Kept albums play
+  instantly and offline, and are seeded so listeners share music with each other. Sharing is **on by default and
+  opt-out**: one switch stops all uploading (downloads keep working), another stops background seeding of the
+  library, and an upload speed limit leaves room for the rest of your connection.
+- **Seed what you stream** — whatever you played stays on disk after you close the app (within a space limit you
+  pick, 1–20 GB; least recently played albums make room first) and is seeded on the next launch. Listed under
+  *Recently streamed*, with *Clear all*; switching it off clears it when the app closes.
 - **Appearance studio** (*Appearance* page) — nine ready-made themes (dark and light) or build your own:
   accent and secondary colours (any colour), background (aurora, animated mesh, starfield, gradient, solid or
   your own picture with blur/dim), panels (classic, glass, frosted, solid, outline) with blur and opacity, button
@@ -73,14 +82,19 @@ save (`.vscode/settings.json`, rules in `biome.json`).
   the same song exists in several formats), padding files skipped, cover image chosen.
 - **Providers** (`src/main/providers/`) turn a query or an Explore category into results and a chosen result
   into a torrent. Results reach the UI as opaque ids; links are only resolved in the main process.
-- **Extensions** (`src/main/extensions/`) each run in a hidden, sandboxed window with an in-memory session; the
+- **Extensions** (`src/main/extension-host/`) each run in a hidden, sandboxed window with an in-memory session; the
   code runs in a Web Worker and may only reach the https hosts its manifest declares. Results are re-validated,
   magnets are rebuilt with only the hash, name and public trackers, and LAN addresses are stripped from
   `.torrent` files. Code is pinned by SHA-256.
 - **Renderer** (`src/renderer`) is React in a sandboxed, context-isolated window with a strict CSP. It only
   reaches the main process through the functions in `src/preload/index.ts`.
+- **Seeding library** (`src/main/seeding.ts`) keeps albums in `<userData>/library/` (`library.json`, the
+  `.torrent` files and each album's files): kept albums, and streamed albums within the space cap. Albums
+  downloaded during a session live in the cache and are moved into the library on quit; at launch the library is
+  re-added and seeded (unless the user opted out). With sharing off, every peer stays choked, so no piece data is
+  uploaded from any torrent.
 
-Downloaded pieces live in a session cache under the OS temp folder, wiped on launch and on quit.
+Everything else streams through a session cache under the OS temp folder, wiped on launch and on quit.
 UPnP/NAT-PMP port mapping and uTP are off; peers are reached over TCP and web seeds.
 
 See [docs/sources.md](docs/sources.md) for the sources and templates in detail, and how to write an extension

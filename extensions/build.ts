@@ -1,5 +1,5 @@
 // Bundles every extension in extensions/src/*.ts into one standalone ES module each, in extensions/dist/.
-// The app embeds these (src/main/extensions/defaults.ts); third-party repositories publish the same kind of file.
+// The app embeds these (src/main/extension-host/defaults.ts); third-party repositories publish the same kind of file.
 // Run with: npm run build:extensions
 import { readdirSync } from 'node:fs'
 import path from 'node:path'

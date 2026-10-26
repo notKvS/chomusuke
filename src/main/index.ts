@@ -1,21 +1,26 @@
-import { mkdir, readFile, rm, stat } from 'node:fs/promises'
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { app, BrowserWindow, dialog, type IpcMainInvokeEvent, ipcMain, safeStorage, session } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, type IpcMainInvokeEvent, ipcMain, safeStorage, session } from 'electron'
+import parseTorrent from 'parse-torrent'
 import type {
   Album,
   BrowseResponse,
   ExploreSource,
+  LibraryResponse,
+  LibraryView,
   LoadResult,
   ProvidersResponse,
+  SaveTorrentResult,
   SearchResponse,
   SourceHints,
-  TestResponse
+  TestResponse,
+  TorrentDetails
 } from '../shared/types.ts'
 import { TorrentEngine } from './engine.ts'
-import { BUNDLED_REPOSITORY, bundledExtensions } from './extensions/defaults.ts'
-import { ExtensionHost, hostPage } from './extensions/host.ts'
-import { ExtensionError, type ExtensionManifest, parseRepository } from './extensions/manifest.ts'
-import { testExtension } from './extensions/provider.ts'
+import { BUNDLED_REPOSITORY, bundledExtensions } from './extension-host/defaults.ts'
+import { ExtensionHost, hostPage } from './extension-host/host.ts'
+import { ExtensionError, type ExtensionManifest, parseRepository } from './extension-host/manifest.ts'
+import { testExtension } from './extension-host/provider.ts'
 import { FetchError, fetchJson, fetchText } from './http.ts'
 import { annotationsForTorrentUrl } from './providers/archive.ts'
 import { archiveJsonFetcher, buildProviders } from './providers/index.ts'
@@ -23,6 +28,7 @@ import { ProviderRegistry } from './providers/registry.ts'
 import { ProviderSettingsStore, type SecretBox, SettingsError, validateRepositoryUrl } from './providers/settings.ts'
 import { TorznabError, testTorznab } from './providers/torznab.ts'
 import type { Playable } from './providers/types.ts'
+import { isInfoHash, type LibraryEntry, LibraryError, SeedLibrary } from './seeding.ts'
 import { parseSource, SourceError } from './source.ts'
 import { type StreamServer, startStreamServer } from './stream-server.ts'
 import { fetchTorrentFile } from './torrent-fetch.ts'
@@ -53,6 +59,9 @@ const secretBox: SecretBox = {
 
 // Session-scoped cache: wiped on launch and on quit so streamed audio never piles up on disk.
 const cacheDir = path.join(app.getPath('temp'), 'chomusuke-cache')
+
+// Kept albums (seeded library); survives restarts.
+const library = new SeedLibrary(path.join(app.getPath('userData'), 'library'))
 
 let mainWindow: BrowserWindow | null = null
 let engine: TorrentEngine | null = null
@@ -208,12 +217,98 @@ async function playableToAlbum(torrents: TorrentEngine, playable: Playable): Pro
 
 async function toResult(work: () => Promise<Album>): Promise<LoadResult> {
   try {
-    return { ok: true, album: await work() }
+    const album = await work()
+    // Every user-opened album counts as played: streamed albums played recently are evicted last.
+    void library.touch(album.infoHash).catch(() => {})
+    return { ok: true, album }
   } catch (err) {
     if (err instanceof SourceError) return { ok: false, error: err.message }
     console.error('[ipc] unexpected load failure:', err)
     return { ok: false, error: 'Something went wrong while loading this torrent.' }
   }
+}
+
+/** Applies the saved sharing settings to the torrent client. */
+function applySharing(torrents: TorrentEngine): void {
+  const { enabled, uploadLimitKBps } = library.sharing
+  torrents.setSharing(enabled, uploadLimitKBps * 1024)
+}
+
+/** Opens a kept album from the library folder (verifying what's already on disk) and fetches the rest. */
+async function loadFromLibrary(torrents: TorrentEngine, infoHash: string): Promise<Album> {
+  // Kept albums download in full; streamed ones only seed what they have (and fetch what's played).
+  const kept = library.has(infoHash)
+  const loaded = torrents.album(infoHash)
+  if (loaded) {
+    if (kept) torrents.keep(infoHash)
+    return loaded
+  }
+  const entry = library.get(infoHash)
+  if (!entry) throw new SourceError('That album isn’t in your library any more.')
+  const data = await library.readTorrent(infoHash).catch(() => {
+    throw new SourceError('This album’s torrent file is missing from your library.')
+  })
+  const parsed = await parseTorrent(data).catch(() => undefined)
+  if (parsed?.infoHash !== infoHash) throw new SourceError('This album’s torrent file is damaged.')
+  const album = await torrents.load(data, { title: entry.title, artist: entry.artist }, library.dataPath(infoHash))
+  if (kept) torrents.keep(infoHash)
+  return album
+}
+
+/** Starts seeding the library in the background (when the user hasn't opted out). */
+async function seedLibrary(torrents: TorrentEngine): Promise<void> {
+  const { enabled, seedLibrary: kept, seedStreamed: streamed } = library.sharing
+  if (!enabled) return
+  const entries = [...(kept ? library.list() : []), ...(streamed ? library.listStreamed() : [])]
+  for (const entry of entries) {
+    await loadFromLibrary(torrents, entry.infoHash).catch(err =>
+      console.error(`[library] couldn't seed ${entry.infoHash}:`, err instanceof Error ? err.message : err)
+    )
+  }
+}
+
+function libraryView(torrents: TorrentEngine): LibraryView {
+  const withActivity = (entry: LibraryEntry, progress: boolean) => {
+    const activity = torrents.activity(entry.infoHash)
+    return {
+      ...entry,
+      active: activity !== undefined,
+      progress: progress ? activity?.progress : undefined,
+      uploaded: activity?.uploaded ?? 0,
+      numPeers: activity?.numPeers ?? 0,
+      uploadSpeed: activity?.uploadSpeed ?? 0
+    }
+  }
+  const streamed = library.listStreamed()
+  return {
+    sharing: library.sharing,
+    items: library.list().map(entry => withActivity(entry, true)),
+    streamed: streamed.map(entry => withActivity(entry, false)),
+    streamedBytes: streamed.reduce((sum, entry) => sum + entry.size, 0),
+    session: torrents.totals()
+  }
+}
+
+async function toLibraryResponse(torrents: TorrentEngine, work: () => Promise<unknown>): Promise<LibraryResponse> {
+  try {
+    await work()
+    return { ok: true, library: libraryView(torrents) }
+  } catch (err) {
+    if (err instanceof LibraryError) return { ok: false, error: err.message }
+    console.error('[library]', err)
+    return { ok: false, error: 'Something went wrong with your library.' }
+  }
+}
+
+/** A file name that's safe on every OS, from a torrent's (untrusted) name. */
+function safeFileName(name: string): string {
+  const clean = name
+    .replace(/[\p{Cc}<>:"/\\|?*]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[. ]+$/, '')
+    .slice(0, 120)
+  return /^(con|prn|aux|nul|com\d|lpt\d)$/i.test(clean) || !clean ? 'album' : clean
 }
 
 function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settings: ProviderSettingsStore): void {
@@ -379,6 +474,91 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
     }
   })
 
+  ipcMain.handle('torrent:details', (event, infoHash: unknown): TorrentDetails | null => {
+    assertTrustedSender(event)
+    if (!isInfoHash(infoHash)) return null
+    return torrents.details(infoHash, library.has(infoHash)) ?? null
+  })
+
+  ipcMain.handle('torrent:save-file', async (event, infoHash: unknown): Promise<SaveTorrentResult> => {
+    assertTrustedSender(event)
+    const file = isInfoHash(infoHash) ? torrents.torrentFile(infoHash) : undefined
+    if (!file || !mainWindow) return { ok: false, error: 'That torrent isn’t loaded any more.' }
+    const picked = await dialog.showSaveDialog(mainWindow, {
+      title: 'Save .torrent file',
+      defaultPath: path.join(app.getPath('downloads'), `${safeFileName(file.name)}.torrent`),
+      filters: [{ name: 'Torrent files', extensions: ['torrent'] }]
+    })
+    if (picked.canceled || !picked.filePath) return null
+    try {
+      await writeFile(picked.filePath, file.data)
+      return { ok: true, path: picked.filePath }
+    } catch {
+      return { ok: false, error: 'Couldn’t save the file there.' }
+    }
+  })
+
+  ipcMain.handle('torrent:copy-magnet', (event, infoHash: unknown): boolean => {
+    assertTrustedSender(event)
+    const magnet = isInfoHash(infoHash) ? torrents.magnet(infoHash) : undefined
+    if (magnet) clipboard.writeText(magnet)
+    return magnet !== undefined
+  })
+
+  ipcMain.handle('library:get', (event): LibraryView => {
+    assertTrustedSender(event)
+    return libraryView(torrents)
+  })
+
+  ipcMain.handle('library:keep', (event, infoHash: unknown, info: unknown) => {
+    assertTrustedSender(event)
+    return toLibraryResponse(torrents, async () => {
+      const kept = isInfoHash(infoHash) ? torrents.keep(infoHash) : undefined
+      if (!kept) throw new LibraryError('That album isn’t loaded any more.')
+      const details = typeof info === 'object' && info !== null ? (info as Record<string, unknown>) : {}
+      await library.add(
+        { title: details.title, artist: details.artist, coverUrl: details.coverUrl, infoHash, size: kept.size },
+        kept.torrentFile
+      )
+    })
+  })
+
+  ipcMain.handle('library:remove', (event, infoHash: unknown) => {
+    assertTrustedSender(event)
+    return toLibraryResponse(torrents, async () => {
+      if (!isInfoHash(infoHash)) throw new LibraryError('That album isn’t in your library.')
+      await library.remove(infoHash)
+    })
+  })
+
+  ipcMain.handle('library:clear-streamed', event => {
+    assertTrustedSender(event)
+    return toLibraryResponse(torrents, () => library.clearStreamed())
+  })
+
+  ipcMain.handle('library:open', (event, infoHash: unknown) => {
+    assertTrustedSender(event)
+    return toResult(async () => {
+      if (!isInfoHash(infoHash)) throw new SourceError('That album isn’t in your library.')
+      return loadFromLibrary(torrents, infoHash)
+    })
+  })
+
+  ipcMain.handle('sharing:set', (event, raw: unknown) => {
+    assertTrustedSender(event)
+    return toLibraryResponse(torrents, async () => {
+      const before = library.sharing
+      await library.setSharing(raw)
+      applySharing(torrents)
+      const after = library.sharing
+      // Turning seeding on starts it now rather than at the next launch.
+      const seeds = (s: typeof after) => [s.enabled && s.seedLibrary, s.enabled && s.seedStreamed]
+      const [keptNow, streamedNow] = seeds(after)
+      const [keptBefore, streamedBefore] = seeds(before)
+      if ((keptNow && !keptBefore) || (streamedNow && !streamedBefore)) void seedLibrary(torrents)
+    })
+  })
+
   ipcMain.handle('source:open-file', async event => {
     assertTrustedSender(event) // also guarantees mainWindow is set
     if (!mainWindow) return null
@@ -400,7 +580,27 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
 
 async function shutdown(): Promise<void> {
   for (const { host } of extensionHosts.values()) host.dispose()
+  // Albums kept or streamed this session were downloaded into the cache: move them into the library before the
+  // cache goes. Streamed ones only while the user wants them seeded later, and only if anything was downloaded.
+  const kept = new Set(library.list().map(entry => entry.infoHash))
+  const playedAt = new Date().toISOString()
+  const streamed = library.sharing.seedStreamed
+    ? (engine?.cachedTorrents() ?? []).filter(t => !kept.has(t.infoHash) && t.downloaded > 0)
+    : []
+  for (const t of streamed) {
+    await library
+      .recordStreamed({ infoHash: t.infoHash, title: t.title, artist: t.artist, addedAt: playedAt }, t.torrentFile)
+      .catch(err => console.error('[library] couldn’t record', t.infoHash, err))
+  }
+  const move = new Set([...kept, ...streamed.map(t => t.infoHash)])
+  for (const { infoHash, storePath } of (await engine?.release(move)) ?? []) {
+    await library.adopt(infoHash, storePath).catch(err => console.error('[library] couldn’t keep', infoHash, err))
+  }
   await Promise.allSettled([engine?.destroy(), streamServer?.close()])
+  // Opted out: forget streamed music; otherwise trim it to the space the user allowed.
+  if (library.sharing.seedStreamed) await library.enforceStreamCap().catch(() => {})
+  else await library.clearStreamed().catch(() => {})
+  await library.purge().catch(() => {})
   await rm(cacheDir, { recursive: true, force: true }).catch(() => {})
 }
 
@@ -430,9 +630,13 @@ app.whenReady().then(async () => {
     console.error('[settings] could not install the bundled extensions:', err instanceof Error ? err.message : err)
   }
 
+  await library.load()
+  await library.purge().catch(() => {})
+
   let torrents: TorrentEngine | null = null
   streamServer = await startStreamServer((infoHash, fileIndex) => torrents?.resolveFile(infoHash, fileIndex))
-  torrents = engine = new TorrentEngine(cacheDir, streamServer.baseUrl)
+  torrents = engine = new TorrentEngine(cacheDir, streamServer.baseUrl, library.dataDir)
+  applySharing(torrents)
   registerIpc(torrents, new ProviderRegistry(), settings)
 
   mainWindow = createWindow()
@@ -445,6 +649,8 @@ app.whenReady().then(async () => {
     console.error('[window] renderer gone:', details.reason)
     if (details.reason !== 'clean-exit') mainWindow?.reload()
   })
+
+  void seedLibrary(torrents)
 
   setInterval(() => {
     const contents = mainWindow?.webContents

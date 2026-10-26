@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import type { Album, TorrentStats } from '../../../shared/types'
 import { formatBytes, formatSpeed, formatTime, plural } from '../format'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
 import { Chomu } from './mascot/Chomu'
 import { LoaderScene } from './mascot/LoaderScene'
+import { KeepButton, TorrentPanel, useTorrentDetails } from './TorrentPanel'
 
 interface Props {
   album: Album
@@ -17,6 +19,8 @@ interface Props {
 
 export function AlbumView({ album, stats, durations, currentTrackId, isPlaying, onPlay, onToggle }: Props) {
   const albumIsCurrent = album.tracks.some(t => t.id === currentTrackId)
+  const [details, refreshDetails] = useTorrentDetails(album.infoHash)
+  const [showTorrent, setShowTorrent] = useState(false)
 
   return (
     <div className="page album">
@@ -38,9 +42,21 @@ export function AlbumView({ album, stats, durations, currentTrackId, isPlaying, 
             >
               <Icon name={albumIsCurrent && isPlaying ? 'pause' : 'play'} size={32} />
             </button>
+            <KeepButton album={album} details={details} onChanged={refreshDetails} />
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => setShowTorrent(v => !v)}
+              aria-expanded={showTorrent}
+            >
+              <Icon name="info" size={18} />
+              {showTorrent ? 'Hide torrent' : 'Torrent'}
+            </button>
           </div>
         </div>
       </header>
+
+      {showTorrent && <TorrentPanel details={details} />}
 
       <ol className="tracklist">
         {album.tracks.map((track, index) => {

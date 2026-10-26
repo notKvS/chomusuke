@@ -2,7 +2,7 @@
  * Types for writing Chomusuke extensions. An extension is a TypeScript module whose default export implements
  * `Extension`. `npm run build:extensions` bundles each one into a single ES module in `extensions/dist/`,
  * which the app loads into a sandboxed Web Worker (no DOM, no Node; fetch() only to the manifest's hosts).
- * Manifest format: see src/main/extensions/manifest.ts and extensions/index.json.
+ * Manifest format: see src/main/extension-host/manifest.ts and extensions/index.json.
  */
 
 /** One playable release. Needs `link` (magnet or https .torrent URL on a declared host) or `hash`. */

@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { ExtensionOptionView, ProviderSettingsView } from '../../shared/types.ts'
-import { type ExtensionManifest, parseRepository } from '../extensions/manifest.ts'
+import { type ExtensionManifest, parseRepository } from '../extension-host/manifest.ts'
 import { isPrivateHost } from '../net.ts'
 
 /** Encrypts secrets at rest; Electron's safeStorage (DPAPI / Keychain / libsecret) in the app, a fake in tests. */

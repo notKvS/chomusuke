@@ -30,7 +30,82 @@ export interface TorrentStats {
   numPeers: number
   downloadSpeed: number
   uploadSpeed: number
+  /** Bytes sent to other peers this session */
+  uploaded: number
 }
+
+/** Everything about one loaded torrent, for the album page's "Torrent" panel. */
+export interface TorrentDetails {
+  infoHash: string
+  name: string
+  magnetURI: string
+  /** Total size of every file in the torrent, bytes */
+  size: number
+  pieceLength: number
+  pieceCount: number
+  /** First files of the torrent (capped), with download progress 0–1 */
+  files: Array<{ path: string; size: number; progress: number; playable: boolean }>
+  fileCount: number
+  trackers: string[]
+  numPeers: number
+  downloadSpeed: number
+  uploadSpeed: number
+  downloaded: number
+  uploaded: number
+  createdBy?: string
+  comment?: string
+  /** ISO date */
+  created?: string
+  /** In the user's library (kept on disk and seeded) */
+  kept: boolean
+}
+
+/** Opt-out sharing: whether this app uploads to other listeners, and how. */
+export interface SharingSettings {
+  /** Upload pieces you have to other peers (seeding). */
+  enabled: boolean
+  /** Seed library albums in the background whenever the app is open. */
+  seedLibrary: boolean
+  /** Keep what you stream on disk after quitting and seed it next time (off: cleared on quit). */
+  seedStreamed: boolean
+  /** Disk space for streamed music, GB; least recently played albums are dropped first. */
+  streamCacheGB: number
+  /** KB/s, 0 = unlimited */
+  uploadLimitKBps: number
+}
+
+export interface LibraryItem {
+  infoHash: string
+  title: string
+  artist?: string
+  coverUrl?: string
+  /** Bytes of the album's audio */
+  size: number
+  addedAt: string
+  /** Loaded in the torrent client right now (downloading and/or seeding) */
+  active: boolean
+  /** Share of the album's audio that's on disk, 0–1 (only known while active) */
+  progress?: number
+  uploaded: number
+  numPeers: number
+  uploadSpeed: number
+}
+
+export interface LibraryView {
+  sharing: SharingSettings
+  /** Kept albums */
+  items: LibraryItem[]
+  /** Albums streamed in earlier sessions, still on disk and seeded; `addedAt` is when last played */
+  streamed: LibraryItem[]
+  /** Disk used by streamed albums (as of the last quit) */
+  streamedBytes: number
+  /** This session, across every torrent */
+  session: { uploaded: number; uploadSpeed: number }
+}
+
+export type LibraryResponse = { ok: true; library: LibraryView } | { ok: false; error: string }
+
+export type SaveTorrentResult = { ok: true; path: string } | { ok: false; error: string } | null
 
 /** Optional display info for curated sources (the torrent itself carries no artist metadata). */
 export interface SourceHints {
@@ -158,6 +233,19 @@ export interface ChomusukeApi {
   onStats(listener: (stats: TorrentStats[]) => void): () => void
   /** Window chrome that follows the theme: zoom factor and the native title-bar overlay colours. */
   setWindowAppearance(appearance: WindowAppearance): Promise<void>
+  getTorrentDetails(infoHash: string): Promise<TorrentDetails | null>
+  /** Shows a save dialog for the .torrent file; null when cancelled. */
+  saveTorrentFile(infoHash: string): Promise<SaveTorrentResult>
+  copyMagnet(infoHash: string): Promise<boolean>
+  getLibrary(): Promise<LibraryView>
+  /** Keeps an album: downloads all of its audio to the library folder and seeds it (when sharing is on). */
+  keepAlbum(infoHash: string, info: { title: string; artist?: string; coverUrl?: string }): Promise<LibraryResponse>
+  /** Removes a kept or streamed album; its files are deleted when the app closes. */
+  removeFromLibrary(infoHash: string): Promise<LibraryResponse>
+  /** Forgets every streamed album; files are deleted when the app closes. */
+  clearStreamed(): Promise<LibraryResponse>
+  openLibraryAlbum(infoHash: string): Promise<LoadResult>
+  setSharing(settings: SharingSettings): Promise<LibraryResponse>
 }
 
 export interface WindowAppearance {

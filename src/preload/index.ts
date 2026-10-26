@@ -18,6 +18,15 @@ const api: ChomusukeApi = {
   exploreSources: () => ipcRenderer.invoke('explore:sources'),
   browse: (sourceId, categoryId) => ipcRenderer.invoke('explore:browse', sourceId, categoryId),
   setWindowAppearance: appearance => ipcRenderer.invoke('ui:set-window-appearance', appearance),
+  getTorrentDetails: infoHash => ipcRenderer.invoke('torrent:details', infoHash),
+  saveTorrentFile: infoHash => ipcRenderer.invoke('torrent:save-file', infoHash),
+  copyMagnet: infoHash => ipcRenderer.invoke('torrent:copy-magnet', infoHash),
+  getLibrary: () => ipcRenderer.invoke('library:get'),
+  keepAlbum: (infoHash, info) => ipcRenderer.invoke('library:keep', infoHash, info),
+  removeFromLibrary: infoHash => ipcRenderer.invoke('library:remove', infoHash),
+  clearStreamed: () => ipcRenderer.invoke('library:clear-streamed'),
+  openLibraryAlbum: infoHash => ipcRenderer.invoke('library:open', infoHash),
+  setSharing: settings => ipcRenderer.invoke('sharing:set', settings),
   onStats: listener => {
     const handler = (_event: IpcRendererEvent, stats: TorrentStats[]) => listener(stats)
     ipcRenderer.on('torrent:stats', handler)

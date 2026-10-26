@@ -1,5 +1,5 @@
-import type { ExtensionManifest } from '../extensions/manifest.ts'
-import { createExtensionProvider, type ExtensionRuntime } from '../extensions/provider.ts'
+import type { ExtensionManifest } from '../extension-host/manifest.ts'
+import { createExtensionProvider, type ExtensionRuntime } from '../extension-host/provider.ts'
 import { fetchJson } from '../http.ts'
 import { fetchTorrentFile } from '../torrent-fetch.ts'
 import { createArchiveProvider, isArchiveHost, type JsonFetcher } from './archive.ts'
@@ -21,7 +21,7 @@ export interface ProviderDeps {
 /**
  * The one place that maps saved settings to provider implementations.
  * New built-in provider type: add it to EnabledProvider/StoredProvider in settings.ts and a case here.
- * Third-party sources don't need either: they ship as extensions (see extensions/manifest.ts).
+ * Third-party sources don't need either: they ship as extensions (see extension-host/manifest.ts).
  */
 export function buildProviders(configs: EnabledProvider[], deps: ProviderDeps): MusicProvider[] {
   return configs.map((config): MusicProvider => {
