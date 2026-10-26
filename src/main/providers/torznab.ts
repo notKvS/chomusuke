@@ -5,9 +5,8 @@ import { parseSource, SourceError } from '../source.ts'
 import type { MusicProvider, Playable, ProviderAlbum, ProviderResults } from './types.ts'
 
 /**
- * Torznab is the search API torrent indexer managers speak (Jackett, Prowlarr, BitMagnet, NZBHydra…), and
- * what Lidarr/Sonarr use. BitTorrent trackers themselves can't be searched; this is how a client queries the
- * trackers/indexers its user has configured in one of those tools.
+ * Torznab is the standard search API spoken by torrent indexer managers. BitTorrent trackers themselves can't
+ * be searched; this is how a client queries the trackers/indexers its user has configured in such a tool.
  * Spec: https://torznab.github.io/spec-1.3-draft/torznab/Specification-v1.3.html
  */
 

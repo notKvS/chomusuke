@@ -527,9 +527,14 @@ h2,
     chomu-flame 1.6s ease-in-out infinite alternate;
 }
 
-.chomu.is-asleep .chomu__art {
+.chomu.is-calm .chomu__art {
   transform-origin: 50% 100%;
+  filter: drop-shadow(0 0 8px rgba(255, 190, 70, 0.3));
   animation: chomu-breathe 3.4s ease-in-out infinite;
+}
+
+.chomu--sleep .chomu__art {
+  filter: brightness(0.82) saturate(0.85) drop-shadow(0 0 6px rgba(201, 184, 255, 0.3));
 }
 
 .chomu.is-dancing .chomu__art {

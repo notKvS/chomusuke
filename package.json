@@ -11,7 +11,7 @@
     "build": "npm run build:extensions && electron-vite build",
     "start": "npm run build:extensions && electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.extensions.json",
-    "test": "node --disable-warning=ExperimentalWarning --test \"src/**/*.test.ts\"",
+    "test": "node --disable-warning=ExperimentalWarning --test \"src/**/*.test.ts\" \"extensions/test/*.test.ts\"",
     "build:extensions": "node --disable-warning=ExperimentalWarning extensions/build.ts"
   },
   "dependencies": {

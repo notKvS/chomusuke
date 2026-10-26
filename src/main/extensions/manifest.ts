@@ -2,9 +2,8 @@ import type { SourceCategory } from '../../shared/types.ts'
 import type { ProviderAlbum } from '../providers/types.ts'
 
 /**
- * Extensions, Hayase-style: Chomusuke ships no tracker integrations of its own. Users import a repository
- * (a JSON manifest listing extensions); each extension is a bundled ES module that runs in a sandboxed
- * worker and turns queries into torrent results. The manifest declares which https hosts it may contact.
+ * Extensions add search sources. Users import a repository (a JSON manifest listing extensions); each
+ * extension is a bundled ES module that runs in a sandboxed worker and turns queries into torrent results. The manifest declares which https hosts it may contact.
  *
  * Manifest (array of these, or { "extensions": [...] }):
  * {
@@ -13,7 +12,8 @@ import type { ProviderAlbum } from '../providers/types.ts'
  *   "hosts": ["example.org", "*.example.org"],          // the only hosts the code may reach (https)
  *   "layout": "list" | "cards",
  *   "categories": [{ "id": "top", "name": "Top this week" }],
- *   "options": { "apiKey": { "type": "string", "label": "API key", "secret": true } }
+ *   "options": { "apiKey": { "type": "string", "label": "API key", "secret": true } },
+ *   "enabledByDefault": false                           // optional: install switched off (default true)
  * }
  *
  * Extension module: export default {
@@ -42,6 +42,8 @@ export interface ExtensionManifest {
   layout: 'cards' | 'list'
   categories: SourceCategory[]
   options: Record<string, ExtensionOption>
+  /** Whether a fresh install starts switched on. */
+  enabledByDefault: boolean
 }
 
 /** Extension-provided errors that are safe to show to the user. */
@@ -125,7 +127,8 @@ function parseOne(raw: unknown, base: URL, sameOriginHttp: boolean): ExtensionMa
     hosts: [...new Set(hosts)],
     layout: raw.layout === 'cards' ? 'cards' : 'list',
     categories,
-    options
+    options,
+    enabledByDefault: raw.enabledByDefault !== false
   }
 }
 

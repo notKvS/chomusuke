@@ -202,5 +202,210 @@
         "name": "Piano"
       }
     ]
+  },
+  {
+    "manifestVersion": 1,
+    "id": "the-pirate-bay",
+    "name": "The Pirate Bay",
+    "description": "Template, off by default: enable it in Sources and press Test. Music and FLAC from The Pirate Bay via its apibay.org JSON API, with its top-100 charts in Explore.",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "the-pirate-bay.js",
+    "enabledByDefault": false,
+    "hosts": [
+      "apibay.org"
+    ],
+    "layout": "list",
+    "categories": [
+      {
+        "id": "top-music",
+        "name": "Top 100 music"
+      },
+      {
+        "id": "top-48h",
+        "name": "Top music, last 48h"
+      },
+      {
+        "id": "top-flac",
+        "name": "Top 100 FLAC"
+      },
+      {
+        "id": "top-audio",
+        "name": "Top 100 audio"
+      }
+    ],
+    "options": {
+      "flacOnly": {
+        "type": "boolean",
+        "label": "FLAC only",
+        "description": "Search the FLAC category only",
+        "default": false
+      },
+      "includeAudiobooks": {
+        "type": "boolean",
+        "label": "Include audiobooks",
+        "default": false
+      }
+    }
+  },
+  {
+    "manifestVersion": 1,
+    "id": "1337x",
+    "name": "1337x",
+    "description": "Template, off by default: enable it in Sources and press Test. Music from 1337x (scraped; often behind Cloudflare, so a mirror may be needed).",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "1337x.js",
+    "enabledByDefault": false,
+    "hosts": [
+      "1337x.to",
+      "1337x.st",
+      "x1337x.ws",
+      "x1337x.eu",
+      "x1337x.cc"
+    ],
+    "layout": "list",
+    "categories": [
+      {
+        "id": "popular-week",
+        "name": "Popular this week"
+      },
+      {
+        "id": "popular-today",
+        "name": "Popular today"
+      },
+      {
+        "id": "top-100",
+        "name": "Top 100"
+      },
+      {
+        "id": "latest",
+        "name": "Latest uploads"
+      }
+    ],
+    "options": {
+      "mirror": {
+        "type": "string",
+        "label": "Mirror",
+        "description": "One of: 1337x.to, 1337x.st, x1337x.ws, x1337x.eu, x1337x.cc (blank = first)",
+        "default": ""
+      }
+    }
+  },
+  {
+    "manifestVersion": 1,
+    "id": "nyaa",
+    "name": "Nyaa (audio)",
+    "description": "Template, off by default: enable it in Sources and press Test. Anime OSTs, J-pop and doujin music from Nyaa's Audio section, via its RSS feed.",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "nyaa.js",
+    "enabledByDefault": false,
+    "hosts": [
+      "nyaa.si"
+    ],
+    "layout": "list",
+    "categories": [
+      {
+        "id": "lossless-top",
+        "name": "Most seeded lossless"
+      },
+      {
+        "id": "lossy-top",
+        "name": "Most seeded lossy"
+      },
+      {
+        "id": "latest",
+        "name": "Latest audio"
+      }
+    ],
+    "options": {
+      "losslessOnly": {
+        "type": "boolean",
+        "label": "Lossless only",
+        "description": "Search the lossless category only",
+        "default": false
+      },
+      "trustedOnly": {
+        "type": "boolean",
+        "label": "Trusted uploaders only",
+        "default": false
+      }
+    }
+  },
+  {
+    "manifestVersion": 1,
+    "id": "knaben",
+    "name": "Knaben",
+    "description": "Template, off by default: enable it in Sources and press Test. Meta-search over many public trackers (TPB, 1337x, Nyaa, LimeTorrents and more) through one JSON API.",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "knaben.js",
+    "enabledByDefault": false,
+    "hosts": [
+      "api.knaben.org"
+    ],
+    "layout": "list",
+    "categories": [
+      {
+        "id": "lossless-top",
+        "name": "Most seeded lossless"
+      },
+      {
+        "id": "mp3-top",
+        "name": "Most seeded MP3"
+      },
+      {
+        "id": "latest",
+        "name": "Latest music"
+      }
+    ],
+    "options": {
+      "losslessOnly": {
+        "type": "boolean",
+        "label": "Lossless only",
+        "default": false
+      },
+      "includeAudiobooks": {
+        "type": "boolean",
+        "label": "Include audiobooks",
+        "default": false
+      }
+    }
+  },
+  {
+    "manifestVersion": 1,
+    "id": "limetorrents",
+    "name": "LimeTorrents",
+    "description": "Template, off by default: enable it in Sources and press Test. Music from LimeTorrents (scraped; the site changes domain often, so pick a working mirror).",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "limetorrents.js",
+    "enabledByDefault": false,
+    "hosts": [
+      "www.limetorrents.fun",
+      "www.limetorrents.lol",
+      "limetorrents.torrentbay.st",
+      "limetorrents.torrentsbay.org"
+    ],
+    "layout": "list",
+    "categories": [
+      {
+        "id": "top-seeded",
+        "name": "Most seeded"
+      },
+      {
+        "id": "latest",
+        "name": "Latest uploads"
+      }
+    ],
+    "options": {
+      "mirror": {
+        "type": "string",
+        "label": "Mirror",
+        "description": "One of: www.limetorrents.fun, www.limetorrents.lol, limetorrents.torrentbay.st, limetorrents.torrentsbay.org (blank = first)",
+        "default": ""
+      }
+    }
   }
 ]

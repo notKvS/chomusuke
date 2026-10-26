@@ -18,7 +18,7 @@ test('isPrivateHost', () => {
     'http://[fe80::1]/',
     'http://[::ffff:192.168.0.1]/',
     'http://nas/',
-    'http://jackett.local/',
+    'http://indexer.local/',
     'http://box.home.arpa/'
   ]) {
     assert.equal(isPrivateHost(host(url)), true, url)

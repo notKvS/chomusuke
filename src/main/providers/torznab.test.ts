@@ -70,7 +70,7 @@ before(async () => {
 
 after(() => new Promise<void>(resolve => server.close(() => resolve())))
 
-const config = () => ({ id: 'jackett', name: 'Jackett', url: `${base}/api`, apiKey: 'secret-key' })
+const config = () => ({ id: 'indexer', name: 'My indexer', url: `${base}/api`, apiKey: 'secret-key' })
 
 test('search asks for audio, drops non-audio and undownloadable items, sorts by seeders', async () => {
   const provider = createTorznabProvider(config())
@@ -122,7 +122,7 @@ test('plain http is refused for public hosts', async () => {
 })
 
 test('testTorznab checks capabilities', async () => {
-  assert.equal(await testTorznab(config()), 'Connected to Jackett.')
+  assert.equal(await testTorznab(config()), 'Connected to My indexer.')
   await assert.rejects(testTorznab({ ...config(), apiKey: 'nope' }), /Incorrect user credentials/)
 })
 

@@ -113,7 +113,7 @@ export function AlbumLoading({ title, artist }: { title?: string; artist?: strin
 export function AlbumError({ message, onRetry, onHome }: { message: string; onRetry?: () => void; onHome: () => void }) {
   return (
     <div className="page error-page">
-      <Chomu mood="sad" size={280} />
+      <Chomu mood="sad" size={200} />
       <h1>Nyaa… couldn't open that torrent</h1>
       <p>{message}</p>
       <div className="error-page__actions">

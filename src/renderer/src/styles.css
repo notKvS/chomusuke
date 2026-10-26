@@ -1014,6 +1014,12 @@ code {
   text-overflow: ellipsis;
 }
 
+.source-row__note {
+  color: var(--text-2);
+  font-size: 0.85em;
+  line-height: 1.35;
+}
+
 .switch {
   position: relative;
   flex: none;

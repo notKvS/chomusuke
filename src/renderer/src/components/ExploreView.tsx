@@ -11,7 +11,7 @@ interface Props {
   onManageSources: () => void
 }
 
-/** Browse every source by category: trending, genres, formats — like YouTube Music's Explore. */
+/** Browse every source by category: trending, genres, formats. */
 export function ExploreView({ onOpenAlbum, onManageSources }: Props) {
   const [sources, setSources] = useState<ExploreSource[] | null>(null)
 
@@ -24,7 +24,7 @@ export function ExploreView({ onOpenAlbum, onManageSources }: Props) {
       <h1 className="search__title">Explore</h1>
       {sources?.length === 0 && (
         <div className="search__message">
-          <Chomu mood="sleep" size={220} />
+          <Chomu mood="sleep" size={180} />
           <p>None of your sources can be browsed.</p>
           <button type="button" className="solid-button" onClick={onManageSources}>
             Manage sources

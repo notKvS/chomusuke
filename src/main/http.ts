@@ -38,7 +38,7 @@ const MAX_REDIRECTS = 5
 /**
  * GET with a strict policy: https only (unless allowHttp approves the host), redirects followed manually so
  * none can downgrade or leave the allowed hosts, body capped at `maxBytes`. A redirect to a magnet: link
- * (how Jackett/Prowlarr hand out magnet-only releases) is returned instead of followed.
+ * (how indexers hand out magnet-only releases) is returned instead of followed.
  */
 export async function fetchBodyOrMagnet(url: string | URL, options: CappedFetchOptions): Promise<BodyOrMagnet> {
   const { maxBytes, timeoutMs, accept, allowHost, allowHttp, signal } = options

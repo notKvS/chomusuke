@@ -24,7 +24,7 @@ async function withStore(run: (store: ProviderSettingsStore, file: string) => Pr
   }
 }
 
-const form = { name: 'Jackett', url: 'http://localhost:9117/api/v2.0/indexers/all/results/torznab/api', apiKey: 'abc123' }
+const form = { name: 'My indexer', url: 'http://localhost:9117/api/v2.0/indexers/all/results/torznab/api', apiKey: 'abc123' }
 
 test('starts with the Internet Archive enabled', () =>
   withStore(async store => {
@@ -41,10 +41,10 @@ test('saves a Torznab indexer with an encrypted key and reloads it', () =>
     const reloaded = new ProviderSettingsStore(file, box)
     await reloaded.load()
     const [, indexer] = reloaded.list()
-    assert.equal(indexer.name, 'Jackett')
+    assert.equal(indexer.name, 'My indexer')
     assert.equal(indexer.hasApiKey, true)
     assert.equal('apiKey' in indexer, false)
-    assert.deepEqual(reloaded.enabled()[1], { type: 'torznab', id: indexer.id, name: 'Jackett', url: form.url, apiKey: 'abc123' })
+    assert.deepEqual(reloaded.enabled()[1], { type: 'torznab', id: indexer.id, name: 'My indexer', url: form.url, apiKey: 'abc123' })
   }))
 
 test('editing with a blank key keeps the saved key; toggling and removing work', () =>
@@ -208,4 +208,21 @@ test('bundled extensions install once, update when changed, and stay removed', (
     await reloaded.load()
     await reloaded.syncBundled(repo, [{ manifest, code: 'export default { search: () => [] } // v3' }])
     assert.equal(reloaded.list().some(p => p.id === 'ext-bundled'), false)
+  }))
+
+test('extensions marked enabledByDefault: false install switched off and keep the user’s choice', () =>
+  withStore(async (store, file) => {
+    const { parseRepository } = await import('../extensions/manifest.ts')
+    const repo = 'https://bundled.chomusuke.invalid/extensions/index.json'
+    const raw = { manifestVersion: 1, id: 'template', name: 'Template', version: '1', type: 'torrent', code: 't.js', hosts: ['example.org'], enabledByDefault: false }
+    const manifest = parseRepository([raw], repo)[0]
+    await store.syncBundled(repo, [{ manifest, code: 'export default { search: () => [] } // v1' }])
+    assert.equal(store.list().find(p => p.id === 'ext-template')?.enabled, false)
+    assert.equal(store.enabled().length, 1) // only the Internet Archive
+
+    await store.setEnabled('ext-template', true)
+    await store.syncBundled(repo, [{ manifest, code: 'export default { search: () => [] } // v2' }])
+    const reloaded = new ProviderSettingsStore(file, box)
+    await reloaded.load()
+    assert.equal(reloaded.list().find(p => p.id === 'ext-template')?.enabled, true)
   }))

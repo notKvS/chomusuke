@@ -23,6 +23,7 @@
     "src/main/**/*",
     "src/preload/**/*",
     "src/shared/**/*",
-    "extensions/build.ts"
+    "extensions/build.ts",
+    "extensions/test/**/*"
   ]
 }

@@ -80,7 +80,8 @@ function toRawManifest(manifest: ExtensionManifest): Record<string, unknown> {
     hosts: manifest.hosts,
     layout: manifest.layout,
     categories: manifest.categories,
-    options: manifest.options
+    options: manifest.options,
+    enabledByDefault: manifest.enabledByDefault
   }
 }
 
@@ -216,7 +217,7 @@ export class ProviderSettingsStore {
       const entry: StoredExtension = {
         type: 'extension',
         id,
-        enabled: kept?.enabled ?? true,
+        enabled: kept?.enabled ?? manifest.enabledByDefault,
         repository,
         manifest,
         codeSha256: sha256(code),

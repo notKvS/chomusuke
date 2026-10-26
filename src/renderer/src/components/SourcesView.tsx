@@ -67,11 +67,9 @@ export function SourcesView() {
       <section className="shelf">
         <h2 className="shelf__title">Torrent indexers</h2>
         <p className="sources__help">
-          Connect Jackett, Prowlarr, BitMagnet or anything else that speaks <strong>Torznab</strong>, the search API Lidarr
-          uses. Chomusuke searches the audio categories of whatever trackers you've set up there. Copy the Torznab feed
-          URL and API key from the indexer's settings, for example{' '}
-          <code>http://localhost:9117/api/v2.0/indexers/all/results/torznab/api</code> (Jackett) or{' '}
-          <code>http://localhost:9696/1/api</code> (Prowlarr).
+          Connect any indexer that speaks <strong>Torznab</strong>, the standard torrent search API. Chomusuke searches
+          the audio categories of whatever trackers you've set up there. Copy the Torznab feed URL and API key from the
+          indexer's settings, for example <code>http://localhost:9117/api/torznab</code>.
         </p>
 
         {indexers.map(provider => (
@@ -118,7 +116,7 @@ interface ExtensionsProps {
   onRemove: (provider: ProviderSettingsView) => void
 }
 
-/** Hayase-style extensions: third-party sources installed from a repository manifest, run in a sandbox. */
+/** Extensions: sources installed from a repository manifest, each run in a sandbox. */
 function ExtensionsSection({ extensions, apply, onToggle, onRemove }: ExtensionsProps) {
   const [url, setUrl] = useState('')
   const [status, setStatus] = useState<Status>(null)
@@ -148,9 +146,10 @@ function ExtensionsSection({ extensions, apply, onToggle, onRemove }: Extensions
     <section className="shelf">
       <h2 className="shelf__title">Extensions</h2>
       <p className="sources__help">
-        Like Hayase, Chomusuke ships without tracker integrations: extensions add them. Paste the URL of an extension
-        repository (a JSON manifest) to install its extensions. Each one runs in an isolated sandbox and can only reach
-        the websites it declares. Only install repositories you trust.
+        Extensions add sources. The Internet Archive collections come switched on; the tracker templates
+        (The Pirate Bay, 1337x, Nyaa, Knaben, LimeTorrents) come switched off — turn one on and press Test to use it.
+        To add more, paste the URL of an extension repository (a JSON manifest). Each extension runs in an isolated
+        sandbox and can only reach the websites it declares. Only install repositories you trust.
       </p>
 
       {extensions.map(provider => (
@@ -158,6 +157,7 @@ function ExtensionsSection({ extensions, apply, onToggle, onRemove }: Extensions
           <SourceRow
             provider={provider}
             description={`v${provider.version} • ${provider.hosts?.join(', ')}`}
+            note={provider.description}
             onToggle={() => onToggle(provider)}
             onTest={() => void test(provider)}
             onEdit={provider.options?.length ? () => setConfiguring(configuring === provider.id ? null : provider.id) : undefined}
@@ -258,13 +258,15 @@ function ExtensionOptionsForm({ provider, onDone }: { provider: ProviderSettings
 interface RowProps {
   provider: ProviderSettingsView
   description: string
+  /** Optional longer text under the description, wrapped. */
+  note?: string
   onToggle: () => void
   onTest?: () => void
   onEdit?: () => void
   onRemove?: () => void
 }
 
-function SourceRow({ provider, description, onToggle, onTest, onEdit, onRemove }: RowProps) {
+function SourceRow({ provider, description, note, onToggle, onTest, onEdit, onRemove }: RowProps) {
   return (
     <div className={`source-row ${provider.enabled ? '' : 'is-off'}`}>
       <span className="source-row__icon">
@@ -273,6 +275,7 @@ function SourceRow({ provider, description, onToggle, onTest, onEdit, onRemove }
       <span className="source-row__text">
         <span className="source-row__name">{provider.name}</span>
         <span className="source-row__sub">{description}</span>
+        {note && <span className="source-row__note">{note}</span>}
       </span>
       {onTest && (
         <button type="button" className="ghost-button" onClick={onTest}>
@@ -333,7 +336,7 @@ function TorznabEditor({ initial, onCancel, onSaved }: EditorProps) {
     <form className="torznab-form" onSubmit={save}>
       <label>
         <span>Name</span>
-        <input value={form.name} onChange={e => set('name')(e.target.value)} placeholder="Jackett" maxLength={60} required />
+        <input value={form.name} onChange={e => set('name')(e.target.value)} placeholder="My indexer" maxLength={60} required />
       </label>
       <label>
         <span>Torznab URL</span>

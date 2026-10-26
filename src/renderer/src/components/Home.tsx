@@ -29,7 +29,7 @@ function Hero() {
         <p className="hero__line">{line}</p>
       </div>
       <div className="hero__mascot">
-        <Chomu mood={hour >= 23 || hour < 5 ? 'sleep' : 'happy'} size={hour >= 23 || hour < 5 ? 300 : 190} />
+        <Chomu mood={hour >= 23 || hour < 5 ? 'sleep' : 'happy'} size={190} />
       </div>
     </section>
   )

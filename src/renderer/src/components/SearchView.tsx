@@ -43,7 +43,7 @@ export function SearchView({ search, isPlaying, onPlaySong, onOpenAlbum, onRetry
 
       {search.status === 'error' && (
         <div className="search__message">
-          <Chomu mood="sad" size={220} />
+          <Chomu mood="sad" size={180} />
           <p>{search.error}</p>
           <button type="button" className="solid-button" onClick={onRetry}>
             Try again
@@ -53,7 +53,7 @@ export function SearchView({ search, isPlaying, onPlaySong, onOpenAlbum, onRetry
 
       {noSources && (
         <div className="search__message">
-          <Chomu mood="sleep" size={220} />
+          <Chomu mood="sleep" size={180} />
           <p>Every source is switched off. Chomusuke is napping.</p>
           <button type="button" className="solid-button" onClick={onManageSources}>
             Manage sources
@@ -63,7 +63,7 @@ export function SearchView({ search, isPlaying, onPlaySong, onOpenAlbum, onRetry
 
       {results && !noSources && isEmpty(results) && !results.sections.some(s => s.error) && (
         <div className="search__message">
-          <Chomu mood="confused" size={220} />
+          <Chomu mood="confused" size={180} />
           <p>Nyaa? Nothing found. Try fewer words, or just the artist's name.</p>
         </div>
       )}
