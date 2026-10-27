@@ -1,0 +1,62 @@
+# Packaging for Windows, macOS and Linux (electron-builder). Built by .github/workflows/release.yml on every push;
+# locally: `npm run dist` (installer for this OS) or `npm run dist:dir` (unpacked app, quickest to test).
+appId: com.chomusuke.app
+productName: Chomusuke
+copyright: Copyright © 2026 notKvS
+
+directories:
+  output: release
+  buildResources: build
+
+# electron-vite already bundled the app into out/; production dependencies are added automatically.
+files:
+  - out/**
+  - build/icon.ico
+  - build/icon.png
+  - package.json
+  - '!**/*.map'
+
+# node-datachannel ships a prebuilt N-API binary (fetched by `npm run setup`); never rebuild native modules.
+npmRebuild: false
+asar: true
+
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: zip
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: Chomusuke
+
+mac:
+  icon: build/icon.png
+  category: public.app-category.music
+  target:
+    - target: dmg
+    - target: zip
+  # Unsigned until a Developer ID certificate is configured (users open it with right-click → Open the first time).
+  identity: null
+  hardenedRuntime: false
+
+linux:
+  icon: build/icon.png
+  category: Audio
+  maintainer: notKvS
+  synopsis: Music player that streams straight from torrents
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+
+# Releases are created by the workflow (gh release), not by electron-builder.
+publish: null
