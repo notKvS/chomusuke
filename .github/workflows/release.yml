@@ -1,5 +1,6 @@
-# Every push to master: check, build installers for Windows, macOS and Linux, and publish them as a GitHub
-# pre-release (v<version>-build.<run>). Pushing a tag like v1.2.0 publishes a full release with that version.
+# Every push to master: check, build installers for Windows, macOS and Linux, and publish them as the latest GitHub
+# release (v<version>-build.<run>), so /releases/latest always has the newest build. Pushing a tag like v1.2.0
+# publishes a release with that version instead.
 name: Release
 
 on:
@@ -98,6 +99,6 @@ jobs:
           else
             version="$(ls dist | sed -nE 's/^Chomusuke-(.+)-(win|mac|linux)-.*/\1/p' | head -n1)"
             tag="v${version}"
-            flags=(--prerelease --title "Chomusuke ${version}" --target "$GITHUB_SHA")
+            flags=(--latest --title "Chomusuke ${version}" --target "$GITHUB_SHA")
           fi
           gh release create "$tag" dist/* --generate-notes "${flags[@]}"

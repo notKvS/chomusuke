@@ -70,9 +70,22 @@ npm run dev      # start the app with hot reload
 
 With the recommended Biome extension, VS Code formats and fixes files on save.
 
+## ⬇️ Download
+
+Get the latest build from **[Releases → Latest](https://github.com/notKvS/chomusuke/releases/latest)** (under
+*Assets*):
+
+| System | File |
+|---|---|
+| 🪟 Windows | `Chomusuke-<version>-win-x64.exe` (installer) or `-win-x64.zip` (portable) |
+| 🍎 macOS (Apple silicon) | `Chomusuke-<version>-mac-arm64.dmg` |
+| 🐧 Linux | `Chomusuke-<version>-linux-x86_64.AppImage` or `-linux-amd64.deb` |
+
+Builds are unsigned: on Windows choose *More info → Run anyway*; on macOS right-click the app → *Open* the first
+time.
+
 ## 📦 Releases
 
-Each push to `master` runs `.github/workflows/release.yml`: lint, typecheck and tests, then builds for Windows
-(`.exe`, `.zip`), macOS (`.dmg`, `.zip`) and Linux (`.AppImage`, `.deb`) and publishes them as a GitHub
-pre-release. Pushing a `v*` tag (e.g. `v0.2.0`) publishes a full release. Packaging is configured in
-`electron-builder.yml`.
+Each push to `master` runs `.github/workflows/release.yml`: lint, typecheck and tests, then builds for Windows,
+macOS and Linux and publishes them as the latest GitHub release. Pushing a `v*` tag (e.g. `v0.2.0`) publishes a
+release with that version. Packaging is configured in `electron-builder.yml`.
