@@ -2,7 +2,9 @@ import { type CSSProperties, useEffect, useRef } from 'react'
 import type { TorrentStats } from '../../../shared/types'
 import { formatSpeed, formatTime, plural } from '../format'
 import type { Player } from '../usePlayer'
+import type { Playlists } from '../usePlaylists'
 import type { Ratings } from '../useRatings'
+import { AddToPlaylist } from './AddToPlaylist'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
 import { RateButtons } from './RateButtons'
@@ -12,9 +14,12 @@ interface Props {
   stats?: TorrentStats
   onOpenAlbum: () => void
   ratings: Ratings
+  playlists: Playlists
+  /** Set while a playlist (or the liked list) is playing across albums */
+  queue?: { label: string; hasNext: boolean; hasPrev: boolean }
 }
 
-export function PlayerBar({ player, stats, onOpenAlbum, ratings }: Props) {
+export function PlayerBar({ player, stats, onOpenAlbum, ratings, playlists, queue }: Props) {
   const { state, track, audio } = player
   const progressRef = useRef<HTMLDivElement>(null)
 
@@ -39,8 +44,8 @@ export function PlayerBar({ player, stats, onOpenAlbum, ratings }: Props) {
 
   const { currentTime, duration, bufferedEnd } = state
   const pct = (value: number) => (duration > 0 ? `${Math.min(100, (value / duration) * 100)}%` : '0%')
-  const hasPrev = state.index > 0 || currentTime > 0
-  const hasNext = state.index + 1 < state.album.tracks.length
+  const hasPrev = state.index > 0 || currentTime > 0 || Boolean(queue?.hasPrev)
+  const hasNext = state.index + 1 < state.album.tracks.length || Boolean(queue?.hasNext)
   const volumeIcon = state.muted || state.volume === 0 ? 'volumeOff' : state.volume < 0.5 ? 'volumeLow' : 'volume'
 
   return (
@@ -88,11 +93,21 @@ export function PlayerBar({ player, stats, onOpenAlbum, ratings }: Props) {
         <Cover src={state.album.coverUrl} size={40} />
         <span className="player__text">
           <span className="player__title">{track.title}</span>
-          <span className="player__subtitle">{[track.artist, state.album.title].filter(Boolean).join(' • ')}</span>
+          <span className="player__subtitle">
+            {[track.artist, state.album.title, queue && `from ${queue.label}`].filter(Boolean).join(' • ')}
+          </span>
         </span>
       </button>
 
       <div className="player__side">
+        <AddToPlaylist
+          playlists={playlists}
+          infoHash={state.album.infoHash}
+          trackKey={track.key}
+          label={`Add ${track.title} to a playlist`}
+          size={20}
+          className="is-up"
+        />
         <RateButtons infoHash={state.album.infoHash} track={track} ratings={ratings} size={20} />
         {stats && (
           <span className="player__swarm" title="Torrent swarm for this album">

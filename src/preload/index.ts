@@ -31,6 +31,14 @@ const api: ChomusukeApi = {
   rateTrack: (infoHash, key, rating) => ipcRenderer.invoke('ratings:set', infoHash, key, rating),
   exportBackup: appearance => ipcRenderer.invoke('backup:export', appearance),
   importBackup: () => ipcRenderer.invoke('backup:import'),
+  getPlaylists: () => ipcRenderer.invoke('playlists:list'),
+  createPlaylist: name => ipcRenderer.invoke('playlists:create', name),
+  renamePlaylist: (id, name) => ipcRenderer.invoke('playlists:rename', id, name),
+  deletePlaylist: id => ipcRenderer.invoke('playlists:delete', id),
+  addToPlaylist: (id, infoHash, key) => ipcRenderer.invoke('playlists:add', id, infoHash, key),
+  addSongsToPlaylist: (id, songs) => ipcRenderer.invoke('playlists:add-songs', id, songs),
+  removeFromPlaylist: (id, songId) => ipcRenderer.invoke('playlists:remove', id, songId),
+  moveInPlaylist: (id, from, to) => ipcRenderer.invoke('playlists:move', id, from, to),
   onStats: listener => {
     const handler = (_event: IpcRendererEvent, stats: TorrentStats[]) => listener(stats)
     ipcRenderer.on('torrent:stats', handler)

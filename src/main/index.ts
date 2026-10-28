@@ -11,6 +11,7 @@ import type {
   LibraryResponse,
   LibraryView,
   LoadResult,
+  Playlist,
   ProvidersResponse,
   RatedSong,
   SaveTorrentResult,
@@ -26,6 +27,7 @@ import { ExtensionHost, hostPage } from './extension-host/host.ts'
 import { ExtensionError, type ExtensionManifest, parseRepository } from './extension-host/manifest.ts'
 import { testExtension } from './extension-host/provider.ts'
 import { FetchError, fetchJson, fetchText } from './http.ts'
+import { PlaylistError, PlaylistStore } from './playlists.ts'
 import { annotationsForTorrentUrl } from './providers/archive.ts'
 import { archiveJsonFetcher, buildProviders } from './providers/index.ts'
 import { ProviderRegistry } from './providers/registry.ts'
@@ -69,6 +71,7 @@ const cacheDir = path.join(app.getPath('temp'), 'chomusuke-cache')
 const library = new SeedLibrary(path.join(app.getPath('userData'), 'library'))
 // Liked and disliked songs.
 const ratings = new RatingsStore(path.join(app.getPath('userData'), 'ratings.json'))
+const playlists = new PlaylistStore(path.join(app.getPath('userData'), 'playlists.json'))
 
 let mainWindow: BrowserWindow | null = null
 let engine: TorrentEngine | null = null
@@ -645,10 +648,17 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
         app: `Chomusuke ${app.getVersion()}`,
         ratings: ratings.list(),
         albums: await keptAlbumsForBackup(),
+        playlists: playlists.list(),
         appearance
       })
       await writeFile(picked.filePath, JSON.stringify(backup, null, 2), 'utf8')
-      return { ok: true, path: picked.filePath, songs: backup.ratings.length, albums: backup.albums.length }
+      return {
+        ok: true,
+        path: picked.filePath,
+        songs: backup.ratings.length,
+        albums: backup.albums.length,
+        playlists: backup.playlists.length
+      }
     } catch {
       return { ok: false, error: 'Couldn’t save the backup there.' }
     }
@@ -669,14 +679,75 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
       if (!info.isFile() || info.size > MAX_BACKUP_BYTES) throw new BackupError('That file isn’t a Chomusuke backup.')
       const backup = parseBackup(await readFile(filePath, 'utf8'))
       const songs = await ratings.merge(backup.ratings)
+      const mergedPlaylists = await playlists.merge(backup.playlists)
       const albums = backup.albums.filter(album => !library.has(album.infoHash))
       void restoreAlbums(torrents, albums)
-      return { ok: true, songs, albums: albums.length, appearance: backup.appearance }
+      return { ok: true, songs, albums: albums.length, playlists: mergedPlaylists, appearance: backup.appearance }
     } catch (err) {
       if (err instanceof BackupError) return { ok: false, error: err.message }
       console.error('[backup] import failed:', err)
       return { ok: false, error: 'Couldn’t read that backup.' }
     }
+  })
+
+  // Playlists: every handler answers with the full list, so the UI always shows what's saved.
+  const playlistCall = (work: () => Promise<unknown>) => async (): Promise<Playlist[]> => {
+    try {
+      await work()
+    } catch (err) {
+      if (!(err instanceof PlaylistError)) console.error('[playlists]', err)
+    }
+    return playlists.list()
+  }
+
+  ipcMain.handle('playlists:list', (event): Playlist[] => {
+    assertTrustedSender(event)
+    return playlists.list()
+  })
+
+  ipcMain.handle('playlists:create', async (event, name: unknown) => {
+    assertTrustedSender(event)
+    try {
+      const playlist = await playlists.create(name)
+      return { playlists: playlists.list(), id: playlist.id }
+    } catch (err) {
+      return { playlists: playlists.list(), error: err instanceof PlaylistError ? err.message : 'Couldn’t create it.' }
+    }
+  })
+
+  ipcMain.handle('playlists:rename', (event, id: unknown, name: unknown) => {
+    assertTrustedSender(event)
+    return playlistCall(() => playlists.rename(id, name))()
+  })
+
+  ipcMain.handle('playlists:delete', (event, id: unknown) => {
+    assertTrustedSender(event)
+    return playlistCall(() => playlists.remove(id))()
+  })
+
+  ipcMain.handle('playlists:add', (event, id: unknown, infoHash: unknown, key: unknown) => {
+    assertTrustedSender(event)
+    return playlistCall(async () => {
+      // Song details come from the loaded torrent, not from the UI.
+      const info = isInfoHash(infoHash) && typeof key === 'string' ? torrents.songInfo(infoHash, key) : undefined
+      if (info) await playlists.add(id, [info])
+    })()
+  })
+
+  ipcMain.handle('playlists:add-songs', (event, id: unknown, songs: unknown) => {
+    assertTrustedSender(event)
+    // Known songs (from the liked list or another playlist); re-validated like a backup entry.
+    return playlistCall(() => playlists.add(id, Array.isArray(songs) ? songs.slice(0, 5000) : []))()
+  })
+
+  ipcMain.handle('playlists:remove', (event, id: unknown, songId: unknown) => {
+    assertTrustedSender(event)
+    return playlistCall(() => playlists.removeSong(id, songId))()
+  })
+
+  ipcMain.handle('playlists:move', (event, id: unknown, from: unknown, to: unknown) => {
+    assertTrustedSender(event)
+    return playlistCall(() => playlists.move(id, from, to))()
   })
 
   ipcMain.handle('source:open-file', async event => {
@@ -752,6 +823,7 @@ app.whenReady().then(async () => {
 
   await library.load()
   await ratings.load()
+  await playlists.load()
   await library.purge().catch(() => {})
 
   let torrents: TorrentEngine | null = null

@@ -1,4 +1,5 @@
-import type { Album } from '../../../shared/types'
+import { type FormEvent, useState } from 'react'
+import type { Album, Playlist } from '../../../shared/types'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
 
@@ -14,6 +15,10 @@ interface Props {
   onAppearance: () => void
   onLibrary: () => void
   onLiked: () => void
+  playlists: Playlist[]
+  onOpenPlaylist: (id: string) => void
+  /** Creates a playlist and opens it; returns an error message, if any. */
+  onCreatePlaylist: (name: string) => Promise<string | undefined>
   onOpenAlbum: (infoHash: string) => void
   onOpenFile: () => void
 }
@@ -30,6 +35,9 @@ export function Sidebar({
   onAppearance,
   onLibrary,
   onLiked,
+  playlists,
+  onOpenPlaylist,
+  onCreatePlaylist,
   onOpenAlbum,
   onOpenFile
 }: Props) {
@@ -81,6 +89,8 @@ export function Sidebar({
 
       <hr className="sidebar__divider" />
 
+      <PlaylistsSection playlists={playlists} active={active} onOpen={onOpenPlaylist} onCreate={onCreatePlaylist} />
+
       <button type="button" className="pill-button" onClick={onOpenFile}>
         <Icon name="add" size={20} />
         <span>Open .torrent file</span>
@@ -112,5 +122,77 @@ export function Sidebar({
         </ul>
       )}
     </nav>
+  )
+}
+
+function PlaylistsSection({
+  playlists,
+  active,
+  onOpen,
+  onCreate
+}: {
+  playlists: Playlist[]
+  active: string
+  onOpen: (id: string) => void
+  onCreate: (name: string) => Promise<string | undefined>
+}) {
+  const [creating, setCreating] = useState(false)
+  const [name, setName] = useState('')
+  const [error, setError] = useState<string | undefined>()
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!name.trim()) return setCreating(false)
+    const problem = await onCreate(name)
+    setError(problem)
+    if (!problem) {
+      setName('')
+      setCreating(false)
+    }
+  }
+
+  return (
+    <div className="sidebar-playlists">
+      <div className="sidebar-playlists__head">
+        <span>Playlists</span>
+        <button
+          type="button"
+          className="icon-button"
+          aria-label="New playlist"
+          title="New playlist"
+          onClick={() => setCreating(v => !v)}
+        >
+          <Icon name="add" size={20} />
+        </button>
+      </div>
+      {creating && (
+        <form className="sidebar-playlists__new" onSubmit={submit}>
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Playlist name"
+            maxLength={100}
+            aria-label="New playlist name"
+            // biome-ignore lint/a11y/noAutofocus: the field appears because the user asked to create a playlist
+            autoFocus
+            onKeyDown={e => e.key === 'Escape' && setCreating(false)}
+          />
+          {error && <small>{error}</small>}
+        </form>
+      )}
+      {playlists.map(playlist => (
+        <button
+          key={playlist.id}
+          type="button"
+          className={`sidebar-playlist ${active === `playlist:${playlist.id}` ? 'is-active' : ''}`}
+          onClick={() => onOpen(playlist.id)}
+          title={playlist.name}
+        >
+          <Icon name="queueMusic" size={20} />
+          <span className="sidebar-playlist__name">{playlist.name}</span>
+          <span className="sidebar-playlist__count">{playlist.songs.length}</span>
+        </button>
+      ))}
+    </div>
   )
 }

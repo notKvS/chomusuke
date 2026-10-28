@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ExploreSource, ProviderSection, SearchAlbum } from '../../../shared/types'
 import { Icon } from './Icon'
-import { Chomu } from './mascot/Chomu'
+import { Sticker } from './mascot/Sticker'
 import { SectionBody } from './SearchView'
 
 type Shelf = { status: 'loading' } | { status: 'done'; section: ProviderSection } | { status: 'error'; error: string }
@@ -24,11 +24,12 @@ export function ExploreView({ onOpenAlbum, onManageSources }: Props) {
       <h1 className="search__title">Explore</h1>
       {sources?.length === 0 && (
         <div className="search__message">
-          <Chomu mood="sleep" size={180} />
-          <p>None of your sources can be browsed.</p>
-          <button type="button" className="solid-button" onClick={onManageSources}>
-            Manage sources
-          </button>
+          <Sticker scene="no-sources">
+            <p>None of your sources can be browsed.</p>
+            <button type="button" className="solid-button" onClick={onManageSources}>
+              Manage sources
+            </button>
+          </Sticker>
         </div>
       )}
       {sources?.map(source => (

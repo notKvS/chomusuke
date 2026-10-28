@@ -1684,29 +1684,30 @@ code {
 }
 
 .track {
-  grid-template-columns: 48px minmax(0, 5fr) minmax(0, 3fr) 64px 76px 80px;
+  grid-template-columns: 48px minmax(0, 5fr) minmax(0, 3fr) 64px 112px 80px;
 }
 
-/* The 76px column is left empty for the like/dislike buttons, which sit outside the row's button. */
+/* The 112px column is left empty for add-to-playlist and like/dislike, which sit outside the row's button. */
 .track__duration {
   grid-column: 6;
 }
 
 @media (max-width: 1100px) {
   .track {
-    grid-template-columns: 40px minmax(0, 1fr) 64px 76px 72px;
+    grid-template-columns: 40px minmax(0, 1fr) 64px 112px 72px;
   }
 
   .track__duration {
     grid-column: 5;
   }
 
-  .track-row > .rate {
+  .track-row > .track-actions {
     right: 104px;
   }
 }
 
-.track-row > .rate {
+.track-row > .track-actions {
+  display: inline-flex;
   position: absolute;
   top: 50%;
   right: 112px;
@@ -1727,6 +1728,8 @@ code {
 }
 
 .track-row:hover .rate__button,
+.track-row:hover .add-to-playlist__button,
+.add-to-playlist__button[aria-expanded='true'],
 .player .rate__button,
 .rate__button.is-on,
 .rate__button:focus-visible {
@@ -1757,7 +1760,9 @@ code {
 
 .liked-song {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 64px 110px auto;
+  grid-template-columns: minmax(0, 1fr) 64px;
+  grid-auto-columns: auto;
+  grid-auto-flow: column;
   align-items: center;
   gap: 12px;
   border-bottom: 1px solid var(--border);
@@ -1793,6 +1798,10 @@ code {
   font-weight: 700;
 }
 
+.liked-song__date {
+  width: 100px;
+}
+
 .liked-song__sub,
 .liked-song__duration,
 .liked-song__date {
@@ -1816,4 +1825,241 @@ code {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+/* ---------- Playlists ---------- */
+
+.add-to-playlist {
+  position: relative;
+  display: inline-flex;
+}
+
+.add-to-playlist__button {
+  width: 34px;
+  height: 34px;
+  color: var(--text-3);
+}
+
+.track-row .add-to-playlist__button {
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.playlist-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 230px;
+  max-height: 320px;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-raised);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+}
+
+.add-to-playlist.is-up .playlist-menu {
+  top: auto;
+  bottom: calc(100% + 10px);
+}
+
+.playlist-menu__title {
+  margin: 4px 8px 6px;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.playlist-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.playlist-menu__item:hover {
+  background: var(--hover);
+}
+
+.playlist-menu__item span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.playlist-menu__new {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.playlist-menu__new input,
+.sidebar-playlists__new input,
+.playlist__rename input {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--bg);
+  font: inherit;
+}
+
+.playlist-menu__done {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px;
+  color: var(--text-2);
+}
+
+.sidebar-playlists {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.sidebar-playlists__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 0 16px;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.sidebar-playlists__new {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 8px 6px 16px;
+}
+
+.sidebar-playlists__new small {
+  color: var(--accent-light);
+}
+
+.sidebar-playlist {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 38px;
+  padding: 0 12px 0 16px;
+  border-radius: 10px;
+  color: var(--text-2);
+}
+
+.sidebar-playlist:hover,
+.sidebar-playlist.is-active {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.sidebar-playlist.is-active svg {
+  color: var(--accent);
+}
+
+.sidebar-playlist__name {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sidebar-playlist__count {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.playlist__header {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  padding-top: 24px;
+  margin-bottom: 32px;
+}
+
+.playlist__art {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 220px;
+  height: 220px;
+  border-radius: var(--radius);
+  color: var(--on-accent);
+  background: var(--gradient);
+  box-shadow: var(--glow);
+}
+
+.playlist__meta {
+  min-width: 0;
+}
+
+.playlist__edit {
+  margin-left: 8px;
+  vertical-align: middle;
+  color: var(--text-3);
+}
+
+.playlist__rename {
+  display: flex;
+  max-width: 520px;
+  margin: 8px 0;
+}
+
+.playlist__rename input {
+  height: 48px;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.playlist__index {
+  width: 22px;
+  color: var(--text-3);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.playlist__order {
+  display: inline-flex;
+}
+
+.liked-song.is-current .liked-song__title {
+  color: var(--accent-light);
+}
+
+.liked__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.liked__toolbar .solid-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* An open add-to-playlist menu sits above the rows below it. */
+.track-row:has(.playlist-menu),
+.liked-song:has(.playlist-menu),
+.liked__toolbar:has(.playlist-menu) {
+  position: relative;
+  z-index: 10;
 }

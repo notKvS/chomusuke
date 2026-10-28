@@ -1,54 +1,18 @@
 import { readFile, rename, writeFile } from 'node:fs/promises'
-import { songFingerprint, songId } from '../shared/fingerprint.ts'
+import { songId } from '../shared/fingerprint.ts'
 import type { RatedSong } from '../shared/types.ts'
-import { sanitizeThirdPartyMagnet } from './net.ts'
+import { isoDate, isRecord, sanitizeSongRef } from './song-ref.ts'
 
 /** Liked and disliked songs, kept in `<userData>/ratings.json`. */
 
-const INFO_HASH = /^[a-f0-9]{40}$/
 const MAX_SONGS = 20_000
 const FILE_VERSION = 1
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
-function text(value: unknown, max: number): string | undefined {
-  if (typeof value !== 'string') return undefined
-  const clean = value.replace(/[\p{Cc}\s]+/gu, ' ').trim()
-  return clean ? clean.slice(0, max) : undefined
-}
-
-/** A magnet for exactly this torrent, with only public trackers / https web seeds kept. */
-function cleanMagnet(value: unknown, infoHash: string): string | undefined {
-  if (typeof value !== 'string' || value.length > 8192 || !value.startsWith('magnet:?')) return undefined
-  const magnet = sanitizeThirdPartyMagnet(value)
-  return magnet.toLowerCase().includes(`xt=urn:btih:${infoHash}`) ? magnet : undefined
-}
-
 /** Validates a rated song from disk, a backup file, or the engine. */
 export function sanitizeRatedSong(raw: unknown): RatedSong | undefined {
-  if (!isRecord(raw)) return undefined
-  const infoHash = typeof raw.infoHash === 'string' ? raw.infoHash.toLowerCase() : ''
-  const key = text(raw.key, 1024)
-  const title = text(raw.title, 300)
-  if (!INFO_HASH.test(infoHash) || !key || !title || (raw.rating !== 1 && raw.rating !== -1)) return undefined
-  const artist = text(raw.artist, 200)
-  const ratedAt = typeof raw.ratedAt === 'string' && !Number.isNaN(Date.parse(raw.ratedAt)) ? raw.ratedAt : undefined
-  const duration =
-    typeof raw.duration === 'number' && Number.isFinite(raw.duration) && raw.duration > 0 ? raw.duration : undefined
-  return {
-    id: songId(infoHash, key),
-    infoHash,
-    key,
-    title,
-    artist,
-    album: text(raw.album, 300),
-    duration,
-    fingerprint: songFingerprint(title, artist),
-    magnet: cleanMagnet(raw.magnet, infoHash) ?? `magnet:?xt=urn:btih:${infoHash}`,
-    rating: raw.rating,
-    ratedAt: ratedAt ?? new Date().toISOString()
-  }
+  const song = sanitizeSongRef(raw)
+  if (!song || !isRecord(raw) || (raw.rating !== 1 && raw.rating !== -1)) return undefined
+  return { ...song, rating: raw.rating, ratedAt: isoDate(raw.ratedAt) ?? new Date().toISOString() }
 }
 
 export class RatingsStore {

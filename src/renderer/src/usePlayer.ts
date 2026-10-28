@@ -41,7 +41,15 @@ function bufferedAhead(audio: HTMLAudioElement): number {
  * `shouldSkip` (e.g. disliked songs) is honoured when the queue moves on by itself or with Next; a track the user
  * picks explicitly always plays.
  */
-export function usePlayer(onError: (message: string) => void, shouldSkip: (track: Track) => boolean = () => false) {
+/**
+ * `onEdge` is asked to continue past the end (1) or before the start (-1) of the current album — e.g. to move on in a
+ * playlist that spans several torrents. It returns true when it took over.
+ */
+export function usePlayer(
+  onError: (message: string) => void,
+  shouldSkip: (track: Track) => boolean = () => false,
+  onEdge: (direction: 1 | -1) => boolean = () => false
+) {
   const audio = useMemo(() => {
     const element = new Audio()
     element.preload = 'auto'
@@ -67,10 +75,12 @@ export function usePlayer(onError: (message: string) => void, shouldSkip: (track
   const lastDataAt = useRef(0)
   const onErrorRef = useRef(onError)
   const skipRef = useRef(shouldSkip)
+  const edgeRef = useRef(onEdge)
   useEffect(() => {
     onErrorRef.current = onError
     skipRef.current = shouldSkip
-  }, [onError, shouldSkip])
+    edgeRef.current = onEdge
+  }, [onError, shouldSkip, onEdge])
 
   /** The next playable index after `index`, skipping what the user doesn't want to hear. */
   const nextIndex = useCallback((album: Album, index: number): number | undefined => {
@@ -99,13 +109,15 @@ export function usePlayer(onError: (message: string) => void, shouldSkip: (track
     const { album, index } = queueRef.current
     const target = album ? nextIndex(album, index) : undefined
     if (album && target !== undefined) playAt(album, target)
+    else edgeRef.current(1)
   }, [playAt, nextIndex])
 
   const prev = useCallback(() => {
     const { album, index } = queueRef.current
     if (!album) return
-    if (audio.currentTime > RESTART_THRESHOLD_S || index === 0) audio.currentTime = 0
-    else playAt(album, index - 1)
+    if (audio.currentTime > RESTART_THRESHOLD_S) audio.currentTime = 0
+    else if (index > 0) playAt(album, index - 1)
+    else if (!edgeRef.current(-1)) audio.currentTime = 0
   }, [audio, playAt])
 
   const toggle = useCallback(() => {
@@ -161,7 +173,7 @@ export function usePlayer(onError: (message: string) => void, shouldSkip: (track
         const { album, index } = queueRef.current
         const target = album ? nextIndex(album, index) : undefined
         if (album && target !== undefined) playAt(album, target)
-        else patch({ isPlaying: false })
+        else if (!edgeRef.current(1)) patch({ isPlaying: false })
       },
       error: () => {
         if (!audio.src) return

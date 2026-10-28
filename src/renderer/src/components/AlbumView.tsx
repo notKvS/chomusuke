@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import type { Album, TorrentStats } from '../../../shared/types'
 import { formatBytes, formatSpeed, formatTime, plural } from '../format'
+import type { Playlists } from '../usePlaylists'
 import type { Ratings } from '../useRatings'
+import { AddToPlaylist } from './AddToPlaylist'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
-import { Chomu } from './mascot/Chomu'
 import { LoaderScene } from './mascot/LoaderScene'
+import { Sticker } from './mascot/Sticker'
 import { RateButtons } from './RateButtons'
 import { KeepButton, TorrentPanel, useTorrentDetails } from './TorrentPanel'
 
@@ -18,9 +20,20 @@ interface Props {
   onPlay: (index: number) => void
   onToggle: () => void
   ratings: Ratings
+  playlists: Playlists
 }
 
-export function AlbumView({ album, stats, durations, currentTrackId, isPlaying, onPlay, onToggle, ratings }: Props) {
+export function AlbumView({
+  album,
+  stats,
+  durations,
+  currentTrackId,
+  isPlaying,
+  onPlay,
+  onToggle,
+  ratings,
+  playlists
+}: Props) {
   const albumIsCurrent = album.tracks.some(t => t.id === currentTrackId)
   const [details, refreshDetails] = useTorrentDetails(album.infoHash)
   const [showTorrent, setShowTorrent] = useState(false)
@@ -96,7 +109,15 @@ export function AlbumView({ album, stats, durations, currentTrackId, isPlaying, 
                     : formatBytes(track.size)}
                 </span>
               </button>
-              <RateButtons infoHash={album.infoHash} track={track} ratings={ratings} />
+              <span className="track-actions">
+                <AddToPlaylist
+                  playlists={playlists}
+                  infoHash={album.infoHash}
+                  trackKey={track.key}
+                  label={`Add ${track.title} to a playlist`}
+                />
+                <RateButtons infoHash={album.infoHash} track={track} ratings={ratings} />
+              </span>
             </li>
           )
         })}
@@ -146,19 +167,20 @@ export function AlbumError({
 }) {
   return (
     <div className="page error-page">
-      <Chomu mood="sad" size={200} />
-      <h1>Nyaa… couldn't open that torrent</h1>
-      <p>{message}</p>
-      <div className="error-page__actions">
-        {onRetry && (
-          <button type="button" className="solid-button" onClick={onRetry}>
-            Try again
+      <Sticker scene="album-error" size={200}>
+        <h1>Couldn't open that torrent</h1>
+        <p>{message}</p>
+        <div className="error-page__actions">
+          {onRetry && (
+            <button type="button" className="solid-button" onClick={onRetry}>
+              Try again
+            </button>
+          )}
+          <button type="button" className="ghost-button" onClick={onHome}>
+            Back to home
           </button>
-        )}
-        <button type="button" className="ghost-button" onClick={onHome}>
-          Back to home
-        </button>
-      </div>
+        </div>
+      </Sticker>
     </div>
   )
 }

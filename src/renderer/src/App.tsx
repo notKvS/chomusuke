@@ -1,5 +1,14 @@
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { Album, LoadResult, SearchAlbum, SearchSong, SourceHints, TorrentStats, Track } from '../../shared/types'
+import type {
+  Album,
+  LoadResult,
+  SearchAlbum,
+  SearchSong,
+  SongRef,
+  SourceHints,
+  TorrentStats,
+  Track
+} from '../../shared/types'
 import { AlbumError, AlbumLoading, AlbumView } from './components/AlbumView'
 import { AppearanceView } from './components/AppearanceView'
 import { ExploreView } from './components/ExploreView'
@@ -11,6 +20,7 @@ import { Chomu } from './components/mascot/Chomu'
 import { Sakura } from './components/mascot/Sakura'
 import { Splash } from './components/mascot/Splash'
 import { PlayerBar } from './components/PlayerBar'
+import { PlaylistView } from './components/PlaylistView'
 import { type SearchState, SearchView } from './components/SearchView'
 import { Sidebar } from './components/Sidebar'
 import { SourcesView } from './components/SourcesView'
@@ -18,6 +28,7 @@ import { TopBar } from './components/TopBar'
 import { looksLikeSource } from './source'
 import { useAppearance } from './theme/useAppearance'
 import { usePlayer } from './usePlayer'
+import { usePlaylists } from './usePlaylists'
 import { useRatings } from './useRatings'
 
 /** Pages are what back/forward move between. */
@@ -29,6 +40,7 @@ type Page =
   | { kind: 'appearance' }
   | { kind: 'library' }
   | { kind: 'liked' }
+  | { kind: 'playlist'; id: string }
   | { kind: 'album'; infoHash: string }
 
 /** Shown in place of the current page while an album loads or fails to; not part of the history. */
@@ -37,6 +49,14 @@ type Overlay =
   | { kind: 'error'; message: string; retry?: () => void }
 
 type View = Page | Overlay
+
+/** A list of songs from any torrents played in order (a playlist, or the liked songs). */
+interface Queue {
+  label: string
+  playlistId?: string
+  items: SongRef[]
+  position: number
+}
 
 /** What to start once an album has loaded: nothing, its first track, or a specific song. */
 type Autoplay = boolean | { key: string }
@@ -48,6 +68,7 @@ const MAX_CACHED_SEARCHES = 20
 function samePage(a: Page, b: Page): boolean {
   if (a.kind === 'album' && b.kind === 'album') return a.infoHash === b.infoHash
   if (a.kind === 'search' && b.kind === 'search') return a.query === b.query
+  if (a.kind === 'playlist' && b.kind === 'playlist') return a.id === b.id
   return a.kind === b.kind
 }
 
@@ -67,8 +88,74 @@ export function App() {
   const { ratingOf } = ratings
   // Disliked songs are skipped when an album plays on (the track id starts with its torrent's info hash).
   const isDisliked = useCallback((track: Track) => ratingOf(track.id.slice(0, 40), track).rating === -1, [ratingOf])
-  const player = usePlayer(setToast, isDisliked)
+  const playlists = usePlaylists()
+  const [queue, setQueue] = useState<Queue | null>(null)
+  const queueRef = useRef<Queue | null>(null)
+  const queueLoad = useRef(0)
+  // The player asks this to go past the end (or start) of the current album; filled in once playAt exists.
+  const edgeRef = useRef<(direction: 1 | -1) => boolean>(() => false)
+  const onEdge = useCallback((direction: 1 | -1) => edgeRef.current(direction), [])
+  const player = usePlayer(setToast, isDisliked, onEdge)
   const { playAt, toggle } = player
+
+  const setCurrentQueue = useCallback((next: Queue | null) => {
+    queueRef.current = next
+    setQueue(next)
+  }, [])
+
+  /** Loads the queue item's torrent (no page change) and plays just that song; the queue then moves on. */
+  const playQueueAt = useCallback(
+    async (q: Queue, position: number): Promise<void> => {
+      const item = q.items[position]
+      if (!item) return setCurrentQueue(null)
+      const current = { ...q, position }
+      setCurrentQueue(current)
+      const id = ++queueLoad.current
+      const result = await window.chomusuke.loadSource(item.magnet, { title: item.album, artist: item.artist })
+      if (id !== queueLoad.current || queueRef.current !== current) return // something else started playing
+      const track = result.ok ? result.album.tracks.find(t => t.key === item.key) : undefined
+      if (!result.ok || !track) {
+        setToast(`Couldn't load “${item.title}” — skipping it.`)
+        return playQueueAt(current, position + 1)
+      }
+      const album = result.album
+      setAlbums(prev => (prev.some(a => a.infoHash === album.infoHash) ? prev : [album, ...prev]))
+      playAt({ ...album, tracks: [track] }, 0)
+    },
+    [playAt, setCurrentQueue]
+  )
+
+  edgeRef.current = direction => {
+    const q = queueRef.current
+    const position = q ? q.position + direction : -1
+    if (!q || position < 0 || position >= q.items.length) return false
+    void playQueueAt(q, position)
+    return true
+  }
+
+  const startQueue = useCallback(
+    (label: string, items: SongRef[], start: number, options: { shuffle?: boolean; playlistId?: string } = {}) => {
+      let list = items
+      if (options.shuffle) {
+        list = [...items]
+        for (let i = list.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          ;[list[i], list[j]] = [list[j], list[i]]
+        }
+      }
+      void playQueueAt({ label, items: list, position: 0, playlistId: options.playlistId }, options.shuffle ? 0 : start)
+    },
+    [playQueueAt]
+  )
+
+  /** Playing from an album page or search ends any playlist that was playing. */
+  const playAlbumAt = useCallback(
+    (album: Album, index: number) => {
+      setCurrentQueue(null)
+      playAt(album, index)
+    },
+    [playAt, setCurrentQueue]
+  )
 
   const page = history.pages[history.index]
   const view: View = overlay ?? page
@@ -157,14 +244,14 @@ export function App() {
     (album: Album, autoplay: Autoplay) => {
       setAlbums(prev => (prev.some(a => a.infoHash === album.infoHash) ? prev : [album, ...prev]))
       navigate({ kind: 'album', infoHash: album.infoHash })
-      if (autoplay === true) playAt(album, 0)
+      if (autoplay === true) playAlbumAt(album, 0)
       if (typeof autoplay === 'object') {
         const index = album.tracks.findIndex(t => t.key === autoplay.key)
-        if (index >= 0) playAt(album, index)
+        if (index >= 0) playAlbumAt(album, index)
         else setToast("That song isn't in this torrent's playable files — here's the rest of the album.")
       }
     },
-    [navigate, playAt]
+    [navigate, playAlbumAt]
   )
 
   const runLoad = useCallback(
@@ -326,13 +413,28 @@ export function App() {
   const goAppearance = useCallback(() => goTo({ kind: 'appearance' }), [goTo])
   const goLibrary = useCallback(() => goTo({ kind: 'library' }), [goTo])
   const goLiked = useCallback(() => goTo({ kind: 'liked' }), [goTo])
+  const goPlaylist = useCallback((id: string) => goTo({ kind: 'playlist', id }), [goTo])
+  const createPlaylist = useCallback(
+    async (name: string) => {
+      const result = await playlists.create(name)
+      if (result.id) goPlaylist(result.id)
+      return result.error
+    },
+    [playlists, goPlaylist]
+  )
   const goSearch = useCallback(() => {
     if (lastQuery !== null) goTo({ kind: 'search', query: lastQuery })
   }, [goTo, lastQuery])
 
   const playingHash = player.state.album?.infoHash ?? null
   const activeKey =
-    view.kind === 'album' ? view.infoHash : view.kind === 'loading' || view.kind === 'error' ? '' : view.kind
+    view.kind === 'album'
+      ? view.infoHash
+      : view.kind === 'playlist'
+        ? `playlist:${view.id}`
+        : view.kind === 'loading' || view.kind === 'error'
+          ? ''
+          : view.kind
 
   let content: ReactNode
   switch (view.kind) {
@@ -375,12 +477,32 @@ export function App() {
         <LikedView
           ratings={ratings}
           looks={looks}
-          onPlay={song =>
-            loadSource(song.magnet, { title: song.album, artist: song.artist }, undefined, { key: song.key })
-          }
+          playlists={playlists}
+          onPlay={(songs, index) => startQueue('Liked songs', songs, index)}
         />
       )
       break
+    case 'playlist': {
+      const playlist = playlists.playlists.find(p => p.id === view.id)
+      content = playlist ? (
+        <PlaylistView
+          playlist={playlist}
+          playlists={playlists}
+          currentSongId={
+            queue?.playlistId === playlist.id && player.track ? (queue.items[queue.position]?.id ?? null) : null
+          }
+          onPlay={(index, shuffle) =>
+            startQueue(playlist.name, playlist.songs, index, { shuffle, playlistId: playlist.id })
+          }
+          onDeleted={goHome}
+        />
+      ) : (
+        <div className="page">
+          <p className="sources__lead">That playlist no longer exists.</p>
+        </div>
+      )
+      break
+    }
     case 'library':
       content = <LibraryView onOpen={openLibraryAlbum} />
       break
@@ -399,9 +521,10 @@ export function App() {
           durations={player.durations}
           currentTrackId={player.track?.id ?? null}
           isPlaying={player.state.isPlaying}
-          onPlay={index => playAt(album, index)}
+          onPlay={index => playAlbumAt(album, index)}
           onToggle={toggle}
           ratings={ratings}
+          playlists={playlists}
         />
       ) : null
       break
@@ -432,6 +555,9 @@ export function App() {
         onAppearance={goAppearance}
         onLibrary={goLibrary}
         onLiked={goLiked}
+        playlists={playlists.playlists}
+        onOpenPlaylist={goPlaylist}
+        onCreatePlaylist={createPlaylist}
         onOpenAlbum={openAlbum}
         onOpenFile={openFile}
       />
@@ -443,6 +569,12 @@ export function App() {
         stats={playingHash ? stats[playingHash] : undefined}
         onOpenAlbum={() => playingHash && openAlbum(playingHash)}
         ratings={ratings}
+        playlists={playlists}
+        queue={
+          queue
+            ? { label: queue.label, hasNext: queue.position + 1 < queue.items.length, hasPrev: queue.position > 0 }
+            : undefined
+        }
       />
       {toast && (
         <div className="toast" role="alert">

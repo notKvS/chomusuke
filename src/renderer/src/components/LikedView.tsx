@@ -3,9 +3,11 @@ import type { RatedSong } from '../../../shared/types'
 import { formatTime } from '../format'
 import { sanitizeAppearance } from '../theme/appearance'
 import type { AppearanceControls } from '../theme/useAppearance'
+import type { Playlists } from '../usePlaylists'
 import type { Ratings } from '../useRatings'
+import { AddToPlaylist } from './AddToPlaylist'
 import { Icon } from './Icon'
-import { Chomu } from './mascot/Chomu'
+import { Sticker } from './mascot/Sticker'
 
 type Status = { kind: 'ok' | 'error' | 'busy'; text: string } | null
 
@@ -13,11 +15,14 @@ type Status = { kind: 'ok' | 'error' | 'busy'; text: string } | null
 export function LikedView({
   ratings,
   looks,
+  playlists,
   onPlay
 }: {
   ratings: Ratings
   looks: AppearanceControls
-  onPlay: (song: RatedSong) => void
+  playlists: Playlists
+  /** Plays `songs` in order, starting at `index`. */
+  onPlay: (songs: RatedSong[], index: number) => void
 }) {
   const [tab, setTab] = useState<1 | -1>(1)
   const [status, setStatus] = useState<Status>(null)
@@ -51,6 +56,22 @@ export function LikedView({
         artist and title in other releases. Disliked songs are skipped when an album plays on.
       </p>
 
+      <div className="liked__toolbar">
+        <button
+          type="button"
+          className="solid-button"
+          onClick={() => onPlay(songs, 0)}
+          disabled={songs.length === 0 || tab === -1}
+        >
+          <Icon name="play" size={18} /> Play all
+        </button>
+        <AddToPlaylist
+          playlists={playlists}
+          songs={songs}
+          label="Add all of these to a playlist"
+          className="liked__add-all"
+        />
+      </div>
       <div className="chips" role="tablist">
         <button
           type="button"
@@ -74,21 +95,22 @@ export function LikedView({
 
       {songs.length === 0 ? (
         <div className="library__empty">
-          <Chomu mood="sleep" size={150} />
-          <p>
-            {tab === 1
-              ? 'No liked songs yet. Use the thumbs-up next to any track or in the player.'
-              : 'Nothing disliked. Thumbs-down a track to skip it next time.'}
-          </p>
+          <Sticker scene={tab === 1 ? 'liked-empty' : 'disliked-empty'} size={150}>
+            <p>
+              {tab === 1
+                ? 'Use the thumbs-up next to any track or in the player.'
+                : 'Thumbs-down a track to skip it next time.'}
+            </p>
+          </Sticker>
         </div>
       ) : (
         <ol className="liked__list">
-          {songs.map(song => (
+          {songs.map((song, index) => (
             <li key={song.id} className="liked-song">
               <button
                 type="button"
                 className="liked-song__play"
-                onClick={() => onPlay(song)}
+                onClick={() => onPlay(songs, index)}
                 title={`Play ${song.title}`}
               >
                 <Icon name="play" size={22} />
@@ -99,6 +121,7 @@ export function LikedView({
               </button>
               <span className="liked-song__duration">{song.duration ? formatTime(song.duration) : ''}</span>
               <span className="liked-song__date">{new Date(song.ratedAt).toLocaleDateString()}</span>
+              <AddToPlaylist playlists={playlists} songs={[song]} label={`Add ${song.title} to a playlist`} />
               <button
                 type="button"
                 className="icon-button"

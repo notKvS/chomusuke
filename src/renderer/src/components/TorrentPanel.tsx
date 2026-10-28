@@ -27,7 +27,7 @@ export function useTorrentDetails(infoHash: string): [TorrentDetails | null, () 
   return [details, () => setTick(t => t + 1)]
 }
 
-/** "Keep & seed" / "In your library" button for the album header. */
+/** "Save offline" / "Saved offline" button for the album header: downloads the whole album into the library. */
 export function KeepButton({
   album,
   details,
@@ -64,12 +64,12 @@ export function KeepButton({
         disabled={busy || !details}
         title={
           kept
-            ? 'Remove from your library (its files are deleted when Chomusuke closes)'
-            : 'Download the whole album to your library and share it with other listeners'
+            ? 'Saved on this computer — click to remove it (files are deleted when Chomusuke closes)'
+            : 'Download the whole album so it plays instantly, even offline'
         }
       >
-        <Icon name={kept ? 'check' : 'heart'} size={18} />
-        {kept ? 'In your library' : 'Keep & seed'}
+        <Icon name={kept ? 'check' : 'download'} size={18} />
+        {kept ? 'Saved offline' : 'Save offline'}
       </button>
       {error && <span className="album__action-error">{error}</span>}
     </>

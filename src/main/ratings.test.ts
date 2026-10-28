@@ -91,6 +91,7 @@ test('backup round-trip; merge keeps the newest rating per song', () =>
       app: 'Chomusuke test',
       ratings: [{ ...store.list()[0], rating: -1, ratedAt: '2099-01-01T00:00:00.000Z' }],
       albums: [{ infoHash: HASH, title: 'Album', magnet: MAGNET }],
+      playlists: [],
       appearance: { accent: '#3ec7ff' }
     })
     assert.equal(backup.format, BACKUP_FORMAT)

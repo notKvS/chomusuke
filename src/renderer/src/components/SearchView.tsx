@@ -3,7 +3,7 @@ import { formatBytes, formatTime, plural } from '../format'
 import { Card } from './Card'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
-import { Chomu } from './mascot/Chomu'
+import { Sticker } from './mascot/Sticker'
 
 export type SearchState =
   | { query: string; status: 'loading' }
@@ -43,28 +43,30 @@ export function SearchView({ search, isPlaying, onPlaySong, onOpenAlbum, onRetry
 
       {search.status === 'error' && (
         <div className="search__message">
-          <Chomu mood="sad" size={180} />
-          <p>{search.error}</p>
-          <button type="button" className="solid-button" onClick={onRetry}>
-            Try again
-          </button>
+          <Sticker scene="search-error">
+            <p>{search.error}</p>
+            <button type="button" className="solid-button" onClick={onRetry}>
+              Try again
+            </button>
+          </Sticker>
         </div>
       )}
 
       {noSources && (
         <div className="search__message">
-          <Chomu mood="sleep" size={180} />
-          <p>Every source is switched off. Chomusuke is napping.</p>
-          <button type="button" className="solid-button" onClick={onManageSources}>
-            Manage sources
-          </button>
+          <Sticker scene="no-sources">
+            <button type="button" className="solid-button" onClick={onManageSources}>
+              Manage sources
+            </button>
+          </Sticker>
         </div>
       )}
 
       {results && !noSources && isEmpty(results) && !results.sections.some(s => s.error) && (
         <div className="search__message">
-          <Chomu mood="confused" size={180} />
-          <p>Nyaa? Nothing found. Try fewer words, or just the artist's name.</p>
+          <Sticker scene="search-empty">
+            <p>Try fewer words, or just the artist's name.</p>
+          </Sticker>
         </div>
       )}
 

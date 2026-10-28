@@ -108,7 +108,8 @@ export type LibraryResponse = { ok: true; library: LibraryView } | { ok: false; 
 export type SaveTorrentResult = { ok: true; path: string } | { ok: false; error: string } | null
 
 /** A liked (1) or disliked (-1) song. Identified by its torrent and file, so it's the same from every source. */
-export interface RatedSong {
+/** A song that can be found and played again later: identified by its torrent and file, so it's the same from every source. */
+export interface SongRef {
   /** `${infoHash}:${key}` */
   id: string
   infoHash: string
@@ -122,17 +123,33 @@ export interface RatedSong {
   fingerprint?: string
   /** To play it again: the torrent's magnet link with public trackers and web seeds */
   magnet: string
+}
+
+/** A liked (1) or disliked (-1) song. */
+export interface RatedSong extends SongRef {
   rating: 1 | -1
   ratedAt: string
 }
 
+export interface PlaylistSong extends SongRef {
+  addedAt: string
+}
+
+export interface Playlist {
+  id: string
+  name: string
+  createdAt: string
+  updatedAt: string
+  songs: PlaylistSong[]
+}
+
 export type BackupExportResult =
-  | { ok: true; path: string; songs: number; albums: number }
+  | { ok: true; path: string; songs: number; albums: number; playlists: number }
   | { ok: false; error: string }
   | null
 
 export type BackupImportResult =
-  | { ok: true; songs: number; albums: number; appearance?: unknown }
+  | { ok: true; songs: number; albums: number; playlists: number; appearance?: unknown }
   | { ok: false; error: string }
   | null
 
@@ -282,6 +299,16 @@ export interface ChomusukeApi {
   exportBackup(appearance: unknown): Promise<BackupExportResult>
   /** Reads a backup file and merges it in; kept albums are re-downloaded in the background. */
   importBackup(): Promise<BackupImportResult>
+  getPlaylists(): Promise<Playlist[]>
+  createPlaylist(name: string): Promise<{ playlists: Playlist[]; id?: string; error?: string }>
+  renamePlaylist(id: string, name: string): Promise<Playlist[]>
+  deletePlaylist(id: string): Promise<Playlist[]>
+  /** Adds a track of a loaded album (details come from the torrent, not the UI). */
+  addToPlaylist(id: string, infoHash: string, key: string): Promise<Playlist[]>
+  /** Adds songs that are already known (e.g. from another playlist or the liked list). */
+  addSongsToPlaylist(id: string, songs: SongRef[]): Promise<Playlist[]>
+  removeFromPlaylist(id: string, songId: string): Promise<Playlist[]>
+  moveInPlaylist(id: string, from: number, to: number): Promise<Playlist[]>
 }
 
 export interface WindowAppearance {

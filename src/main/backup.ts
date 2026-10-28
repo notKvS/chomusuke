@@ -1,6 +1,6 @@
 // Backup file: liked/disliked songs, kept albums (as magnet links) and appearance settings, in one JSON file that
 // can be imported into Chomusuke on another computer or OS. Everything is re-validated on import.
-import type { RatedSong } from '../shared/types.ts'
+import type { Playlist, RatedSong } from '../shared/types.ts'
 import { sanitizeThirdPartyMagnet } from './net.ts'
 
 export const BACKUP_FORMAT = 'chomusuke-backup'
@@ -25,6 +25,7 @@ export interface Backup {
   app: string
   ratings: RatedSong[]
   albums: BackupAlbum[]
+  playlists: Playlist[]
   appearance?: unknown
 }
 
@@ -45,6 +46,7 @@ export function buildBackup(input: {
   app: string
   ratings: RatedSong[]
   albums: BackupAlbum[]
+  playlists: Playlist[]
   appearance?: unknown
 }): Backup {
   return {
@@ -53,6 +55,7 @@ export function buildBackup(input: {
     exportedAt: new Date().toISOString(),
     app: input.app,
     ratings: input.ratings,
+    playlists: input.playlists,
     albums: input.albums,
     appearance: appearanceOrUndefined(input.appearance)
   }
@@ -75,8 +78,13 @@ function sanitizeAlbum(raw: unknown): BackupAlbum | undefined {
   return { infoHash, title, artist: text(raw.artist, 200), magnet }
 }
 
-/** Checks a file is a Chomusuke backup; ratings stay raw (the ratings store validates each one). */
-export function parseBackup(json: string): { ratings: unknown[]; albums: BackupAlbum[]; appearance?: unknown } {
+/** Checks a file is a Chomusuke backup; ratings and playlists stay raw (their stores validate each one). */
+export function parseBackup(json: string): {
+  ratings: unknown[]
+  albums: BackupAlbum[]
+  playlists: unknown[]
+  appearance?: unknown
+} {
   let raw: unknown
   try {
     raw = JSON.parse(json)
@@ -92,6 +100,7 @@ export function parseBackup(json: string): { ratings: unknown[]; albums: BackupA
     .filter((album): album is BackupAlbum => album !== undefined)
   return {
     ratings: Array.isArray(raw.ratings) ? raw.ratings : [],
+    playlists: Array.isArray(raw.playlists) ? raw.playlists : [],
     albums,
     appearance: appearanceOrUndefined(raw.appearance)
   }

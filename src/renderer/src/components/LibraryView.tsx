@@ -3,7 +3,7 @@ import type { LibraryView as Library, LibraryItem, LibraryResponse, SharingSetti
 import { formatBytes, formatSpeed, plural } from '../format'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
-import { Chomu } from './mascot/Chomu'
+import { Sticker } from './mascot/Sticker'
 
 const REFRESH_MS = 2000
 const UPLOAD_LIMITS: Array<[number, string]> = [
@@ -152,13 +152,14 @@ export function LibraryView({ onOpen }: { onOpen: (infoHash: string) => void }) 
       </section>
 
       <section className="shelf">
-        <h2 className="shelf__title">Kept albums</h2>
+        <h2 className="shelf__title">Saved albums</h2>
         {items.length === 0 ? (
           <div className="library__empty">
-            <Chomu mood="sleep" size={150} />
-            <p>
-              Nothing kept yet. Open an album and press <strong>Keep &amp; seed</strong> to add it here.
-            </p>
+            <Sticker scene="library-empty" size={150}>
+              <p>
+                Open an album and press <strong>Save offline</strong> to add it here.
+              </p>
+            </Sticker>
           </div>
         ) : (
           <ul className="library__list">
