@@ -13,6 +13,7 @@ interface Props {
   onExplore: () => void
   onAppearance: () => void
   onLibrary: () => void
+  onLiked: () => void
   onOpenAlbum: (infoHash: string) => void
   onOpenFile: () => void
 }
@@ -28,6 +29,7 @@ export function Sidebar({
   onExplore,
   onAppearance,
   onLibrary,
+  onLiked,
   onOpenAlbum,
   onOpenFile
 }: Props) {
@@ -59,6 +61,10 @@ export function Sidebar({
       >
         <Icon name="nowPlaying" />
         <span className="nav-item__label">Now playing</span>
+      </button>
+      <button type="button" className={`nav-item ${active === 'liked' ? 'is-active' : ''}`} onClick={onLiked}>
+        <Icon name="thumbUp" />
+        <span className="nav-item__label">Liked songs</span>
       </button>
       <button type="button" className={`nav-item ${active === 'library' ? 'is-active' : ''}`} onClick={onLibrary}>
         <Icon name="library" />

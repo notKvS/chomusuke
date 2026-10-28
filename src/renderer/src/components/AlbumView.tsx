@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import type { Album, TorrentStats } from '../../../shared/types'
 import { formatBytes, formatSpeed, formatTime, plural } from '../format'
+import type { Ratings } from '../useRatings'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
 import { Chomu } from './mascot/Chomu'
 import { LoaderScene } from './mascot/LoaderScene'
+import { RateButtons } from './RateButtons'
 import { KeepButton, TorrentPanel, useTorrentDetails } from './TorrentPanel'
 
 interface Props {
@@ -15,9 +17,10 @@ interface Props {
   isPlaying: boolean
   onPlay: (index: number) => void
   onToggle: () => void
+  ratings: Ratings
 }
 
-export function AlbumView({ album, stats, durations, currentTrackId, isPlaying, onPlay, onToggle }: Props) {
+export function AlbumView({ album, stats, durations, currentTrackId, isPlaying, onPlay, onToggle, ratings }: Props) {
   const albumIsCurrent = album.tracks.some(t => t.id === currentTrackId)
   const [details, refreshDetails] = useTorrentDetails(album.infoHash)
   const [showTorrent, setShowTorrent] = useState(false)
@@ -62,7 +65,10 @@ export function AlbumView({ album, stats, durations, currentTrackId, isPlaying, 
         {album.tracks.map((track, index) => {
           const isCurrent = track.id === currentTrackId
           return (
-            <li key={track.id}>
+            <li
+              key={track.id}
+              className={`track-row ${ratings.ratingOf(album.infoHash, track).rating === -1 ? 'is-disliked' : ''}`}
+            >
               <button
                 type="button"
                 className={`track ${isCurrent ? 'is-current' : ''}`}
@@ -90,6 +96,7 @@ export function AlbumView({ album, stats, durations, currentTrackId, isPlaying, 
                     : formatBytes(track.size)}
                 </span>
               </button>
+              <RateButtons infoHash={album.infoHash} track={track} ratings={ratings} />
             </li>
           )
         })}

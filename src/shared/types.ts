@@ -107,6 +107,35 @@ export type LibraryResponse = { ok: true; library: LibraryView } | { ok: false; 
 
 export type SaveTorrentResult = { ok: true; path: string } | { ok: false; error: string } | null
 
+/** A liked (1) or disliked (-1) song. Identified by its torrent and file, so it's the same from every source. */
+export interface RatedSong {
+  /** `${infoHash}:${key}` */
+  id: string
+  infoHash: string
+  /** Track key inside the torrent (matches Track.key) */
+  key: string
+  title: string
+  artist?: string
+  album?: string
+  duration?: number
+  /** Normalised artist|title, to recognise the same song in other torrents */
+  fingerprint?: string
+  /** To play it again: the torrent's magnet link with public trackers and web seeds */
+  magnet: string
+  rating: 1 | -1
+  ratedAt: string
+}
+
+export type BackupExportResult =
+  | { ok: true; path: string; songs: number; albums: number }
+  | { ok: false; error: string }
+  | null
+
+export type BackupImportResult =
+  | { ok: true; songs: number; albums: number; appearance?: unknown }
+  | { ok: false; error: string }
+  | null
+
 /** Optional display info for curated sources (the torrent itself carries no artist metadata). */
 export interface SourceHints {
   title?: string
@@ -246,6 +275,13 @@ export interface ChomusukeApi {
   clearStreamed(): Promise<LibraryResponse>
   openLibraryAlbum(infoHash: string): Promise<LoadResult>
   setSharing(settings: SharingSettings): Promise<LibraryResponse>
+  getRatings(): Promise<RatedSong[]>
+  /** Like (1), dislike (-1) or clear (0) a track of a loaded album. Returns the updated list. */
+  rateTrack(infoHash: string, key: string, rating: 0 | 1 | -1): Promise<RatedSong[]>
+  /** Saves a backup file (ratings, kept albums and the given appearance settings); null when cancelled. */
+  exportBackup(appearance: unknown): Promise<BackupExportResult>
+  /** Reads a backup file and merges it in; kept albums are re-downloaded in the background. */
+  importBackup(): Promise<BackupImportResult>
 }
 
 export interface WindowAppearance {

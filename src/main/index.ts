@@ -1,21 +1,25 @@
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { app, BrowserWindow, clipboard, dialog, type IpcMainInvokeEvent, ipcMain, safeStorage, session } from 'electron'
-import parseTorrent from 'parse-torrent'
+import parseTorrent, { toMagnetURI } from 'parse-torrent'
 import type {
   Album,
+  BackupExportResult,
+  BackupImportResult,
   BrowseResponse,
   ExploreSource,
   LibraryResponse,
   LibraryView,
   LoadResult,
   ProvidersResponse,
+  RatedSong,
   SaveTorrentResult,
   SearchResponse,
   SourceHints,
   TestResponse,
   TorrentDetails
 } from '../shared/types.ts'
+import { BackupError, buildBackup, MAX_BACKUP_BYTES, parseBackup } from './backup.ts'
 import { TorrentEngine } from './engine.ts'
 import { BUNDLED_REPOSITORY, bundledExtensions } from './extension-host/defaults.ts'
 import { ExtensionHost, hostPage } from './extension-host/host.ts'
@@ -28,6 +32,7 @@ import { ProviderRegistry } from './providers/registry.ts'
 import { ProviderSettingsStore, type SecretBox, SettingsError, validateRepositoryUrl } from './providers/settings.ts'
 import { TorznabError, testTorznab } from './providers/torznab.ts'
 import type { Playable } from './providers/types.ts'
+import { RatingsStore } from './ratings.ts'
 import { isInfoHash, type LibraryEntry, LibraryError, SeedLibrary } from './seeding.ts'
 import { parseSource, SourceError } from './source.ts'
 import { type StreamServer, startStreamServer } from './stream-server.ts'
@@ -62,6 +67,8 @@ const cacheDir = path.join(app.getPath('temp'), 'chomusuke-cache')
 
 // Kept albums (seeded library); survives restarts.
 const library = new SeedLibrary(path.join(app.getPath('userData'), 'library'))
+// Liked and disliked songs.
+const ratings = new RatingsStore(path.join(app.getPath('userData'), 'ratings.json'))
 
 let mainWindow: BrowserWindow | null = null
 let engine: TorrentEngine | null = null
@@ -298,6 +305,48 @@ async function toLibraryResponse(torrents: TorrentEngine, work: () => Promise<un
     console.error('[library]', err)
     return { ok: false, error: 'Something went wrong with your library.' }
   }
+}
+
+/** Re-downloads albums from a backup in the background and keeps them, one at a time. */
+async function restoreAlbums(
+  torrents: TorrentEngine,
+  albums: Array<{ infoHash: string; title: string; artist?: string; magnet: string }>
+): Promise<void> {
+  for (const album of albums) {
+    try {
+      await torrents.load(album.magnet, { title: album.title, artist: album.artist })
+      const kept = torrents.keep(album.infoHash)
+      if (kept) {
+        await library.add(
+          { infoHash: album.infoHash, title: album.title, artist: album.artist, size: kept.size },
+          kept.torrentFile
+        )
+      }
+    } catch (err) {
+      console.error(`[backup] couldn't restore ${album.infoHash}:`, err instanceof Error ? err.message : err)
+    }
+  }
+}
+
+/** Kept albums as magnet links (from their saved .torrent files), for a backup. */
+async function keptAlbumsForBackup(): Promise<
+  Array<{ infoHash: string; title: string; artist?: string; magnet: string }>
+> {
+  const albums = []
+  for (const entry of library.list()) {
+    try {
+      const parsed = await parseTorrent(await library.readTorrent(entry.infoHash))
+      albums.push({ infoHash: entry.infoHash, title: entry.title, artist: entry.artist, magnet: toMagnetURI(parsed) })
+    } catch {
+      albums.push({
+        infoHash: entry.infoHash,
+        title: entry.title,
+        artist: entry.artist,
+        magnet: `magnet:?xt=urn:btih:${entry.infoHash}`
+      })
+    }
+  }
+  return albums
 }
 
 /** A file name that's safe on every OS, from a torrent's (untrusted) name. */
@@ -559,6 +608,77 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
     })
   })
 
+  ipcMain.handle('ratings:list', (event): RatedSong[] => {
+    assertTrustedSender(event)
+    return ratings.list()
+  })
+
+  ipcMain.handle(
+    'ratings:set',
+    async (event, infoHash: unknown, key: unknown, rating: unknown): Promise<RatedSong[]> => {
+      assertTrustedSender(event)
+      if (!isInfoHash(infoHash) || typeof key !== 'string' || (rating !== 0 && rating !== 1 && rating !== -1)) {
+        return ratings.list()
+      }
+      if (rating === 0) await ratings.set({ infoHash, key }, 0)
+      else {
+        // Song details come from the loaded torrent, not from the UI.
+        const info = torrents.songInfo(infoHash, key)
+        if (info) await ratings.set(info, rating)
+      }
+      return ratings.list()
+    }
+  )
+
+  ipcMain.handle('backup:export', async (event, appearance: unknown): Promise<BackupExportResult> => {
+    assertTrustedSender(event)
+    if (!mainWindow) return null
+    const day = new Date().toISOString().slice(0, 10)
+    const picked = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export Chomusuke backup',
+      defaultPath: path.join(app.getPath('documents'), `chomusuke-backup-${day}.json`),
+      filters: [{ name: 'Chomusuke backup', extensions: ['json'] }]
+    })
+    if (picked.canceled || !picked.filePath) return null
+    try {
+      const backup = buildBackup({
+        app: `Chomusuke ${app.getVersion()}`,
+        ratings: ratings.list(),
+        albums: await keptAlbumsForBackup(),
+        appearance
+      })
+      await writeFile(picked.filePath, JSON.stringify(backup, null, 2), 'utf8')
+      return { ok: true, path: picked.filePath, songs: backup.ratings.length, albums: backup.albums.length }
+    } catch {
+      return { ok: false, error: 'Couldn’t save the backup there.' }
+    }
+  })
+
+  ipcMain.handle('backup:import', async (event): Promise<BackupImportResult> => {
+    assertTrustedSender(event)
+    if (!mainWindow) return null
+    const picked = await dialog.showOpenDialog(mainWindow, {
+      title: 'Import Chomusuke backup',
+      properties: ['openFile'],
+      filters: [{ name: 'Chomusuke backup', extensions: ['json'] }]
+    })
+    const filePath = picked.filePaths[0]
+    if (picked.canceled || !filePath) return null
+    try {
+      const info = await stat(filePath)
+      if (!info.isFile() || info.size > MAX_BACKUP_BYTES) throw new BackupError('That file isn’t a Chomusuke backup.')
+      const backup = parseBackup(await readFile(filePath, 'utf8'))
+      const songs = await ratings.merge(backup.ratings)
+      const albums = backup.albums.filter(album => !library.has(album.infoHash))
+      void restoreAlbums(torrents, albums)
+      return { ok: true, songs, albums: albums.length, appearance: backup.appearance }
+    } catch (err) {
+      if (err instanceof BackupError) return { ok: false, error: err.message }
+      console.error('[backup] import failed:', err)
+      return { ok: false, error: 'Couldn’t read that backup.' }
+    }
+  })
+
   ipcMain.handle('source:open-file', async event => {
     assertTrustedSender(event) // also guarantees mainWindow is set
     if (!mainWindow) return null
@@ -631,6 +751,7 @@ app.whenReady().then(async () => {
   }
 
   await library.load()
+  await ratings.load()
   await library.purge().catch(() => {})
 
   let torrents: TorrentEngine | null = null

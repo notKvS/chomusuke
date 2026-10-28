@@ -1,11 +1,12 @@
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { Album, LoadResult, SearchAlbum, SearchSong, SourceHints, TorrentStats } from '../../shared/types'
+import type { Album, LoadResult, SearchAlbum, SearchSong, SourceHints, TorrentStats, Track } from '../../shared/types'
 import { AlbumError, AlbumLoading, AlbumView } from './components/AlbumView'
 import { AppearanceView } from './components/AppearanceView'
 import { ExploreView } from './components/ExploreView'
 import { Home } from './components/Home'
 import { Icon } from './components/Icon'
 import { LibraryView } from './components/LibraryView'
+import { LikedView } from './components/LikedView'
 import { Chomu } from './components/mascot/Chomu'
 import { Sakura } from './components/mascot/Sakura'
 import { Splash } from './components/mascot/Splash'
@@ -17,6 +18,7 @@ import { TopBar } from './components/TopBar'
 import { looksLikeSource } from './source'
 import { useAppearance } from './theme/useAppearance'
 import { usePlayer } from './usePlayer'
+import { useRatings } from './useRatings'
 
 /** Pages are what back/forward move between. */
 type Page =
@@ -26,6 +28,7 @@ type Page =
   | { kind: 'explore' }
   | { kind: 'appearance' }
   | { kind: 'library' }
+  | { kind: 'liked' }
   | { kind: 'album'; infoHash: string }
 
 /** Shown in place of the current page while an album loads or fails to; not part of the history. */
@@ -60,7 +63,11 @@ export function App() {
   const looks = useAppearance()
   // Decided once at launch: turning the setting on later shouldn't replay the splash.
   const [showSplash] = useState(looks.appearance.splash)
-  const player = usePlayer(setToast)
+  const ratings = useRatings()
+  const { ratingOf } = ratings
+  // Disliked songs are skipped when an album plays on (the track id starts with its torrent's info hash).
+  const isDisliked = useCallback((track: Track) => ratingOf(track.id.slice(0, 40), track).rating === -1, [ratingOf])
+  const player = usePlayer(setToast, isDisliked)
   const { playAt, toggle } = player
 
   const page = history.pages[history.index]
@@ -318,6 +325,7 @@ export function App() {
   const goExplore = useCallback(() => goTo({ kind: 'explore' }), [goTo])
   const goAppearance = useCallback(() => goTo({ kind: 'appearance' }), [goTo])
   const goLibrary = useCallback(() => goTo({ kind: 'library' }), [goTo])
+  const goLiked = useCallback(() => goTo({ kind: 'liked' }), [goTo])
   const goSearch = useCallback(() => {
     if (lastQuery !== null) goTo({ kind: 'search', query: lastQuery })
   }, [goTo, lastQuery])
@@ -362,6 +370,17 @@ export function App() {
     case 'appearance':
       content = <AppearanceView controls={looks} />
       break
+    case 'liked':
+      content = (
+        <LikedView
+          ratings={ratings}
+          looks={looks}
+          onPlay={song =>
+            loadSource(song.magnet, { title: song.album, artist: song.artist }, undefined, { key: song.key })
+          }
+        />
+      )
+      break
     case 'library':
       content = <LibraryView onOpen={openLibraryAlbum} />
       break
@@ -382,6 +401,7 @@ export function App() {
           isPlaying={player.state.isPlaying}
           onPlay={index => playAt(album, index)}
           onToggle={toggle}
+          ratings={ratings}
         />
       ) : null
       break
@@ -411,6 +431,7 @@ export function App() {
         onExplore={goExplore}
         onAppearance={goAppearance}
         onLibrary={goLibrary}
+        onLiked={goLiked}
         onOpenAlbum={openAlbum}
         onOpenFile={openFile}
       />
@@ -421,6 +442,7 @@ export function App() {
         player={player}
         stats={playingHash ? stats[playingHash] : undefined}
         onOpenAlbum={() => playingHash && openAlbum(playingHash)}
+        ratings={ratings}
       />
       {toast && (
         <div className="toast" role="alert">

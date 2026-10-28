@@ -9,4 +9,5 @@ declare module 'parse-torrent' {
   }
   export default function parseTorrent(torrentId: string | Uint8Array | ParsedTorrent): Promise<ParsedTorrent>
   export function toTorrentFile(parsed: ParsedTorrent): Uint8Array
+  export function toMagnetURI(parsed: ParsedTorrent): string
 }

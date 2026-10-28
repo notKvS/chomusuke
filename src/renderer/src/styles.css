@@ -1676,3 +1676,144 @@ code {
 .library__hint {
   color: var(--text-3);
 }
+
+/* ---------- Ratings ---------- */
+
+.track-row {
+  position: relative;
+}
+
+.track {
+  grid-template-columns: 48px minmax(0, 5fr) minmax(0, 3fr) 64px 76px 80px;
+}
+
+/* The 76px column is left empty for the like/dislike buttons, which sit outside the row's button. */
+.track__duration {
+  grid-column: 6;
+}
+
+@media (max-width: 1100px) {
+  .track {
+    grid-template-columns: 40px minmax(0, 1fr) 64px 76px 72px;
+  }
+
+  .track__duration {
+    grid-column: 5;
+  }
+
+  .track-row > .rate {
+    right: 104px;
+  }
+}
+
+.track-row > .rate {
+  position: absolute;
+  top: 50%;
+  right: 112px;
+  transform: translateY(-50%);
+}
+
+.rate {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.rate__button {
+  width: 34px;
+  height: 34px;
+  color: var(--text-3);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.track-row:hover .rate__button,
+.player .rate__button,
+.rate__button.is-on,
+.rate__button:focus-visible {
+  opacity: 1;
+}
+
+.rate__button.is-on {
+  color: var(--accent);
+}
+
+.rate__button.is-on.is-down {
+  color: var(--text-2);
+}
+
+.rate__button.is-similar {
+  opacity: 0.55;
+}
+
+.track-row.is-disliked .track {
+  opacity: 0.45;
+}
+
+.liked__list {
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.liked-song {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px 110px auto;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.liked-song__play {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 10px 8px;
+  border-radius: 10px;
+}
+
+.liked-song__play:hover {
+  background: var(--hover);
+}
+
+.liked-song__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.liked-song__title,
+.liked-song__sub {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.liked-song__title {
+  font-weight: 700;
+}
+
+.liked-song__sub,
+.liked-song__duration,
+.liked-song__date {
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.liked + .shelf,
+.liked__list + .shelf,
+.liked .library__empty + .shelf {
+  margin-top: 40px;
+}
+
+.backup__actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.backup__actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

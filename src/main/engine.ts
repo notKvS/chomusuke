@@ -225,6 +225,35 @@ export class TorrentEngine {
     }
   }
 
+  /** What's needed to rate a track and find it again later. */
+  songInfo(
+    infoHash: string,
+    key: string
+  ):
+    | {
+        infoHash: string
+        key: string
+        title: string
+        artist?: string
+        album: string
+        duration?: number
+        magnet: string
+      }
+    | undefined {
+    const entry = this.loaded.get(infoHash)
+    const track = entry?.album.tracks.find(t => t.key === key)
+    if (!entry || !track) return undefined
+    return {
+      infoHash,
+      key,
+      title: track.title,
+      artist: track.artist,
+      album: entry.album.title,
+      duration: track.duration,
+      magnet: entry.torrent.magnetURI
+    }
+  }
+
   torrentFile(infoHash: string): { name: string; data: Uint8Array } | undefined {
     const torrent = this.loaded.get(infoHash)?.torrent
     return torrent ? { name: torrent.name, data: torrent.torrentFile } : undefined

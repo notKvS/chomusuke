@@ -27,6 +27,10 @@ const api: ChomusukeApi = {
   clearStreamed: () => ipcRenderer.invoke('library:clear-streamed'),
   openLibraryAlbum: infoHash => ipcRenderer.invoke('library:open', infoHash),
   setSharing: settings => ipcRenderer.invoke('sharing:set', settings),
+  getRatings: () => ipcRenderer.invoke('ratings:list'),
+  rateTrack: (infoHash, key, rating) => ipcRenderer.invoke('ratings:set', infoHash, key, rating),
+  exportBackup: appearance => ipcRenderer.invoke('backup:export', appearance),
+  importBackup: () => ipcRenderer.invoke('backup:import'),
   onStats: listener => {
     const handler = (_event: IpcRendererEvent, stats: TorrentStats[]) => listener(stats)
     ipcRenderer.on('torrent:stats', handler)

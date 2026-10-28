@@ -2,16 +2,19 @@ import { type CSSProperties, useEffect, useRef } from 'react'
 import type { TorrentStats } from '../../../shared/types'
 import { formatSpeed, formatTime, plural } from '../format'
 import type { Player } from '../usePlayer'
+import type { Ratings } from '../useRatings'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
+import { RateButtons } from './RateButtons'
 
 interface Props {
   player: Player
   stats?: TorrentStats
   onOpenAlbum: () => void
+  ratings: Ratings
 }
 
-export function PlayerBar({ player, stats, onOpenAlbum }: Props) {
+export function PlayerBar({ player, stats, onOpenAlbum, ratings }: Props) {
   const { state, track, audio } = player
   const progressRef = useRef<HTMLDivElement>(null)
 
@@ -90,6 +93,7 @@ export function PlayerBar({ player, stats, onOpenAlbum }: Props) {
       </button>
 
       <div className="player__side">
+        <RateButtons infoHash={state.album.infoHash} track={track} ratings={ratings} size={20} />
         {stats && (
           <span className="player__swarm" title="Torrent swarm for this album">
             <Icon name="peers" size={16} />

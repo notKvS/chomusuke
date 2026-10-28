@@ -20,6 +20,10 @@ Desktop music player that streams audio straight from torrents 🎶
 - 💾 **Library & seeding** — keep albums (downloaded in full, playable offline) and keep what you stream within a disk
   limit; both are seeded to other listeners. Sharing is on by default and can be switched off, with an upload speed
   limit.
+- 👍 **Like & dislike** — rate songs from the track list or the player; disliked songs are skipped when an album
+  plays on. Ratings follow the song across sources (same torrent file, or same artist + title in another
+  release). *Liked songs* page plays them again; **backup export/import** moves ratings, kept albums and
+  appearance to Chomusuke on another computer.
 - 🎨 **Appearance** — preset themes (dark and light) or custom colours, backgrounds, glass panels, buttons, fonts,
   interface size and effects.
 - ↔️ **Navigation** — back/forward buttons, Alt+←/→ and mouse side buttons.
@@ -34,6 +38,7 @@ Desktop music player that streams audio straight from torrents 🎶
 | Album builder | `src/main/library.ts` | Turns a torrent's file list into an album (tracks, titles, cover) |
 | Providers | `src/main/providers/` | Internet Archive, Torznab and extension sources: search, browse, open a result as a torrent |
 | Extension host | `src/main/extension-host/` | Validates extension manifests and runs each extension in a sandboxed window limited to its declared hosts |
+| Ratings & backup | `src/main/ratings.ts`, `src/main/backup.ts`, `src/shared/fingerprint.ts` | Liked/disliked songs (`<userData>/ratings.json`), song matching across torrents, backup file |
 | Seeding library | `src/main/seeding.ts` | Kept and streamed albums on disk (`<userData>/library/`), sharing settings, space limit |
 | Preload | `src/preload/` | The only bridge between the UI (and extension sandbox) and the main process |
 | UI | `src/renderer/` | React app: pages, player, theme engine (`src/theme/`), styles |

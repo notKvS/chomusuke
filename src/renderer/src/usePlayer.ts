@@ -37,7 +37,11 @@ function bufferedAhead(audio: HTMLAudioElement): number {
 }
 
 /** A single <audio> element driven like a queue over one album's tracks. */
-export function usePlayer(onError: (message: string) => void) {
+/**
+ * `shouldSkip` (e.g. disliked songs) is honoured when the queue moves on by itself or with Next; a track the user
+ * picks explicitly always plays.
+ */
+export function usePlayer(onError: (message: string) => void, shouldSkip: (track: Track) => boolean = () => false) {
   const audio = useMemo(() => {
     const element = new Audio()
     element.preload = 'auto'
@@ -62,9 +66,17 @@ export function usePlayer(onError: (message: string) => void) {
   const queueRef = useRef<{ album: Album | null; index: number }>({ album: null, index: -1 })
   const lastDataAt = useRef(0)
   const onErrorRef = useRef(onError)
+  const skipRef = useRef(shouldSkip)
   useEffect(() => {
     onErrorRef.current = onError
-  }, [onError])
+    skipRef.current = shouldSkip
+  }, [onError, shouldSkip])
+
+  /** The next playable index after `index`, skipping what the user doesn't want to hear. */
+  const nextIndex = useCallback((album: Album, index: number): number | undefined => {
+    for (let i = index + 1; i < album.tracks.length; i++) if (!skipRef.current(album.tracks[i])) return i
+    return undefined
+  }, [])
 
   const patch = useCallback((next: Partial<PlayerState>) => setState(prev => ({ ...prev, ...next })), [])
 
@@ -85,8 +97,9 @@ export function usePlayer(onError: (message: string) => void) {
 
   const next = useCallback(() => {
     const { album, index } = queueRef.current
-    if (album && index + 1 < album.tracks.length) playAt(album, index + 1)
-  }, [playAt])
+    const target = album ? nextIndex(album, index) : undefined
+    if (album && target !== undefined) playAt(album, target)
+  }, [playAt, nextIndex])
 
   const prev = useCallback(() => {
     const { album, index } = queueRef.current
@@ -146,7 +159,8 @@ export function usePlayer(onError: (message: string) => void) {
       volumechange: () => patch({ volume: audio.volume, muted: audio.muted }),
       ended: () => {
         const { album, index } = queueRef.current
-        if (album && index + 1 < album.tracks.length) playAt(album, index + 1)
+        const target = album ? nextIndex(album, index) : undefined
+        if (album && target !== undefined) playAt(album, target)
         else patch({ isPlaying: false })
       },
       error: () => {
@@ -162,7 +176,7 @@ export function usePlayer(onError: (message: string) => void) {
     return () => {
       for (const [name, handler] of Object.entries(handlers)) audio.removeEventListener(name, handler)
     }
-  }, [audio, patch, playAt])
+  }, [audio, patch, playAt, nextIndex])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new track restarts the stall timer
   useEffect(() => {
