@@ -17,3 +17,6 @@ extensions/dist/
 
 # Packaged installers (npm run dist)
 release/
+
+# Written by semantic-release's dry run in CI
+.next-version

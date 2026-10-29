@@ -1,19 +1,32 @@
-# Every push to master: check, build installers for Windows, macOS and Linux, and publish them as the latest GitHub
-# release (v<version>-build.<run>), so /releases/latest always has the newest build. Pushing a tag like v1.2.0
-# publishes a release with that version instead.
+# Every push to master: check, let semantic-release work out the next version from the commit messages
+# (Conventional Commits, rules in .releaserc.json), build installers for Windows, macOS and Linux with that version,
+# then publish them as the GitHub release vX.Y.Z with generated release notes.
+#
+# Manual release: Actions → Release → Run workflow. Pick "auto" (same as a push), force a patch/minor/major bump,
+# or type an exact version.
 name: Release
 
 on:
   push:
     branches: [master]
-    tags: ['v*']
   workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump (auto = decided by the commit messages)
+        type: choice
+        options: [auto, patch, minor, major]
+        default: auto
+      version:
+        description: Exact version instead, e.g. 1.0.0 (overrides the bump; must be higher than the last release)
+        type: string
+        required: false
 
 permissions:
   contents: read
 
+# One release at a time, so two quick pushes can't both pick the same version.
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 jobs:
@@ -31,9 +44,58 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+  version:
+    name: Next version
+    runs-on: ubuntu-latest
+    permissions:
+      # semantic-release checks it would be allowed to push the tag, even in a dry run.
+      contents: write
+    outputs:
+      version: ${{ steps.next.outputs.version }}
+      # "auto": semantic-release tags and writes the notes; "manual": the version was chosen by hand.
+      mode: ${{ steps.next.outputs.mode }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - id: next
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BUMP: ${{ inputs.bump || 'auto' }}
+          EXACT: ${{ inputs.version }}
+        run: |
+          if [[ "$GITHUB_REF" != refs/heads/master ]]; then
+            echo "::error::Releases are made from master; pick master in “Use workflow from”."
+            exit 1
+          fi
+          # Last real release (vX.Y.Z; build tags like v0.1.0-build.3 don't count).
+          last="$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 | sed 's/^v//')"
+          last="${last:-0.0.0}"
+          if [[ -n "$EXACT" ]]; then
+            version="$(npx semver "${EXACT#v}")" || { echo "::error::\"$EXACT\" isn't a valid version"; exit 1; }
+            npx semver -r ">$last" "$version" > /dev/null || { echo "::error::$version isn't higher than the last release $last"; exit 1; }
+            mode=manual
+          elif [[ "$BUMP" != "auto" ]]; then
+            version="$(npx semver -i "$BUMP" "$last")"
+            mode=manual
+          else
+            npx semantic-release --dry-run
+            version="$(cat .next-version 2>/dev/null || true)"
+            mode=auto
+          fi
+          echo "Last release: $last → next: ${version:-none (nothing to release)} ($mode)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build (${{ matrix.os }})
-    needs: check
+    needs: [check, version]
+    if: needs.version.outputs.version != ''
     strategy:
       fail-fast: false
       matrix:
@@ -52,20 +114,12 @@ jobs:
       # this OS/arch explicitly.
       - run: npm ci
       - run: npm run setup
-      - name: Version
-        id: version
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=$(node -p "require('./package.json').version")-build.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
-          fi
       - run: npm run build
       - name: Package
         env:
           # No signing certificates yet: build unsigned installers.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: npx electron-builder --publish never -c.extraMetadata.version=${{ steps.version.outputs.version }}
+        run: npx electron-builder --publish never -c.extraMetadata.version=${{ needs.version.outputs.version }}
       - uses: actions/upload-artifact@v4
         with:
           name: chomusuke-${{ runner.os }}
@@ -79,26 +133,33 @@ jobs:
 
   release:
     name: Publish GitHub release
-    needs: build
+    needs: [build, version]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
-      - name: Create release
+      # Tags the commit, writes release notes from the commits and uploads dist/* (see .releaserc.json).
+      - if: needs.version.outputs.mode == 'auto'
+        run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      # A hand-picked version: tag it on this commit and publish with GitHub's generated notes. semantic-release
+      # treats the new tag as the last release from then on.
+      - if: needs.version.outputs.mode == 'manual'
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            tag="$GITHUB_REF_NAME"
-            flags=(--title "Chomusuke ${GITHUB_REF_NAME#v}")
-          else
-            version="$(ls dist | sed -nE 's/^Chomusuke-(.+)-(win|mac|linux)-.*/\1/p' | head -n1)"
-            tag="v${version}"
-            flags=(--latest --title "Chomusuke ${version}" --target "$GITHUB_SHA")
-          fi
-          gh release create "$tag" dist/* --generate-notes "${flags[@]}"
+          gh release create "v${VERSION}" dist/* --target "$GITHUB_SHA" --title "v${VERSION}" --generate-notes --latest

@@ -96,6 +96,26 @@ time.
 
 ## 📦 Releases
 
-Each push to `master` runs `.github/workflows/release.yml`: lint, typecheck and tests, then builds for Windows,
-macOS and Linux and publishes them as the latest GitHub release. Pushing a `v*` tag (e.g. `v0.2.0`) publishes a
-release with that version. Packaging is configured in `electron-builder.yml`.
+Each push to `master` runs `.github/workflows/release.yml`: lint, typecheck and tests, then
+[semantic-release](https://semantic-release.gitbook.io) works out the next version from the commit messages
+([Conventional Commits](https://www.conventionalcommits.org)), installers are built for Windows, macOS and Linux
+with that version, and they're published as the GitHub release `vX.Y.Z` with generated release notes.
+
+| Commits since the last release | Next version |
+|---|---|
+| any `feat: …` | minor — `0.2.0` → `0.3.0` |
+| `feat!: …` / `fix!: …` or a `BREAKING CHANGE:` footer | major — `0.3.0` → `1.0.0` |
+| `fix:`, `perf:`, `refactor:`, `chore:`, `ci:`, `build:`, `docs:`, `style:`, `test:` | patch — `0.2.0` → `0.2.1` |
+| messages without a type | no release |
+
+Rules live in `.releaserc.json`; packaging in `electron-builder.yml`.
+
+**Manual release:** GitHub → *Actions* → *Release* → *Run workflow* (on `master`):
+
+| Input | Result |
+|---|---|
+| `bump: auto` | Same as a push — version from the commit messages |
+| `bump: patch` / `minor` / `major` | Forces that bump from the last release, even with no qualifying commits |
+| `version: 1.0.0` | Releases exactly that version (must be higher than the last release); overrides `bump` |
+
+Manual releases get GitHub's generated release notes; later automatic releases continue from the new tag.
