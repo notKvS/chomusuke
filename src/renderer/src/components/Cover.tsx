@@ -10,7 +10,7 @@ export function Cover({ src, size, className = '' }: { src?: string; size?: numb
   return (
     <div className={`cover ${className}`} style={style}>
       {showImage ? (
-        <img src={src} alt="" draggable={false} onError={() => setFailed(src)} />
+        <img src={src} alt="" draggable={false} loading="lazy" decoding="async" onError={() => setFailed(src)} />
       ) : (
         <Icon name="music" size={size ? Math.max(16, size * 0.4) : 64} />
       )}

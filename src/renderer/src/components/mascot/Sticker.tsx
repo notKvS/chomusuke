@@ -26,7 +26,7 @@ const NAMES: Record<Character, string> = { aqua: 'Aqua', megumin: 'Megumin', kaz
 const SCENES: Record<Scene, { character: Character; mood: ChomuMood; lines: string[] }> = {
   'search-empty': {
     character: 'aqua',
-    mood: 'confused',
+    mood: 'dead',
     lines: [
       'Zero results?! Impossible. A goddess’s search is never wrong — the internet must be hiding it from me.',
       'Nothing here… try fewer words. And maybe a small offering to Aqua while you’re at it.'
@@ -34,7 +34,7 @@ const SCENES: Record<Scene, { character: Character; mood: ChomuMood; lines: stri
   },
   'search-error': {
     character: 'kazuma',
-    mood: 'sad',
+    mood: 'frustrated',
     lines: [
       'Of course it broke. Nothing in this world works on the first try.',
       'A source tripped over its own feet. Hit retry before it notices.'
@@ -47,7 +47,7 @@ const SCENES: Record<Scene, { character: Character; mood: ChomuMood; lines: stri
   },
   'album-error': {
     character: 'megumin',
-    mood: 'sad',
+    mood: 'dead',
     lines: [
       'This torrent refused to load. If only I were allowed to blow it up instead…',
       'A dud! It fizzled before the fun part. Let’s pick another one — preferably one that goes boom.'
@@ -55,7 +55,7 @@ const SCENES: Record<Scene, { character: Character; mood: ChomuMood; lines: stri
   },
   'liked-empty': {
     character: 'darkness',
-    mood: 'sleep',
+    mood: 'sad',
     lines: ['Not a single liked song… such cold neglect. I don’t hate it. But please, thumbs-up something.']
   },
   'disliked-empty': {

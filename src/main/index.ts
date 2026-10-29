@@ -64,6 +64,11 @@ const secretBox: SecretBox = {
   decrypt: cipher => safeStorage.decryptString(Buffer.from(cipher, 'base64'))
 }
 
+// Scroll pages on the compositor. The content scroller is see-through (the animated background shows behind it), so
+// on 100%-scaled displays Chromium would otherwise keep LCD text by scrolling on the main thread and repainting every
+// card each frame. Measured on Explore (200 cards): ~30 fps before, a steady 60 after.
+app.commandLine.appendSwitch('enable-prefer-compositing-to-lcd-text')
+
 // Session-scoped cache: wiped on launch and on quit so streamed audio never piles up on disk.
 const cacheDir = path.join(app.getPath('temp'), 'chomusuke-cache')
 

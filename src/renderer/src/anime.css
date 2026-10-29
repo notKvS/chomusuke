@@ -547,10 +547,6 @@ h2,
     chomu-flame 0.8s ease-in-out infinite alternate;
 }
 
-.chomu--sad .chomu__art {
-  filter: saturate(0.6) brightness(0.9);
-}
-
 .chomu__badge {
   position: absolute;
   top: 2%;
@@ -571,11 +567,6 @@ h2,
 
 .chomu--sleep .chomu__badge {
   color: #c9b8ff;
-}
-
-.chomu--sad .chomu__badge {
-  top: 30%;
-  right: 30%;
 }
 
 @keyframes chomu-float {
