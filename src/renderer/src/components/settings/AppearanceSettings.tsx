@@ -12,10 +12,10 @@ import {
   randomAppearance,
   SURFACES,
   sanitizeAppearance
-} from '../theme/appearance'
-import { encodeBackgroundImage } from '../theme/dom'
-import type { AppearanceControls } from '../theme/useAppearance'
-import { Icon } from './Icon'
+} from '../../theme/appearance'
+import { encodeBackgroundImage } from '../../theme/dom'
+import type { AppearanceControls } from '../../theme/useAppearance'
+import { Icon } from '../Icon'
 
 const ACCENTS = [
   '#ff5c8a',
@@ -75,7 +75,7 @@ const FONT_SAMPLES: Record<Appearance['font'], string> = {
 }
 
 /** Every look-and-feel setting, applied live. */
-export function AppearanceView({ controls }: { controls: AppearanceControls }) {
+export function AppearanceSettings({ controls }: { controls: AppearanceControls }) {
   const { appearance: a, update, replace, reset, image, setImage } = controls
   const [code, setCode] = useState('')
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
@@ -113,12 +113,9 @@ export function AppearanceView({ controls }: { controls: AppearanceControls }) {
   }
 
   return (
-    <div className="page appearance">
+    <div className="appearance">
       <div className="appearance__intro">
-        <div>
-          <h1 className="search__title">Appearance</h1>
-          <p>Make Chomusuke yours. Every change applies instantly and is remembered.</p>
-        </div>
+        <p>Make Chomusuke yours. Every change applies instantly and is remembered.</p>
         <div className="appearance__actions">
           <button type="button" className="solid-button" onClick={() => replace(randomAppearance())}>
             <Icon name="shuffle" size={18} /> Surprise me

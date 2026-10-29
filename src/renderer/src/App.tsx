@@ -1,4 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import type {
   Album,
   LoadResult,
@@ -10,20 +11,19 @@ import type {
   Track
 } from '../../shared/types'
 import { AlbumError, AlbumLoading, AlbumView } from './components/AlbumView'
-import { AppearanceView } from './components/AppearanceView'
 import { ExploreView } from './components/ExploreView'
 import { Home } from './components/Home'
 import { Icon } from './components/Icon'
-import { LibraryView } from './components/LibraryView'
 import { LikedView } from './components/LikedView'
 import { Chomu } from './components/mascot/Chomu'
 import { Sakura } from './components/mascot/Sakura'
 import { Splash } from './components/mascot/Splash'
 import { PlayerBar } from './components/PlayerBar'
 import { PlaylistView } from './components/PlaylistView'
+import { SavedAlbumsView } from './components/SavedAlbumsView'
 import { type SearchState, SearchView } from './components/SearchView'
 import { Sidebar } from './components/Sidebar'
-import { SourcesView } from './components/SourcesView'
+import { type SettingsSection, SettingsView } from './components/settings/SettingsView'
 import { TopBar } from './components/TopBar'
 import { looksLikeSource } from './source'
 import { useAppearance } from './theme/useAppearance'
@@ -35,10 +35,9 @@ import { useRatings } from './useRatings'
 type Page =
   | { kind: 'home' }
   | { kind: 'search'; query: string }
-  | { kind: 'sources' }
   | { kind: 'explore' }
-  | { kind: 'appearance' }
-  | { kind: 'library' }
+  | { kind: 'settings'; section: SettingsSection }
+  | { kind: 'saved' }
   | { kind: 'liked' }
   | { kind: 'playlist'; id: string }
   | { kind: 'album'; infoHash: string }
@@ -64,11 +63,39 @@ type Autoplay = boolean | { key: string }
 const TOAST_MS = 6000
 const MAX_HISTORY = 50
 const MAX_CACHED_SEARCHES = 20
+const SIDEBAR_KEY = 'chomusuke.sidebar-collapsed'
+
+function savedSidebarCollapsed(): boolean {
+  try {
+    return localStorage.getItem(SIDEBAR_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Collapses or expands the sidebar with a view transition: the browser animates snapshots of the old and new layout
+ * on the compositor, so the page isn't laid out again on every frame the way a width transition would.
+ */
+function morphSidebar(update: () => void): void {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (!document.startViewTransition || reduced) {
+    update()
+    return
+  }
+  const root = document.documentElement
+  // The sidebar and content are named only for the transition: a name makes an element a stacking context, which
+  // would otherwise trap popup menus inside the content beneath the player bar.
+  root.classList.add('is-morphing-sidebar')
+  const transition = document.startViewTransition(() => flushSync(update))
+  void transition.finished.finally(() => root.classList.remove('is-morphing-sidebar'))
+}
 
 function samePage(a: Page, b: Page): boolean {
   if (a.kind === 'album' && b.kind === 'album') return a.infoHash === b.infoHash
   if (a.kind === 'search' && b.kind === 'search') return a.query === b.query
   if (a.kind === 'playlist' && b.kind === 'playlist') return a.id === b.id
+  if (a.kind === 'settings' && b.kind === 'settings') return a.section === b.section
   return a.kind === b.kind
 }
 
@@ -78,9 +105,9 @@ export function App() {
   const [overlay, setOverlay] = useState<Overlay | null>(null)
   /** Results by query, so going back to a search shows it again without re-running it. */
   const [searches, setSearches] = useState<Record<string, SearchState>>({})
-  const [lastQuery, setLastQuery] = useState<string | null>(null)
   const [stats, setStats] = useState<Record<string, TorrentStats>>({})
   const [toast, setToast] = useState<string | null>(null)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(savedSidebarCollapsed)
   const looks = useAppearance()
   // Decided once at launch: turning the setting on later shouldn't replay the splash.
   const [showSplash] = useState(looks.appearance.splash)
@@ -178,6 +205,14 @@ export function App() {
   }, [albums])
 
   useEffect(() => window.chomusuke.onStats(list => setStats(Object.fromEntries(list.map(s => [s.infoHash, s])))), [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_KEY, String(sidebarCollapsed))
+    } catch {
+      // Remembering is a convenience; the sidebar still toggles for this session.
+    }
+  }, [sidebarCollapsed])
 
   useEffect(() => {
     if (!toast) return
@@ -307,7 +342,6 @@ export function App() {
           return next
         })
       store({ query, status: 'loading' })
-      setLastQuery(query)
       if (show) {
         requestId.current++ // cancel any album load in flight
         navigate({ kind: 'search', query })
@@ -408,10 +442,13 @@ export function App() {
     [navigate]
   )
   const goHome = useCallback(() => goTo({ kind: 'home' }), [goTo])
-  const goSources = useCallback(() => goTo({ kind: 'sources' }), [goTo])
+  const goSettings = useCallback(
+    (section: SettingsSection = 'appearance') => goTo({ kind: 'settings', section }),
+    [goTo]
+  )
+  const goSources = useCallback(() => goSettings('sources'), [goSettings])
   const goExplore = useCallback(() => goTo({ kind: 'explore' }), [goTo])
-  const goAppearance = useCallback(() => goTo({ kind: 'appearance' }), [goTo])
-  const goLibrary = useCallback(() => goTo({ kind: 'library' }), [goTo])
+  const goSaved = useCallback(() => goTo({ kind: 'saved' }), [goTo])
   const goLiked = useCallback(() => goTo({ kind: 'liked' }), [goTo])
   const goPlaylist = useCallback((id: string) => goTo({ kind: 'playlist', id }), [goTo])
   const createPlaylist = useCallback(
@@ -422,11 +459,9 @@ export function App() {
     },
     [playlists, goPlaylist]
   )
-  const goSearch = useCallback(() => {
-    if (lastQuery !== null) goTo({ kind: 'search', query: lastQuery })
-  }, [goTo, lastQuery])
 
   const playingHash = player.state.album?.infoHash ?? null
+  const likedCount = ratings.songs.filter(song => song.rating === 1).length
   const activeKey =
     view.kind === 'album'
       ? view.infoHash
@@ -463,20 +498,24 @@ export function App() {
       )
       break
     }
-    case 'sources':
-      content = <SourcesView />
-      break
     case 'explore':
       content = <ExploreView onOpenAlbum={openSearchAlbum} onManageSources={goSources} />
       break
-    case 'appearance':
-      content = <AppearanceView controls={looks} />
+    case 'settings':
+      content = (
+        <SettingsView
+          section={view.section}
+          onSection={goSettings}
+          looks={looks}
+          ratings={ratings}
+          onOpenAlbum={openLibraryAlbum}
+        />
+      )
       break
     case 'liked':
       content = (
         <LikedView
           ratings={ratings}
-          looks={looks}
           playlists={playlists}
           onPlay={(songs, index) => startQueue('Liked songs', songs, index)}
         />
@@ -503,8 +542,8 @@ export function App() {
       )
       break
     }
-    case 'library':
-      content = <LibraryView onOpen={openLibraryAlbum} />
+    case 'saved':
+      content = <SavedAlbumsView onOpen={openLibraryAlbum} />
       break
     case 'loading':
       content = <AlbumLoading title={view.title} artist={view.artist} artwork={view.artwork} />
@@ -532,7 +571,7 @@ export function App() {
   }
 
   return (
-    <div className={`app ${player.track ? 'has-player' : ''}`}>
+    <div className={`app ${player.track ? 'has-player' : ''} ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''}`}>
       {looks.appearance.sakura && <Sakura count={looks.appearance.petals} />}
       <TopBar
         onSubmit={submitTopBar}
@@ -547,14 +586,14 @@ export function App() {
         active={activeKey}
         albums={albums}
         playingAlbum={playingHash}
-        hasSearch={lastQuery !== null}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={() => morphSidebar(() => setSidebarCollapsed(v => !v))}
         onHome={goHome}
-        onSearch={goSearch}
-        onSources={goSources}
         onExplore={goExplore}
-        onAppearance={goAppearance}
-        onLibrary={goLibrary}
+        onSettings={() => goSettings()}
         onLiked={goLiked}
+        likedCount={likedCount}
+        onSaved={goSaved}
         playlists={playlists.playlists}
         onOpenPlaylist={goPlaylist}
         onCreatePlaylist={createPlaylist}

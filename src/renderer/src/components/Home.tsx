@@ -1,7 +1,6 @@
 import type { Album } from '../../../shared/types'
 import { FEATURED, type FeaturedAlbum } from '../featured'
 import { Card } from './Card'
-import { Icon } from './Icon'
 import { Chomu } from './mascot/Chomu'
 
 const GREETINGS: Array<[number, string, string]> = [
@@ -78,15 +77,6 @@ export function Home({ albums, onOpenFeatured, onOpenAlbum }: Props) {
             />
           ))}
         </div>
-      </section>
-
-      <section className="hint">
-        <Icon name="link" />
-        <p>
-          Search the Internet Archive's free music from the bar above, or paste any magnet link, info hash or https{' '}
-          <code>.torrent</code> URL there. You can also open a <code>.torrent</code> file from the sidebar. Only the
-          songs you play get downloaded.
-        </p>
       </section>
     </div>
   )

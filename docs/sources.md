@@ -103,7 +103,7 @@ manifest URL under *Sources*.
 
 1. Implement `MusicProvider` (`providers/types.ts`): `search()`, `open()`, optionally `categories` + `browse()`.
    Keep anything needed to open an album in `album.ref` — it never leaves the main process.
-2. Add settings (with secrets through `SecretBox`) in `providers/settings.ts` and a form in `SourcesView.tsx`.
+2. Add settings (with secrets through `SecretBox`) in `providers/settings.ts` and a form in `components/settings/SourcesSettings.tsx`.
 3. Map settings → implementation in `providers/index.ts`.
 4. Network access only through `http.ts` (https, size caps, timeouts, host allow-lists).
 

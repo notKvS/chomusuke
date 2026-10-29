@@ -16,17 +16,22 @@ export function Sakura({ count = 12 }: { count?: number }) {
   return (
     <div className="sakura" aria-hidden="true">
       {list.map(p => (
+        // The outer span falls and the inner one sways, so each animates only `transform` (no layout per frame).
         <span
           key={p.id}
-          className={`sakura__petal ${p.sway}`}
-          style={{
-            left: `${p.left}%`,
-            width: p.size,
-            height: p.size * 0.8,
-            animationDelay: `${p.delay}s, ${p.delay}s`,
-            animationDuration: `${p.duration}s, ${p.duration / 3}s`
-          }}
-        />
+          className="sakura__petal"
+          style={{ left: `${p.left}%`, animationDelay: `${p.delay}s`, animationDuration: `${p.duration}s` }}
+        >
+          <i
+            className={p.sway}
+            style={{
+              width: p.size,
+              height: p.size * 0.8,
+              animationDelay: `${p.delay}s`,
+              animationDuration: `${p.duration / 3}s`
+            }}
+          />
+        </span>
       ))}
     </div>
   )

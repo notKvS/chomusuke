@@ -17,20 +17,21 @@ Desktop music player that streams audio straight from torrents 🎶
     public-tracker templates (The Pirate Bay, 1337x, Nyaa, Knaben, LimeTorrents) are bundled and off.
 - 📄 **Torrent details** — files, trackers, pieces, peers and transfer stats; save the `.torrent` file or copy the
   magnet link.
-- 💾 **Save offline** — download a whole album to the library so it plays instantly, even offline; recently streamed
+- 💾 **Save offline** — download a whole album to *Saved albums* so it plays instantly, even offline; recently streamed
   music is kept too, within a disk limit you choose.
 - 👍 **Like & dislike** — rate songs from the track list or the player; disliked songs are skipped when an album
   plays on. Ratings follow the song across sources (same torrent file, or same artist + title in another
-  release). *Liked songs* page plays them again; **backup export/import** moves ratings, kept albums and
-  appearance to Chomusuke on another computer.
+  release). *Liked songs* (under Playlists) plays them again; **backup export/import** (Settings) moves ratings,
+  saved albums and appearance to Chomusuke on another computer.
 - 🎼 **Playlists** — mix songs from any torrent and any source; add from track rows, the player or the liked list,
   reorder, rename, shuffle. Playback moves from one torrent to the next on its own, and playlists are part of the
   backup.
-- 🤝 **Sharing** — one app-wide setting (Library page): whether Chomusuke uploads what you have to other listeners,
+- 🤝 **Sharing** — one app-wide setting (Settings → Sharing & storage): whether Chomusuke uploads what you have to other listeners,
   with an upload limit. On by default; switching it off stops all uploading.
 - 🎨 **Appearance** — preset themes (dark and light) or custom colours, backgrounds, glass panels, buttons, fonts,
   interface size and effects.
-- ↔️ **Navigation** — back/forward buttons, Alt+←/→ and mouse side buttons.
+- ⚙️ **Settings** — appearance, sources, sharing & storage and backup in one page, one tab each.
+- ↔️ **Navigation** — collapsible sidebar, back/forward buttons, Alt+←/→ and mouse side buttons.
 
 ## 🏗️ Architecture
 

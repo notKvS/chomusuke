@@ -1,13 +1,13 @@
 import { type FormEvent, useEffect, useState } from 'react'
-import type { ProviderSettingsView, ProvidersResponse, TorznabForm } from '../../../shared/types'
-import { Icon } from './Icon'
+import type { ProviderSettingsView, ProvidersResponse, TorznabForm } from '../../../../shared/types'
+import { Icon } from '../Icon'
 
 type Status = { kind: 'busy' | 'ok' | 'error'; text: string } | null
 
 const EMPTY_FORM: TorznabForm = { name: '', url: '', apiKey: '' }
 
-/** Settings page for where search looks: the built-in Internet Archive plus any Torznab indexers. */
-export function SourcesView() {
+/** Where search looks: the built-in Internet Archive, Torznab indexers and extensions. */
+export function SourcesSettings() {
   const [providers, setProviders] = useState<ProviderSettingsView[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState<TorznabForm | null>(null)
@@ -40,8 +40,7 @@ export function SourcesView() {
   const extensions = providers?.filter(p => p.type === 'extension') ?? []
 
   return (
-    <div className="page sources">
-      <h1 className="search__title">Sources</h1>
+    <div className="sources">
       <p className="sources__lead">
         Where Chomusuke looks when you search. Every result plays over BitTorrent, and only the songs you play are
         downloaded.

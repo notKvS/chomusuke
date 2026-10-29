@@ -37,6 +37,7 @@
   --radius: 16px;
   --btn-radius: 999px;
   --sidebar-width: 248px;
+  --sidebar-collapsed-width: 80px;
   --topbar-height: 68px;
   --player-height: 80px;
   /* Room for the native window controls drawn by titleBarOverlay. */
@@ -98,6 +99,37 @@ code {
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   grid-template-rows: var(--topbar-height) minmax(0, 1fr);
   height: 100vh;
+}
+
+.app.is-sidebar-collapsed {
+  grid-template-columns: var(--sidebar-collapsed-width) minmax(0, 1fr);
+}
+
+/* Collapsing the sidebar: both panels slide to their new size; snapshots are cropped, never stretched. */
+.is-morphing-sidebar .sidebar {
+  view-transition-name: sidebar;
+}
+
+.is-morphing-sidebar .content {
+  view-transition-name: content;
+}
+
+::view-transition-group(sidebar),
+::view-transition-group(content) {
+  overflow: hidden;
+  animation-duration: 0.24s;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+::view-transition-old(sidebar),
+::view-transition-new(sidebar),
+::view-transition-old(content),
+::view-transition-new(content) {
+  width: 100%;
+  height: 100%;
+  object-fit: none;
+  object-position: left top;
+  animation-duration: 0.24s;
 }
 
 .app.has-player {
@@ -195,7 +227,15 @@ code {
   grid-row: 2;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   padding: 8px;
+}
+
+.sidebar__scroll {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -294,6 +334,43 @@ code {
 .sidebar-album__playing {
   flex: none;
   color: var(--accent);
+}
+
+.sidebar__toggle {
+  flex: none;
+  margin-top: 4px;
+  color: var(--text-2);
+}
+
+/* Collapsed: icons only, centred in the narrow column; names show as tooltips. */
+
+.sidebar.is-collapsed
+:is(.nav-item__label, .sidebar-playlist__name, .sidebar-playlist__count, .sidebar-album__text, .pill-button span) {
+  display: none;
+}
+
+.sidebar.is-collapsed :is(.nav-item, .sidebar-playlist) {
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+}
+
+.sidebar.is-collapsed .sidebar-playlist {
+  height: 44px;
+}
+
+.sidebar.is-collapsed .sidebar__divider {
+  width: calc(100% - 16px);
+  margin: 12px 8px;
+}
+
+.sidebar.is-collapsed .pill-button {
+  margin: 4px 4px 12px;
+}
+
+.sidebar.is-collapsed .sidebar-album {
+  justify-content: center;
+  padding: 6px;
 }
 
 /* ---------- Shared bits ---------- */
@@ -500,27 +577,6 @@ code {
   letter-spacing: 0.3px;
 }
 
-.hint {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  max-width: 760px;
-  padding: 20px 24px;
-  border-radius: 12px;
-  color: var(--text-2);
-  background: rgb(var(--ink-rgb) / 0.05);
-  line-height: 1.6;
-}
-
-.hint svg {
-  flex: none;
-  margin-top: 2px;
-}
-
-.hint p {
-  margin: 0;
-}
-
 /* ---------- Album ---------- */
 
 .album__header {
@@ -694,7 +750,9 @@ code {
 
 .eq i {
   width: 3px;
+  height: 14px;
   background: var(--text);
+  transform-origin: bottom;
   animation: eq 0.9s ease-in-out infinite alternate;
 }
 
@@ -708,10 +766,10 @@ code {
 
 @keyframes eq {
   from {
-    height: 3px;
+    transform: scaleY(0.21);
   }
   to {
-    height: 14px;
+    transform: scaleY(1);
   }
 }
 
@@ -721,10 +779,22 @@ code {
   gap: 10px;
 }
 
+/* The shine is a pseudo-element sliding across (transform only), not a repainted background. */
 .skeleton,
 .skeleton-row {
-  background: linear-gradient(100deg, var(--surface) 30%, var(--surface-raised) 50%, var(--surface) 70%);
-  background-size: 300% 100%;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.skeleton::after,
+.skeleton-row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, var(--surface-raised) 50%, transparent 70%);
+  transform: translateX(-100%);
+  will-change: transform;
   animation: shimmer 1.6s linear infinite;
 }
 
@@ -736,11 +806,8 @@ code {
 }
 
 @keyframes shimmer {
-  from {
-    background-position: 100% 0;
-  }
   to {
-    background-position: -50% 0;
+    transform: translateX(100%);
   }
 }
 
@@ -1672,6 +1739,20 @@ code {
   margin-right: auto;
 }
 
+.sharing + .library__heading {
+  margin-top: 32px;
+}
+
+/* ---------- Settings ---------- */
+
+.settings__tabs {
+  margin-bottom: 28px;
+}
+
+.settings__panel .sources__lead {
+  margin-top: 0;
+}
+
 .library__usage,
 .library__hint {
   color: var(--text-3);
@@ -1807,12 +1888,6 @@ code {
 .liked-song__date {
   color: var(--text-3);
   font-size: 13px;
-}
-
-.liked + .shelf,
-.liked__list + .shelf,
-.liked .library__empty + .shelf {
-  margin-top: 40px;
 }
 
 .backup__actions {
