@@ -29,7 +29,8 @@ Desktop music player that streams audio straight from torrents 🎶
 - 🤝 **Sharing** — one app-wide setting (Settings → Sharing & storage): whether Chomusuke uploads what you have to other listeners,
   with an upload limit. On by default; switching it off stops all uploading.
 - 🎨 **Appearance** — preset themes (dark and light) or custom colours, backgrounds, glass panels, buttons, fonts,
-  interface size and effects.
+  interface size and effects, including drifting particles (sakura, snow, leaves, bubbles, embers,
+  music notes, fireflies or sparkles).
 - ⚙️ **Settings** — appearance, sources, sharing & storage and backup in one page, one tab each.
 - ↔️ **Navigation** — collapsible sidebar, back/forward buttons, Alt+←/→ and mouse side buttons.
 

@@ -7,6 +7,7 @@ import {
   computeTheme,
   FONTS,
   matchingPreset,
+  PARTICLES,
   PRESETS,
   presetAppearance,
   randomAppearance,
@@ -64,7 +65,16 @@ const LABELS: Record<string, string> = {
   glow: 'Glow',
   system: 'System',
   serif: 'Serif',
-  mono: 'Mono'
+  mono: 'Mono',
+  off: 'Off',
+  sakura: 'Sakura',
+  snow: 'Snow',
+  leaves: 'Leaves',
+  bubbles: 'Bubbles',
+  embers: 'Embers',
+  notes: 'Notes',
+  fireflies: 'Fireflies',
+  sparkles: 'Sparkles'
 }
 
 const FONT_SAMPLES: Record<Appearance['font'], string> = {
@@ -327,11 +337,17 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
           <Setting label="Glow" value={`${a.glow}%`}>
             <Range min={0} max={200} step={10} value={a.glow} onChange={glow => update({ glow })} />
           </Setting>
-          <Setting label="Sakura petals" value={a.sakura ? String(a.petals) : 'Off'}>
-            <div className="setting--row" style={{ display: 'flex', gap: 12 }}>
-              <Toggle checked={a.sakura} onChange={sakura => update({ sakura })} label="Show sakura petals" />
-              <Range min={4} max={40} value={a.petals} onChange={petals => update({ petals })} disabled={!a.sakura} />
-            </div>
+          <Setting label="Particles" hint="Drifts behind everything. Hidden if your system asks for reduced motion.">
+            <Segmented options={PARTICLES} value={a.particles} onChange={particles => update({ particles })} />
+          </Setting>
+          <Setting label="Amount" value={a.particles === 'off' ? 'Off' : String(a.particleCount)}>
+            <Range
+              min={4}
+              max={40}
+              value={a.particleCount}
+              onChange={particleCount => update({ particleCount })}
+              disabled={a.particles === 'off'}
+            />
           </Setting>
           <Setting label="Animated mascot" row>
             <Toggle

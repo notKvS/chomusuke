@@ -16,7 +16,7 @@ import { Home } from './components/Home'
 import { Icon } from './components/Icon'
 import { LikedView } from './components/LikedView'
 import { Chomu } from './components/mascot/Chomu'
-import { Sakura } from './components/mascot/Sakura'
+import { Particles } from './components/mascot/Particles'
 import { Splash } from './components/mascot/Splash'
 import { PlayerBar } from './components/PlayerBar'
 import { PlaylistView } from './components/PlaylistView'
@@ -572,7 +572,9 @@ export function App() {
 
   return (
     <div className={`app ${player.track ? 'has-player' : ''} ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''}`}>
-      {looks.appearance.sakura && <Sakura count={looks.appearance.petals} />}
+      {looks.appearance.particles !== 'off' && (
+        <Particles kind={looks.appearance.particles} count={looks.appearance.particleCount} />
+      )}
       <TopBar
         onSubmit={submitTopBar}
         onHome={goHome}

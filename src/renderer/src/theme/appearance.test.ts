@@ -56,7 +56,7 @@ test('sanitizeAppearance keeps valid values and repairs the rest', () => {
     uiScale: 10,
     surface: 'chrome',
     font: 'serif',
-    sakura: 'yes',
+    particles: 'confetti',
     extra: '<script>'
   })
   assert.equal(clean.accent, '#3ec7ff')
@@ -65,10 +65,17 @@ test('sanitizeAppearance keeps valid values and repairs the rest', () => {
   assert.equal(clean.uiScale, 80)
   assert.equal(clean.surface, DEFAULT_APPEARANCE.surface)
   assert.equal(clean.font, 'serif')
-  assert.equal(clean.sakura, DEFAULT_APPEARANCE.sakura)
+  assert.equal(clean.particles, DEFAULT_APPEARANCE.particles)
   assert.equal('extra' in clean, false)
   assert.deepEqual(sanitizeAppearance('not json'), DEFAULT_APPEARANCE)
   assert.equal(sanitizeAppearance({ accent: 'red; background: url(x)' }).accent, DEFAULT_APPEARANCE.accent)
+})
+
+test('sanitizeAppearance carries over the old sakura settings', () => {
+  assert.equal(sanitizeAppearance({ sakura: false, petals: 30 }).particles, 'off')
+  assert.equal(sanitizeAppearance({ sakura: true, petals: 30 }).particles, 'sakura')
+  assert.equal(sanitizeAppearance({ sakura: true, petals: 30 }).particleCount, 30)
+  assert.equal(sanitizeAppearance({ particles: 'snow', particleCount: 99 }).particleCount, 40)
 })
 
 test('presets are valid and recognised', () => {

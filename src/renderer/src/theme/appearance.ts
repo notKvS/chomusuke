@@ -9,6 +9,17 @@ export const SURFACES = ['classic', 'glass', 'frosted', 'solid', 'outline'] as c
 export const BUTTON_SHAPES = ['pill', 'rounded', 'square'] as const
 export const BUTTON_STYLES = ['gradient', 'solid', 'outline', 'glow', 'soft'] as const
 export const FONTS = ['rounded', 'system', 'serif', 'mono'] as const
+export const PARTICLES = [
+  'off',
+  'sakura',
+  'snow',
+  'leaves',
+  'bubbles',
+  'embers',
+  'notes',
+  'fireflies',
+  'sparkles'
+] as const
 
 export interface Appearance {
   mode: (typeof MODES)[number]
@@ -34,8 +45,9 @@ export interface Appearance {
   uiScale: number
   /** Glow strength, %. */
   glow: number
-  sakura: boolean
-  petals: number
+  /** What drifts behind the app (sakura petals, snow…), and how many. */
+  particles: (typeof PARTICLES)[number]
+  particleCount: number
   mascotMotion: boolean
   splash: boolean
 }
@@ -58,8 +70,8 @@ export const DEFAULT_APPEARANCE: Appearance = {
   font: 'rounded',
   uiScale: 100,
   glow: 100,
-  sakura: true,
-  petals: 12,
+  particles: 'sakura',
+  particleCount: 12,
   mascotMotion: true,
   splash: true
 }
@@ -182,7 +194,7 @@ export const PRESETS: Preset[] = [
       radius: 4,
       font: 'system',
       glow: 0,
-      sakura: false
+      particles: 'off'
     }
   }
 ]
@@ -237,8 +249,9 @@ export function sanitizeAppearance(raw: unknown): Appearance {
     font: pick(FONTS, v.font, d.font),
     uiScale: number(v.uiScale, 80, 130, d.uiScale),
     glow: number(v.glow, 0, 200, d.glow),
-    sakura: bool(v.sakura, d.sakura),
-    petals: number(v.petals, 4, 40, d.petals),
+    // Settings saved before there was a choice had only sakura on/off (`sakura`) and its count (`petals`).
+    particles: pick(PARTICLES, v.particles, v.sakura === false ? 'off' : d.particles),
+    particleCount: number(v.particleCount ?? v.petals, 4, 40, d.particleCount),
     mascotMotion: bool(v.mascotMotion, d.mascotMotion),
     splash: bool(v.splash, d.splash)
   }
@@ -262,7 +275,8 @@ export function randomAppearance(): Appearance {
     buttonStyle: randomOf(BUTTON_STYLES),
     radius: randomOf([4, 10, 16, 22]),
     font: randomOf(FONTS),
-    glow: randomOf([40, 100, 160])
+    glow: randomOf([40, 100, 160]),
+    particles: randomOf(PARTICLES)
   })
 }
 
