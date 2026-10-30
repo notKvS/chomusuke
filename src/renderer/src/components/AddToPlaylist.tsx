@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react'
 import type { SongRef } from '../../../shared/types'
 import type { Playlists } from '../usePlaylists'
 import { Icon } from './Icon'
+import './AddToPlaylist.css'
 
 /**
  * "+" button with a small menu: add a song to an existing playlist or to a new one. Pass either a loaded track

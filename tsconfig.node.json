@@ -21,6 +21,7 @@
     "src/shared/**/*",
     "extensions/build.ts",
     "extensions/test/**/*",
+    "src/renderer/src/*.test.ts",
     "src/renderer/src/theme/*.test.ts"
   ]
 }

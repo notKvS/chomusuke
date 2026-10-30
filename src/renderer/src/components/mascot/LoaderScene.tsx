@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import scene from '../../assets/mascot/chomusuke-fire-scene.jpg'
+import './LoaderScene.css'
 
 const QUIPS = [
   'Chomusuke is chasing seeders around the neighbourhood…',

@@ -1,0 +1,33 @@
+@layer components {
+  .rate {
+    display: inline-flex;
+    gap: 2px;
+  }
+
+  .rate__button {
+    width: 34px;
+    height: 34px;
+    color: var(--text-3);
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+
+  .track-row:hover .rate__button,
+  .player .rate__button,
+  .rate__button.is-on,
+  .rate__button:focus-visible {
+    opacity: 1;
+  }
+
+  .rate__button.is-on {
+    color: var(--accent);
+  }
+
+  .rate__button.is-on.is-down {
+    color: var(--text-2);
+  }
+
+  .rate__button.is-similar {
+    opacity: 0.55;
+  }
+}

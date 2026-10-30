@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from 'react'
 import { Chomu, type ChomuMood } from './Chomu'
+import './Sticker.css'
 
 /**
  * Character stickers for empty and error states, each with a short quirky line.

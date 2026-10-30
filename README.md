@@ -38,7 +38,7 @@ Desktop music player that streams audio straight from torrents 🎶
 
 | Part | Location | Role |
 |---|---|---|
-| Main process | `src/main/index.ts` | App lifecycle, window, IPC handlers |
+| Main process | `src/main/index.ts`, `src/main/ipc/` | App lifecycle and window; IPC handlers by area, each checking the sender first (`ipc/guard.ts`) |
 | Torrent engine | `src/main/engine.ts` | WebTorrent client; adds torrents with nothing selected, streams byte ranges on demand, sharing on/off |
 | Stream server | `src/main/stream-server.ts` | Loopback HTTP server (random port, per-launch token) serving audio with Range support to the player |
 | Album builder | `src/main/library.ts` | Turns a torrent's file list into an album (tracks, titles, cover) |
@@ -48,7 +48,7 @@ Desktop music player that streams audio straight from torrents 🎶
 | Ratings & backup | `src/main/ratings.ts`, `src/main/backup.ts`, `src/shared/fingerprint.ts` | Liked/disliked songs (`<userData>/ratings.json`), song matching across torrents, backup file |
 | Offline library | `src/main/seeding.ts` | Saved and streamed albums on disk (`<userData>/library/`), sharing settings, space limit |
 | Preload | `src/preload/` | The only bridge between the UI (and extension sandbox) and the main process |
-| UI | `src/renderer/` | React app: pages, player, theme engine (`src/theme/`), styles |
+| UI | `src/renderer/` | React app: pages, player, theme engine (`src/theme/`); global styles in `src/styles/` (cascade layers), each component's styles next to it |
 | Shared types | `src/shared/types.ts` | Types used by main, preload and UI |
 | Extensions | `extensions/` | Bundled extension sources (`src/`), manifests (`index.json`), build script and tests |
 

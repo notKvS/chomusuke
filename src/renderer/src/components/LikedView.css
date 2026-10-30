@@ -1,0 +1,81 @@
+@layer components {
+  .liked__list {
+    margin: 24px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .liked-song {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 64px;
+    grid-auto-columns: auto;
+    grid-auto-flow: column;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .liked-song__play {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    padding: 10px 8px;
+    border-radius: 10px;
+  }
+
+  .liked-song__play:hover {
+    background: var(--hover);
+  }
+
+  .liked-song__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .liked-song__title,
+  .liked-song__sub {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .liked-song__title {
+    font-weight: 700;
+  }
+
+  .liked-song__date {
+    width: 100px;
+  }
+
+  .liked-song__sub,
+  .liked-song__duration,
+  .liked-song__date {
+    color: var(--text-3);
+    font-size: 13px;
+  }
+
+  .liked-song.is-current .liked-song__title {
+    color: var(--accent-light);
+  }
+
+  .liked__toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .liked__toolbar .solid-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .liked-song:has(.playlist-menu),
+  .liked__toolbar:has(.playlist-menu) {
+    position: relative;
+    z-index: 10;
+  }
+}

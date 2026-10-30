@@ -8,6 +8,7 @@ export type FetchErrorKind =
   | 'invalid-json'
   | 'unexpected-magnet'
 
+/** Why a capped fetch failed; `kind` lets callers turn it into a user-facing message (`status` for HTTP errors). */
 export class FetchError extends Error {
   name = 'FetchError'
   readonly kind: FetchErrorKind
@@ -98,16 +99,19 @@ export async function fetchBodyOrMagnet(url: string | URL, options: CappedFetchO
   throw new FetchError('too-many-redirects', 'Too many redirects')
 }
 
+/** {@link fetchBodyOrMagnet}'s policy, for responses that must be a body: a redirect to a magnet link throws. */
 export async function fetchCapped(url: string | URL, options: CappedFetchOptions): Promise<Uint8Array> {
   const result = await fetchBodyOrMagnet(url, options)
   if (result.kind === 'magnet') throw new FetchError('unexpected-magnet', 'Redirected to a magnet link')
   return result.body
 }
 
+/** {@link fetchCapped}, decoded as UTF-8. */
 export async function fetchText(url: string | URL, options: CappedFetchOptions): Promise<string> {
   return new TextDecoder().decode(await fetchCapped(url, options))
 }
 
+/** {@link fetchCapped} with `Accept: application/json`, parsed; throws `invalid-json` if it doesn't parse. */
 export async function fetchJson(url: string | URL, options: CappedFetchOptions): Promise<unknown> {
   const text = await fetchText(url, { accept: 'application/json', ...options })
   try {

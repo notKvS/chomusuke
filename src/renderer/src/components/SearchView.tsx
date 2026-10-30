@@ -4,6 +4,8 @@ import { Card } from './Card'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
 import { Sticker } from './mascot/Sticker'
+import './AlbumView.css'
+import './SearchView.css'
 
 export type SearchState =
   | { query: string; status: 'loading' }
@@ -25,6 +27,10 @@ const albumSubtitle = (album: SearchAlbum): string =>
 const isEmpty = (results: SearchResults): boolean =>
   results.songs.length === 0 && results.sections.every(section => section.albums.length === 0)
 
+/**
+ * Search results: matching songs first, then one section of albums per source (cards or a release list, as the
+ * source prefers). Shows a sticker for errors, no sources and no results.
+ */
 export function SearchView({ search, isPlaying, onPlaySong, onOpenAlbum, onRetry, onManageSources }: Props) {
   const results = search.status === 'done' ? search.results : null
   const noSources = results !== null && results.sections.length === 0

@@ -1,0 +1,62 @@
+@layer components {
+  .playlist__rename input {
+    flex: 1;
+    min-width: 0;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    background: var(--bg);
+    font: inherit;
+    height: 48px;
+    font-size: 28px;
+    font-weight: 800;
+  }
+
+  .playlist__header {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    padding-top: 24px;
+    margin-bottom: 32px;
+  }
+
+  .playlist__art {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 220px;
+    height: 220px;
+    border-radius: var(--radius);
+    color: var(--on-accent);
+    background: var(--gradient);
+    box-shadow: var(--glow);
+  }
+
+  .playlist__meta {
+    min-width: 0;
+  }
+
+  .playlist__edit {
+    margin-left: 8px;
+    vertical-align: middle;
+    color: var(--text-3);
+  }
+
+  .playlist__rename {
+    display: flex;
+    max-width: 520px;
+    margin: 8px 0;
+  }
+
+  .playlist__index {
+    width: 22px;
+    color: var(--text-3);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .playlist__order {
+    display: inline-flex;
+  }
+}

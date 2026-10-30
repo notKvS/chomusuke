@@ -2,6 +2,7 @@ import { type FormEvent, useState } from 'react'
 import { looksLikeSource } from '../source'
 import { Icon } from './Icon'
 import { AnimatedLogo } from './mascot/AnimatedLogo'
+import './TopBar.css'
 
 interface Props {
   onSubmit: (input: string) => void
@@ -13,6 +14,10 @@ interface Props {
   onForward: () => void
 }
 
+/**
+ * Logo, back/forward and the search box, which also takes magnet links, info hashes and torrent URLs (sent to
+ * `onSubmit` either way; the caller decides). Doubles as the window's drag region.
+ */
 export function TopBar({ onSubmit, onHome, playing, canGoBack, canGoForward, onBack, onForward }: Props) {
   const [value, setValue] = useState('')
 

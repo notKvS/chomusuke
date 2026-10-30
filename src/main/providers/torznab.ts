@@ -142,6 +142,7 @@ export function parseTorznab(xml: string): TorznabItem[] {
 const isAudio = (item: TorznabItem): boolean =>
   item.categories.length === 0 || item.categories.some(c => c >= AUDIO_CATEGORY && c < AUDIO_CATEGORY + 1000)
 
+/** A Torznab release as an album result, or undefined when it has nothing to download (no magnet, link or hash). */
 export function toAlbum(item: TorznabItem): ProviderAlbum | undefined {
   if (!item.magnet && !item.link && !item.infoHash) return undefined
   const tags = [...new Set([...item.title.matchAll(TAG_PATTERN)].map(m => m[1].toUpperCase().replace(/[- ]/g, '')))]
@@ -176,6 +177,10 @@ function describeFetchError(err: unknown, name: string): Error {
   return new TorznabError(`Couldn't reach ${name}.`)
 }
 
+/**
+ * A Torznab indexer as a source: audio releases only, most seeded first. Plain http is allowed only back to the
+ * configured indexer on a private network; a release is opened from its magnet, its download link, or its info hash.
+ */
 export function createTorznabProvider(config: TorznabConfig): MusicProvider {
   const indexerOrigin = new URL(config.url).origin
   // Plain http only to the configured indexer itself (same scheme, host and port), on a private network.

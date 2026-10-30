@@ -255,6 +255,11 @@ function uniqueById<T>(items: T[], idOf: (item: T) => string): T[] {
   })
 }
 
+/**
+ * Searches the Internet Archive for albums, then looks inside the best matches for songs. Several queries run at once
+ * (strict, broad, and partial for multi-word queries); it fails only if both main queries do, and the song lookup is
+ * time-boxed so a slow item doesn't hold up the results.
+ */
 export async function searchArchive(query: string, fetchJson: JsonFetcher): Promise<ProviderResults> {
   const tokens = tokenize(query)
   if (tokens.length === 0) return { songs: [], albums: [] }
@@ -339,6 +344,7 @@ export const ARCHIVE_CATEGORIES = [
   { id: 'jazz', name: 'Jazz', query: 'subject:(jazz)' }
 ] as const
 
+/** One Explore category's most downloaded items this week. Throws for an unknown category id. */
 export async function browseArchive(categoryId: string, fetchJson: JsonFetcher): Promise<ProviderResults> {
   const category = ARCHIVE_CATEGORIES.find(c => c.id === categoryId)
   if (!category) throw new Error('Unknown category')
@@ -356,6 +362,7 @@ export async function annotationsForTorrentUrl(
   return fetchArchiveTrackInfo(id, fetchJson).catch(() => null)
 }
 
+/** The built-in Internet Archive source. Opening an item fetches its torrent and, in parallel, its track tags. */
 export function createArchiveProvider(deps: {
   fetchJson: JsonFetcher
   fetchTorrent: (url: string, signal?: AbortSignal) => Promise<Uint8Array>

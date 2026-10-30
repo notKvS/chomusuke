@@ -1,0 +1,132 @@
+@layer components {
+  .selectable {
+    user-select: text;
+    cursor: text;
+  }
+
+  .link-button {
+    padding: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .link-button:hover {
+    text-decoration: underline;
+  }
+
+  .torrent-panel {
+    margin-top: 32px;
+    padding: 20px 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: rgb(var(--surface-rgb) / 0.55);
+  }
+
+  .torrent-panel__empty {
+    margin-top: 32px;
+    color: var(--text-3);
+  }
+
+  .torrent-panel__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .torrent-panel__actions button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .torrent-panel__note {
+    color: var(--text-2);
+  }
+
+  .torrent-panel__facts {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 6px 20px;
+    margin: 0;
+  }
+
+  .torrent-panel__facts dt {
+    color: var(--text-3);
+  }
+
+  .torrent-panel__facts dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .torrent-panel__block {
+    margin-top: 20px;
+  }
+
+  .torrent-panel__block h3 {
+    margin: 0 0 8px;
+    font-size: 15px;
+  }
+
+  .torrent-panel__trackers,
+  .torrent-panel__files {
+    margin: 0 0 6px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .torrent-panel__trackers li {
+    padding: 2px 0;
+    overflow: hidden;
+    color: var(--text-2);
+    font-family: 'Cascadia Mono', Consolas, monospace;
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .torrent-panel__files li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 80px 120px;
+    align-items: center;
+    gap: 12px;
+    padding: 5px 0;
+    border-bottom: 1px solid rgb(var(--ink-rgb) / 0.05);
+  }
+
+  .torrent-panel__files li.is-extra {
+    color: var(--text-3);
+  }
+
+  .torrent-panel__path {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .torrent-panel__size {
+    color: var(--text-3);
+    text-align: right;
+  }
+
+  .torrent-panel__progress {
+    display: block;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: rgb(var(--ink-rgb) / 0.12);
+  }
+
+  .torrent-panel__progress span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+  }
+
+  .torrent-panel__more {
+    margin: 0;
+    color: var(--text-3);
+  }
+}

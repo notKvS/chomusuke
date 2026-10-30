@@ -6,6 +6,7 @@ import type { Ratings } from '../useRatings'
 import { AddToPlaylist } from './AddToPlaylist'
 import { Icon } from './Icon'
 import { Sticker } from './mascot/Sticker'
+import './LikedView.css'
 
 /** Liked and disliked songs. */
 export function LikedView({

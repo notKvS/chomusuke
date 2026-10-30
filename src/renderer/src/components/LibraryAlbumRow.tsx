@@ -2,6 +2,7 @@ import type { LibraryItem, SharingSettings } from '../../../shared/types'
 import { formatBytes, formatSpeed, plural } from '../format'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
+import './LibraryAlbumRow.css'
 
 /** One line about what an album on disk is doing; `background` is whether it seeds without being opened. */
 export function libraryStatus(item: LibraryItem, sharing: SharingSettings, background: boolean): string {

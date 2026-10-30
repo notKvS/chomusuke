@@ -1,0 +1,257 @@
+/* ==========================================================================
+   Customisable theme layer. Tokens come from src/renderer/src/theme/appearance.ts and are written to <html>
+   together with data-* attributes (mode, background, surface, button shape/style, motion). With the default
+   settings ("Night Violet", classic surfaces, pill gradient buttons) nothing here changes the look.
+   ========================================================================== */
+
+@layer theme {
+  html[data-mode='light'] {
+    color-scheme: light;
+  }
+
+  /* ---------- Backgrounds ---------- */
+
+  html[data-bg='solid'] body {
+    background: var(--bg);
+  }
+
+  html[data-bg='gradient'] body {
+    background:
+      linear-gradient(155deg, rgb(var(--accent-2-rgb) / 0.28), transparent 45%),
+      linear-gradient(335deg, rgb(var(--accent-rgb) / 0.22), transparent 50%), var(--bg);
+  }
+
+  html[data-bg='mesh'] body,
+  html[data-bg='starfield'] body,
+  html[data-bg='image'] body {
+    background: var(--bg);
+  }
+
+  html[data-bg='mesh'] body::before,
+  html[data-bg='starfield'] body::before,
+  html[data-bg='starfield'] body::after,
+  html[data-bg='image'] body::before,
+  html[data-bg='image'] body::after {
+    position: fixed;
+    z-index: -1;
+    content: '';
+    pointer-events: none;
+  }
+
+  /* Mesh: big soft blobs of the accent colours drifting slowly. */
+
+  html[data-bg='mesh'] body::before {
+    inset: -25%;
+    background:
+      radial-gradient(35% 40% at 20% 25%, rgb(var(--accent-rgb) / 0.42), transparent 70%),
+      radial-gradient(40% 45% at 80% 20%, rgb(var(--accent-2-rgb) / 0.45), transparent 70%),
+      radial-gradient(45% 40% at 65% 85%, rgb(var(--accent-rgb) / 0.3), transparent 70%),
+      radial-gradient(35% 35% at 15% 80%, rgb(var(--accent-2-rgb) / 0.35), transparent 70%);
+    filter: blur(40px);
+    will-change: transform;
+    animation: mesh-drift 28s ease-in-out infinite alternate;
+  }
+
+  @keyframes mesh-drift {
+    from {
+      transform: translate(0, 0) rotate(0deg) scale(1);
+    }
+    to {
+      transform: translate(6%, -4%) rotate(18deg) scale(1.12);
+    }
+  }
+
+  html[data-mode='light'][data-bg='mesh'] body::before {
+    opacity: 0.8;
+  }
+
+  /* Starfield: two layers of tiny stars, one twinkling, over a faint aurora. */
+
+  html[data-bg='starfield'] body::before {
+    inset: 0;
+    background:
+      radial-gradient(1.5px 1.5px at 20px 30px, rgb(var(--ink-rgb) / 0.8), transparent),
+      radial-gradient(1px 1px at 140px 80px, rgb(var(--ink-rgb) / 0.6), transparent),
+      radial-gradient(1.5px 1.5px at 260px 160px, rgb(var(--tint-rgb) / 0.9), transparent),
+      radial-gradient(1px 1px at 90px 220px, rgb(var(--ink-rgb) / 0.5), transparent),
+      radial-gradient(1px 1px at 320px 40px, rgb(var(--ink-rgb) / 0.7), transparent),
+      radial-gradient(2px 2px at 200px 300px, rgb(var(--accent-soft-rgb) / 0.7), transparent),
+      radial-gradient(900px 500px at 15% -10%, rgb(var(--accent-2-rgb) / 0.16), transparent 60%),
+      radial-gradient(800px 500px at 110% 110%, rgb(var(--accent-rgb) / 0.12), transparent 60%);
+    background-size:
+      360px 360px,
+      360px 360px,
+      360px 360px,
+      360px 360px,
+      360px 360px,
+      360px 360px,
+      100% 100%,
+      100% 100%;
+  }
+
+  html[data-bg='starfield'] body::after {
+    inset: 0;
+    background:
+      radial-gradient(1.5px 1.5px at 60px 120px, rgb(var(--ink-rgb) / 0.9), transparent),
+      radial-gradient(1px 1px at 180px 20px, rgb(var(--tint-rgb) / 0.9), transparent),
+      radial-gradient(1.5px 1.5px at 300px 260px, rgb(var(--ink-rgb) / 0.8), transparent),
+      radial-gradient(1px 1px at 240px 190px, rgb(var(--accent-soft-rgb) / 0.9), transparent);
+    background-size: 420px 420px;
+    animation: star-twinkle 4s ease-in-out infinite alternate;
+  }
+
+  @keyframes star-twinkle {
+    from {
+      opacity: 0.25;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  html[data-mode='light'][data-bg='starfield'] body::before,
+  html[data-mode='light'][data-bg='starfield'] body::after {
+    opacity: 0.55;
+  }
+
+  /* Custom image: blurred and dimmed (or lightened in light mode) so text stays readable. */
+
+  html[data-bg='image'] body::before {
+    inset: 0;
+    background: var(--bg-image, none) center / cover no-repeat;
+    filter: blur(var(--bg-blur));
+    transform: scale(1.06);
+  }
+
+  html[data-bg='image'] body::after {
+    inset: 0;
+    background: rgb(var(--bg-rgb) / var(--bg-dim));
+  }
+
+  html[data-bg-motion='off'] body::before,
+  html[data-bg-motion='off'] body::after {
+    animation: none;
+  }
+
+  /* ---------- Surfaces ---------- */
+
+  html[data-surface='glass'] :is(.topbar, .player, .toast, .torznab-form),
+  html[data-surface='frosted'] :is(.topbar, .player, .toast, .torznab-form) {
+    border: 1px solid rgb(var(--ink-rgb) / 0.1);
+    background: rgb(var(--surface-rgb) / var(--panel-alpha));
+    backdrop-filter: blur(var(--panel-blur)) saturate(1.4);
+    box-shadow:
+      inset 0 1px 0 rgb(var(--ink-rgb) / 0.08),
+      0 10px 30px rgb(0 0 0 / 0.25);
+  }
+
+  html:is([data-surface='glass'], [data-surface='frosted'], [data-surface='solid'], [data-surface='outline']) .sidebar {
+    margin: 0 0 12px 12px;
+    border-radius: var(--radius);
+  }
+
+  html:is([data-surface='glass'], [data-surface='frosted']) .sidebar {
+    border: 1px solid rgb(var(--ink-rgb) / 0.1);
+    background: rgb(var(--surface-rgb) / var(--panel-alpha));
+    backdrop-filter: blur(var(--panel-blur)) saturate(1.4);
+  }
+
+  html:is([data-surface='glass'], [data-surface='frosted']) .topbar {
+    border-width: 0 0 1px;
+    border-radius: 0;
+    background: rgb(var(--bg-rgb) / var(--panel-alpha));
+    box-shadow: none;
+  }
+
+  html[data-surface='solid'] :is(.topbar, .sidebar, .player, .toast, .torznab-form) {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    backdrop-filter: none;
+    box-shadow: 0 6px 18px rgb(0 0 0 / 0.18);
+  }
+
+  html[data-surface='solid'] .topbar {
+    border-width: 0 0 1px;
+    background: var(--bg-2);
+    box-shadow: none;
+  }
+
+  /* Outline: see-through panels drawn with a thin accent line. */
+
+  html[data-surface='outline'] :is(.topbar, .sidebar, .player, .toast, .torznab-form) {
+    border: 1px solid rgb(var(--accent-rgb) / 0.45);
+    background: rgb(var(--bg-rgb) / 0.35);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 0 14px rgb(var(--accent-rgb) / 0.12);
+  }
+
+  html[data-surface='outline'] .topbar {
+    border-width: 0 0 1px;
+  }
+
+  html[data-surface='outline'] .card__art {
+    outline: 1px solid rgb(var(--accent-rgb) / 0.35);
+  }
+
+  /* Panels follow the corner-radius setting. */
+
+  html:not([data-surface='classic']) :is(.player, .torznab-form, .toast) {
+    border-radius: var(--radius);
+  }
+
+  /* ---------- Buttons ---------- */
+
+  html:not([data-btn-shape='pill'])
+  :is(.solid-button, .ghost-button, .pill-button, .chip, .source-form, .card__play, .big-play) {
+    border-radius: var(--btn-radius);
+  }
+
+  html[data-btn-style='solid']
+    :is(.solid-button, .big-play, .chip.is-active, .card__play, .switch[aria-checked='true']),
+  html[data-btn-style='solid'] :is(.solid-button, .big-play, .card__play):hover {
+    background: var(--accent);
+  }
+
+  html[data-btn-style='outline'] :is(.solid-button, .big-play, .chip.is-active, .card__play) {
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    background: rgb(var(--bg-rgb) / 0.4);
+    box-shadow: none;
+  }
+
+  html[data-btn-style='outline'] :is(.solid-button, .big-play, .chip.is-active, .card__play):hover {
+    color: var(--on-accent);
+    background: var(--accent);
+  }
+
+  html[data-btn-style='outline'] :is(.big-play, .card__play) svg {
+    color: currentColor;
+  }
+
+  html[data-btn-style='glow'] :is(.solid-button, .big-play, .chip.is-active, .card__play) {
+    box-shadow:
+      0 0 16px rgb(var(--accent-rgb) / 0.6),
+      0 0 40px rgb(var(--accent-2-rgb) / 0.35);
+  }
+
+  html[data-btn-style='soft'] :is(.solid-button, .big-play, .chip.is-active, .card__play) {
+    color: var(--accent-light);
+    background: rgb(var(--accent-rgb) / 0.18);
+    box-shadow: none;
+  }
+
+  html[data-btn-style='soft'] :is(.solid-button, .big-play, .chip.is-active, .card__play):hover {
+    background: rgb(var(--accent-rgb) / 0.28);
+  }
+
+  /* ---------- Motion ---------- */
+
+  html[data-motion='off'] :is(.chomu, .chomu *, .brand__name, .loader-scene *) {
+    /* biome-ignore lint/complexity/noImportantStyles: switching motion off must beat every component's animation */
+    animation: none !important;
+  }
+
+  html[data-motion='off'] .sticker__art {
+    animation: none;
+  }
+}

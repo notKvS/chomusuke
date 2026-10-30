@@ -1,0 +1,9 @@
+@layer components {
+  .settings__tabs {
+    margin-bottom: 28px;
+  }
+
+  .settings__panel .sources__lead {
+    margin-top: 0;
+  }
+}

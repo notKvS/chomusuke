@@ -1,0 +1,126 @@
+@layer components {
+  .chomu {
+    position: relative;
+    display: inline-block;
+    flex: none;
+  }
+
+  .chomu__art {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center bottom;
+    pointer-events: none;
+  }
+
+  /* Face crops (dedicated square images) for the logo, player bar and toasts. */
+
+  .chomu.is-head .chomu__art {
+    object-position: center;
+  }
+
+  .chomu:is(.is-awake, .is-calm, .is-dancing) .chomu__art {
+    /* Its own layer, so the float/dance and the flame glow run on the compositor. */
+    will-change: transform, filter;
+  }
+
+  .chomu.is-awake .chomu__art {
+    animation:
+      chomu-float 3.2s ease-in-out infinite,
+      chomu-flame 1.6s ease-in-out infinite alternate;
+  }
+
+  @keyframes chomu-flame {
+    from {
+      filter: drop-shadow(0 0 6px rgba(255, 190, 70, 0.35));
+    }
+    to {
+      filter: drop-shadow(0 0 18px rgba(255, 150, 40, 0.75));
+    }
+  }
+
+  @keyframes chomu-float {
+    0%,
+    100% {
+      transform: translateY(0) rotate(-1deg);
+    }
+    50% {
+      transform: translateY(-6%) rotate(1.5deg);
+    }
+  }
+
+  .chomu.is-calm .chomu__art {
+    transform-origin: 50% 100%;
+    filter: drop-shadow(0 0 8px rgba(255, 190, 70, 0.3));
+    animation: chomu-breathe 3.4s ease-in-out infinite;
+  }
+
+  @keyframes chomu-breathe {
+    0%,
+    100% {
+      transform: scale(1, 1);
+    }
+    50% {
+      transform: scale(1.02, 0.97);
+    }
+  }
+
+  .chomu--sleep .chomu__art {
+    filter: brightness(0.82) saturate(0.85) drop-shadow(0 0 6px rgb(var(--tint-rgb) / 0.3));
+  }
+
+  .chomu.is-dancing .chomu__art {
+    transform-origin: 50% 100%;
+    animation:
+      chomu-dance 0.55s ease-in-out infinite alternate,
+      chomu-flame 0.8s ease-in-out infinite alternate;
+  }
+
+  @keyframes chomu-dance {
+    from {
+      transform: rotate(-6deg) translateY(0) scale(1.02, 0.98);
+    }
+    to {
+      transform: rotate(6deg) translateY(-5%) scale(0.98, 1.03);
+    }
+  }
+
+  .chomu__badge {
+    position: absolute;
+    top: 2%;
+    right: 4%;
+    color: #ffd25c;
+    font-family: var(--font-display);
+    font-size: clamp(11px, 0.18em + 14%, 28px);
+    font-weight: 800;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+    animation: chomu-badge 2.4s ease-in-out infinite;
+  }
+
+  @keyframes chomu-badge {
+    0% {
+      opacity: 0;
+      transform: translateY(6px) scale(0.8);
+    }
+    30%,
+    70% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.9);
+    }
+  }
+
+  .chomu.is-head .chomu__badge {
+    top: -2px;
+    right: -2px;
+    font-size: 12px;
+  }
+
+  .chomu--sleep .chomu__badge {
+    color: #c9b8ff;
+  }
+}

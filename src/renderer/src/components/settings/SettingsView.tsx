@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react'
+import type { SettingsSection } from '../../navigation'
 import type { AppearanceControls } from '../../theme/useAppearance'
 import type { Ratings } from '../../useRatings'
 import { AppearanceSettings } from './AppearanceSettings'
 import { BackupSettings } from './BackupSettings'
 import { SharingSettings } from './SharingSettings'
 import { SourcesSettings } from './SourcesSettings'
+import './SettingsView.css'
 
-export type SettingsSection = 'appearance' | 'sources' | 'sharing' | 'backup'
+export type { SettingsSection }
 
 const SECTIONS: Array<[SettingsSection, string]> = [
   ['appearance', 'Appearance'],

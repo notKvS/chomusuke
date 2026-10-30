@@ -1,0 +1,63 @@
+@layer components {
+  .hero__jp {
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: 3px;
+    margin: 0 0 4px;
+    font-size: 16px;
+  }
+
+  .hero {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    overflow: hidden;
+    margin: 8px 0 40px;
+    padding: 28px 36px;
+    border: 1px solid rgb(var(--accent-soft-rgb) / 0.2);
+    background:
+      radial-gradient(500px 200px at 85% 120%, rgb(var(--accent-rgb) / 0.35), transparent 70%),
+      radial-gradient(400px 220px at 0% 0%, rgb(var(--accent-2-rgb) / 0.35), transparent 70%),
+      linear-gradient(120deg, var(--hero-a), var(--hero-b) 60%, var(--hero-c));
+    border-radius: calc(var(--radius) + 8px);
+  }
+
+  .hero::after {
+    content: '✦ ✧ ✦';
+    position: absolute;
+    top: 14px;
+    right: 230px;
+    color: rgba(255, 246, 200, 0.6);
+    letter-spacing: 18px;
+    animation: twinkle 3s ease-in-out infinite;
+  }
+
+  @keyframes twinkle {
+    0%,
+    100% {
+      opacity: 0.25;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  .hero__title {
+    margin: 0 0 8px;
+    font-size: 40px;
+    font-weight: 800;
+  }
+
+  .hero__line {
+    margin: 0;
+    color: var(--text-2);
+    font-size: 16px;
+  }
+
+  .hero__mascot {
+    margin: -20px -6px -36px 0;
+    filter: drop-shadow(0 10px 30px rgb(var(--accent-rgb) / 0.35));
+  }
+}

@@ -34,6 +34,7 @@ const CODE: Record<string, string> = {
   'the-pirate-bay.js': thePirateBay
 }
 
+/** The extensions shipped in the app bundle, validated like any repository; entries without bundled code are skipped. */
 export function bundledExtensions(): Array<{ manifest: ExtensionManifest; code: string }> {
   return parseRepository(JSON.parse(repository), BUNDLED_REPOSITORY).flatMap(manifest => {
     const code = CODE[new URL(manifest.codeUrl).pathname.split('/').pop() ?? '']

@@ -1,0 +1,217 @@
+@layer components {
+  .player {
+    position: relative;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) minmax(0, 1.6fr) minmax(240px, 1fr);
+    align-items: center;
+    gap: 16px;
+    padding: 0 16px 0 8px;
+    z-index: 3;
+    margin: 0 12px 12px;
+    border: 1px solid rgb(var(--tint-rgb) / 0.14);
+    border-radius: 22px;
+    background: rgb(var(--surface-rgb) / 0.85);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.35);
+  }
+
+  .progress {
+    position: absolute;
+    top: -7px;
+    display: flex;
+    align-items: center;
+    height: 14px;
+    z-index: 1;
+    left: 22px;
+    right: 22px;
+  }
+
+  .progress__track {
+    position: relative;
+    width: 100%;
+    height: 2px;
+    background: rgb(var(--ink-rgb) / 0.1);
+    transition: height 0.1s;
+    border-radius: 4px;
+    overflow: visible;
+  }
+
+  .progress:hover .progress__track {
+    height: 4px;
+  }
+
+  .progress__buffered,
+  .progress__played {
+    position: absolute;
+    inset: 0 auto 0 0;
+  }
+
+  .progress__buffered {
+    width: var(--buffered);
+    background: rgb(var(--ink-rgb) / 0.3);
+  }
+
+  .progress__played {
+    width: var(--played);
+    border-radius: 4px;
+    background: var(--gradient);
+    box-shadow: 0 0 10px rgb(var(--accent-rgb) / 0.6);
+  }
+
+  .progress__thumb {
+    position: absolute;
+    top: 50%;
+    left: var(--played);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.1s;
+    width: 16px;
+    height: 16px;
+    border: 3px solid #fff;
+    background: var(--accent);
+  }
+
+  .progress:hover .progress__thumb {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .progress input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .progress input:disabled {
+    cursor: default;
+  }
+
+  .player__controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .player__play {
+    position: relative;
+    width: 52px;
+    height: 52px;
+  }
+
+  .player__time {
+    margin-left: 12px;
+    color: var(--text-2);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .player__now {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    min-width: 0;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+
+  .player__now:hover {
+    background: rgb(var(--ink-rgb) / 0.05);
+  }
+
+  .player__now .cover {
+    border-radius: 3px;
+  }
+
+  .player__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .player__title,
+  .player__subtitle {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .player__title {
+    font-size: 15px;
+    font-weight: 500;
+    font-family: var(--font-display);
+  }
+
+  .player__subtitle {
+    color: var(--text-2);
+  }
+
+  .player__side {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+  }
+
+  .player__swarm {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-3);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .volume {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .volume input {
+    width: 96px;
+    height: 4px;
+    margin: 0;
+    border-radius: 2px;
+    appearance: none;
+    cursor: pointer;
+    background: linear-gradient(to right, var(--accent) var(--level), rgb(var(--ink-rgb) / 0.2) var(--level));
+  }
+
+  .volume input::-webkit-slider-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    appearance: none;
+    background: var(--text);
+  }
+
+  @media (max-width: 1100px) {
+    .player__swarm {
+      display: none;
+    }
+
+    .player {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+  }
+
+  .player__mascot {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    flex: none;
+  }
+
+  .player__play svg {
+    color: var(--text);
+  }
+}

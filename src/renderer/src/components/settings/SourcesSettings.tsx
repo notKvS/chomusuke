@@ -1,8 +1,9 @@
 import { type FormEvent, useEffect, useState } from 'react'
 import type { ProviderSettingsView, ProvidersResponse, TorznabForm } from '../../../../shared/types'
+import { type Status, StatusLine } from '../controls/StatusLine'
+import { Switch } from '../controls/Switch'
 import { Icon } from '../Icon'
-
-type Status = { kind: 'busy' | 'ok' | 'error'; text: string } | null
+import './SourcesSettings.css'
 
 const EMPTY_FORM: TorznabForm = { name: '', url: '', apiKey: '' }
 
@@ -119,9 +120,9 @@ interface ExtensionsProps {
 /** Extensions: sources installed from a repository manifest, each run in a sandbox. */
 function ExtensionsSection({ extensions, apply, onToggle, onRemove }: ExtensionsProps) {
   const [url, setUrl] = useState('')
-  const [status, setStatus] = useState<Status>(null)
+  const [status, setStatus] = useState<Status | null>(null)
   const [configuring, setConfiguring] = useState<string | null>(null)
-  const [tests, setTests] = useState<Record<string, Status>>({})
+  const [tests, setTests] = useState<Record<string, Status | undefined>>({})
 
   const importRepository = async (event: FormEvent) => {
     event.preventDefault()
@@ -167,7 +168,7 @@ function ExtensionsSection({ extensions, apply, onToggle, onRemove }: Extensions
             }
             onRemove={() => onRemove(provider)}
           />
-          {tests[provider.id] && <StatusLine status={tests[provider.id] as NonNullable<Status>} />}
+          {tests[provider.id] && <StatusLine status={tests[provider.id] as Status} />}
           {configuring === provider.id && (
             <ExtensionOptionsForm
               provider={provider}
@@ -195,16 +196,6 @@ function ExtensionsSection({ extensions, apply, onToggle, onRemove }: Extensions
       </form>
       {status && <StatusLine status={status} />}
     </section>
-  )
-}
-
-function StatusLine({ status }: { status: NonNullable<Status> }) {
-  return (
-    <span className={`torznab-form__status is-${status.kind}`} role="status">
-      {status.kind === 'ok' && <Icon name="check" size={18} />}
-      {status.kind === 'error' && <Icon name="error" size={18} />}
-      {status.text}
-    </span>
   )
 }
 
@@ -302,16 +293,11 @@ function SourceRow({ provider, description, note, onToggle, onTest, onEdit, onRe
           <Icon name="delete" size={20} />
         </button>
       )}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={provider.enabled}
-        aria-label={`${provider.enabled ? 'Disable' : 'Enable'} ${provider.name}`}
-        className="switch"
-        onClick={onToggle}
-      >
-        <span className="switch__knob" />
-      </button>
+      <Switch
+        checked={provider.enabled}
+        label={`${provider.enabled ? 'Disable' : 'Enable'} ${provider.name}`}
+        onChange={onToggle}
+      />
     </div>
   )
 }
@@ -324,7 +310,7 @@ interface EditorProps {
 
 function TorznabEditor({ initial, onCancel, onSaved }: EditorProps) {
   const [form, setForm] = useState(initial)
-  const [status, setStatus] = useState<Status>(null)
+  const [status, setStatus] = useState<Status | null>(null)
   const editing = Boolean(initial.id)
   const set = (field: keyof TorznabForm) => (value: string) => setForm(prev => ({ ...prev, [field]: value }))
 
@@ -392,13 +378,7 @@ function TorznabEditor({ initial, onCancel, onSaved }: EditorProps) {
         <button type="button" className="ghost-button" onClick={onCancel}>
           Cancel
         </button>
-        {status && (
-          <span className={`torznab-form__status is-${status.kind}`} role="status">
-            {status.kind === 'ok' && <Icon name="check" size={18} />}
-            {status.kind === 'error' && <Icon name="error" size={18} />}
-            {status.text}
-          </span>
-        )}
+        {status && <StatusLine status={status} />}
       </div>
     </form>
   )

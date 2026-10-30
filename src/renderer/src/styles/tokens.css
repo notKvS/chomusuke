@@ -1,0 +1,58 @@
+/* Design tokens: the default palette and sizes. The theme (theme/dom.ts) overrides them on <html>. */
+
+@layer tokens {
+  :root {
+    /* Theme tokens. These are the defaults ("Night Violet"); the Appearance page overrides them at run time
+     (src/renderer/src/theme/appearance.ts). Colours used with transparency come as "r g b" channel lists. */
+    --bg-rgb: 13 10 26;
+    --surface-rgb: 28 21 51;
+    --surface-raised-rgb: 39 29 71;
+    --accent-rgb: 255 92 138;
+    --accent-2-rgb: 138 107 255;
+    --accent-soft-rgb: 255 143 177;
+    --tint-rgb: 201 184 255;
+    --text-rgb: 236 228 255;
+    /* Overlays (hover fills, hairlines): white on dark themes, ink on light ones. */
+    --ink-rgb: 255 255 255;
+    --bg: #0d0a1a;
+    --bg-2: #120d24;
+    --surface: #1c1533;
+    --surface-raised: #271d47;
+    --hover: rgb(var(--accent-soft-rgb) / 0.1);
+    --pressed: rgb(var(--accent-soft-rgb) / 0.18);
+    --border: rgb(var(--tint-rgb) / 0.12);
+    --text: #f7f2ff;
+    --text-2: rgb(var(--text-rgb) / 0.72);
+    --text-3: rgb(var(--text-rgb) / 0.48);
+    --accent: #ff5c8a;
+    --accent-2: #8a6bff;
+    --accent-3: #5ce1e6;
+    --accent-light: #ffb3cc;
+    --on-accent: #fff;
+    --petal-light: #ffe3ee;
+    --hero-a: #1c1238;
+    --hero-b: #2a1650;
+    --hero-c: #3a1846;
+    --gold: #ffd25c;
+    --ok: #6ee7b7;
+    --gradient: linear-gradient(120deg, #ff5c8a 0%, #c86bff 55%, #6b8cff 100%);
+    --glow: 0 0 24px rgb(var(--accent-rgb) / 0.35);
+    --radius: 16px;
+    --btn-radius: 999px;
+    --sidebar-width: 248px;
+    --sidebar-collapsed-width: 80px;
+    --topbar-height: 68px;
+    --player-height: 80px;
+    /* Room for the native window controls drawn by titleBarOverlay. */
+    --window-controls: 150px;
+    --font-body: 'Nunito', 'M PLUS Rounded 1c', 'Segoe UI', system-ui, sans-serif;
+    --font-display: 'M PLUS Rounded 1c', 'Nunito', system-ui, sans-serif;
+
+    color-scheme: dark;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+}

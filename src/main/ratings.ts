@@ -15,6 +15,10 @@ export function sanitizeRatedSong(raw: unknown): RatedSong | undefined {
   return { ...song, rating: raw.rating, ratedAt: isoDate(raw.ratedAt) ?? new Date().toISOString() }
 }
 
+/**
+ * Liked and disliked songs by song id, held in memory and written after every change (temp file + rename). Invalid
+ * entries in the file are dropped on load; at most 20,000 songs are kept.
+ */
 export class RatingsStore {
   private readonly file: string
   private readonly songs = new Map<string, RatedSong>()

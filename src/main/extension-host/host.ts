@@ -85,6 +85,11 @@ interface Pending {
   timer: ReturnType<typeof setTimeout>
 }
 
+/**
+ * Runs one extension in a hidden, sandboxed window with an in-memory session that can only reach the extension's
+ * declared hosts over https. Started on the first call; a call that doesn't answer in time tears the window down
+ * (stopping runaway code) and the next call starts it again.
+ */
 export class ExtensionHost implements ExtensionRuntime {
   private readonly manifest: ExtensionManifest
   private readonly code: string
@@ -234,6 +239,7 @@ export class ExtensionHost implements ExtensionRuntime {
   }
 }
 
+/** Where the extension sandbox page and its preload are: the dev server while developing, the build otherwise. */
 export function hostPage(rendererUrl: string | undefined, isPackaged: boolean, mainDir: string): HostPage {
   const url =
     !isPackaged && rendererUrl

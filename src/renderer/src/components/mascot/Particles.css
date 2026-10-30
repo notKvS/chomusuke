@@ -1,0 +1,270 @@
+@layer components {
+  /* The outer .particle travels (fall, rise, drift); the inner body sways, spins or pulses. Transform and opacity only. */
+
+  .particles {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .particle {
+    position: absolute;
+    will-change: transform;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+
+  .particle__body {
+    display: block;
+    font-style: normal;
+    line-height: 1;
+    /* No will-change here: it would freeze the raster scale, so bodies that grow (sparkles, fireflies) turn blurry. A
+     running transform animation gets its own layer anyway. */
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+  }
+
+  .particles--fall .particle {
+    top: -40px;
+    animation-name: particle-fall;
+  }
+
+  @keyframes particle-fall {
+    to {
+      transform: translateY(calc(100vh + 80px));
+    }
+  }
+
+  .particles--rise .particle {
+    bottom: -40px;
+    animation-name: particle-rise;
+  }
+
+  @keyframes particle-rise {
+    to {
+      transform: translateY(calc(-100vh - 80px));
+    }
+  }
+
+  .particles--drift .particle {
+    animation-name: particle-drift;
+    animation-direction: alternate;
+    animation-timing-function: ease-in-out;
+  }
+
+  @keyframes particle-drift {
+    0% {
+      transform: translate(0, 0);
+    }
+    33% {
+      transform: translate(60px, -40px);
+    }
+    66% {
+      transform: translate(20px, -90px);
+    }
+    100% {
+      transform: translate(-50px, -30px);
+    }
+  }
+
+  .particles--drift .particle:nth-child(even) {
+    animation-name: particle-drift-b;
+  }
+
+  @keyframes particle-drift-b {
+    0% {
+      transform: translate(0, 0);
+    }
+    33% {
+      transform: translate(-70px, 30px);
+    }
+    66% {
+      transform: translate(-20px, 80px);
+    }
+    100% {
+      transform: translate(50px, 20px);
+    }
+  }
+
+  /* Sakura: blossom-pink petals that sway and spin as they fall. */
+
+  .particles--sakura .particle {
+    opacity: 0.22;
+  }
+
+  .particles--sakura .particle__body {
+    border-radius: 80% 0 80% 0;
+    background: linear-gradient(135deg, var(--petal-light), rgb(var(--accent-soft-rgb)));
+    animation-name: sway-spin;
+  }
+
+  @keyframes sway-spin {
+    from {
+      transform: translateX(-30px) rotate(0deg);
+    }
+    to {
+      transform: translateX(40px) rotate(220deg);
+    }
+  }
+
+  /* Snow: soft white flakes with a slight accent rim, so they show on light themes too. */
+
+  .particles--snow .particle {
+    opacity: 0.75;
+  }
+
+  .particles--snow .particle__body {
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff 0 35%, rgb(var(--accent-soft-rgb) / 0.6) 60%, transparent 72%);
+    animation-name: sway;
+  }
+
+  @keyframes sway {
+    from {
+      transform: translateX(-18px);
+    }
+    to {
+      transform: translateX(18px);
+    }
+  }
+
+  /* Leaves: autumn colours, tumbling. */
+
+  .particles--leaves .particle {
+    opacity: 0.4;
+  }
+
+  .particles--leaves .particle__body {
+    border-radius: 0 80% 0 80%;
+    background: linear-gradient(135deg, #ffb347, #e0532f);
+    animation-name: tumble;
+  }
+
+  @keyframes tumble {
+    from {
+      transform: translateX(-40px) rotate(-30deg) scaleX(1);
+    }
+    to {
+      transform: translateX(40px) rotate(320deg) scaleX(0.6);
+    }
+  }
+
+  .particles--leaves .particle__body.v1 {
+    background: linear-gradient(135deg, #ffd25c, #ff8a3d);
+  }
+
+  .particles--leaves .particle__body.v2 {
+    background: linear-gradient(135deg, #e0532f, #8f2d1e);
+  }
+
+  .particles--leaves .particle__body.v3 {
+    background: linear-gradient(135deg, #c8a24a, #7a5a2a);
+  }
+
+  /* Bubbles: hollow rings with a highlight, wobbling as they rise. */
+
+  .particles--bubbles .particle {
+    opacity: 0.45;
+  }
+
+  .particles--bubbles .particle__body {
+    border: 1.5px solid rgb(var(--accent-soft-rgb) / 0.9);
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 32% 30%, rgb(255 255 255 / 0.9) 0 10%, transparent 18%),
+      radial-gradient(circle, transparent 55%, rgb(var(--accent-soft-rgb) / 0.35) 100%);
+    animation-name: sway;
+  }
+
+  /* Embers: tiny glowing sparks rising and flickering, like Chomusuke's fire. */
+
+  .particles--embers .particle__body {
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff3c4 0 25%, #ffb347 50%, transparent 72%);
+    animation-name: flicker;
+  }
+
+  @keyframes flicker {
+    from {
+      opacity: 0.35;
+      transform: translateX(-10px) scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(10px) scale(1.15);
+    }
+  }
+
+  /* Music notes in the accent colours, rocking as they float up. */
+
+  .particles--notes .particle {
+    opacity: 0.3;
+  }
+
+  .particles--notes .particle__body {
+    color: rgb(var(--accent-soft-rgb));
+    font-weight: 800;
+    animation-name: rock;
+  }
+
+  @keyframes rock {
+    from {
+      transform: translateX(-14px) rotate(-14deg);
+    }
+    to {
+      transform: translateX(14px) rotate(14deg);
+    }
+  }
+
+  .particles--notes .particle__body:is(.v1, .v3) {
+    color: rgb(var(--accent-2-rgb));
+  }
+
+  /* Fireflies: warm dots wandering and pulsing. */
+
+  .particles--fireflies .particle__body {
+    border-radius: 50%;
+    background: radial-gradient(
+      circle,
+      #fffbd0 0 18%,
+      rgb(255 236 140 / 0.7) 32%,
+      rgb(var(--accent-2-rgb) / 0.35) 50%,
+      transparent 72%
+    );
+    animation-name: pulse;
+  }
+
+  @keyframes pulse {
+    from {
+      opacity: 0.1;
+      transform: scale(0.7);
+    }
+    to {
+      opacity: 0.9;
+      transform: scale(1.1);
+    }
+  }
+
+  /* Sparkles: four-point stars popping in and out in place. */
+
+  .particles--sparkles .particle__body {
+    clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+    background: linear-gradient(135deg, #fff 30%, rgb(var(--accent-soft-rgb)));
+    animation-name: twinkle-pop;
+  }
+
+  @keyframes twinkle-pop {
+    0%,
+    10% {
+      opacity: 0;
+      transform: scale(0) rotate(0deg);
+    }
+    100% {
+      opacity: 0.95;
+      transform: scale(1) rotate(90deg);
+    }
+  }
+}

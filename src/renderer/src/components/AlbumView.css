@@ -1,0 +1,330 @@
+@layer components {
+  .album__header {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    padding-top: 24px;
+  }
+
+  .album__cover {
+    width: 264px;
+    height: 264px;
+    border-radius: 22px;
+    box-shadow:
+      0 20px 50px rgba(0, 0, 0, 0.5),
+      var(--glow);
+  }
+
+  .album__meta {
+    min-width: 0;
+  }
+
+  .album__title {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 0 0 12px;
+    font-size: clamp(28px, 3.4vw, 44px);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.8px;
+    font-family: var(--font-display);
+  }
+
+  .album__subtitle,
+  .album__details {
+    margin: 0 0 4px;
+    color: var(--text-2);
+    font-size: 15px;
+  }
+
+  .swarm {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 10px 0 0;
+    color: var(--text-3);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .swarm svg:not(:first-of-type) {
+    margin-left: 8px;
+  }
+
+  .swarm__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-3);
+  }
+
+  .swarm__dot.is-up {
+    background: var(--ok);
+    box-shadow: 0 0 8px var(--ok);
+  }
+
+  .album__actions {
+    margin-top: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .tracklist {
+    margin: 40px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .track {
+    display: grid;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    height: 56px;
+    padding: 0 16px 0 8px;
+    border-bottom: 1px solid var(--border);
+    font-size: 15px;
+    grid-template-columns: 48px minmax(0, 5fr) minmax(0, 3fr) 64px 112px 80px;
+    border-bottom-color: rgb(var(--tint-rgb) / 0.08);
+    border-radius: 12px;
+    transition: background 0.12s;
+  }
+
+  .track:hover {
+    background: var(--hover);
+  }
+
+  .track.is-current {
+    background: linear-gradient(90deg, rgb(var(--accent-rgb) / 0.18), rgb(var(--accent-2-rgb) / 0.08));
+  }
+
+  .track__index {
+    position: relative;
+    display: grid;
+    place-items: center;
+    height: 40px;
+    color: var(--text-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .track__hover-icon {
+    position: absolute;
+    opacity: 0;
+    color: var(--text);
+  }
+
+  .track:hover .track__number,
+  .track:hover .eq {
+    opacity: 0;
+  }
+
+  .track:hover .track__hover-icon {
+    opacity: 1;
+  }
+
+  .track__title,
+  .track__artist {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .track__title {
+    font-weight: 500;
+  }
+
+  .track__artist {
+    color: var(--text-2);
+  }
+
+  .track__format {
+    justify-self: start;
+    padding: 1px 6px;
+    border: 1px solid var(--border);
+    font-size: 11px;
+    letter-spacing: 0.3px;
+    border-color: rgb(var(--accent-soft-rgb) / 0.35);
+    color: var(--accent-light);
+    border-radius: 999px;
+  }
+
+  /* The 112px column is left empty for add-to-playlist and like/dislike, which sit outside the row's button. */
+
+  .track__duration {
+    color: var(--text-2);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    grid-column: 6;
+  }
+
+  .eq {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 14px;
+  }
+
+  .eq i {
+    width: 3px;
+    height: 14px;
+    transform-origin: bottom;
+    animation: eq 0.9s ease-in-out infinite alternate;
+    background: var(--accent);
+  }
+
+  @keyframes eq {
+    from {
+      transform: scaleY(0.21);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+
+  .eq i:nth-child(2) {
+    animation-delay: -0.3s;
+  }
+
+  .eq i:nth-child(3) {
+    animation-delay: -0.6s;
+  }
+
+  .error-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 560px;
+    padding-top: 96px;
+    text-align: center;
+    color: var(--text-2);
+  }
+
+  /* Narrow windows use the regular page padding here too. */
+
+  @media (max-width: 1100px) {
+    .error-page {
+      padding-top: 16px;
+    }
+  }
+
+  .error-page h1 {
+    margin: 16px 0 8px;
+    color: var(--text);
+    font-size: 26px;
+  }
+
+  .error-page p {
+    line-height: 1.5;
+  }
+
+  .error-page__actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  @media (max-width: 1100px) {
+    .album__header {
+      gap: 24px;
+    }
+
+    .album__cover {
+      width: 200px;
+      height: 200px;
+    }
+
+    .track {
+      grid-template-columns: 40px minmax(0, 1fr) 64px 72px;
+    }
+
+    .track__artist {
+      display: none;
+    }
+  }
+
+  .album__actions :is(.solid-button, .ghost-button) {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .album__actions .is-kept {
+    border-color: rgb(var(--accent-rgb) / 0.5);
+    color: var(--accent-light);
+  }
+
+  .album__action-error {
+    color: var(--text-2);
+    font-size: 13px;
+  }
+
+  .track-row {
+    position: relative;
+  }
+
+  @media (max-width: 1100px) {
+    .track {
+      grid-template-columns: 40px minmax(0, 1fr) 64px 112px 72px;
+    }
+
+    .track__duration {
+      grid-column: 5;
+    }
+
+    .track-row > .track-actions {
+      right: 104px;
+    }
+  }
+
+  .track-row > .track-actions {
+    display: inline-flex;
+    position: absolute;
+    top: 50%;
+    right: 112px;
+    transform: translateY(-50%);
+  }
+
+  .track-row:hover .add-to-playlist__button {
+    opacity: 1;
+  }
+
+  .track-row.is-disliked .track {
+    opacity: 0.45;
+  }
+
+  .track-row .add-to-playlist__button {
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+
+  /* An open add-to-playlist menu sits above the rows below it. */
+
+  .track-row:has(.playlist-menu) {
+    position: relative;
+    z-index: 10;
+  }
+
+  .error-page__jp {
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: 3px;
+    margin: 4px 0 0;
+    font-size: 15px;
+  }
+
+  .track.is-current .track__title {
+    color: var(--accent-light);
+  }
+
+  .page.album.is-loading {
+    padding-top: 32px;
+  }
+
+  html[data-mode='light'] .album__cover {
+    box-shadow: 0 8px 24px rgb(var(--ink-rgb) / 0.18);
+  }
+}

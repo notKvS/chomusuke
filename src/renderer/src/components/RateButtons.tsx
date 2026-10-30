@@ -1,6 +1,7 @@
 import type { Track } from '../../../shared/types'
 import type { Ratings } from '../useRatings'
 import { Icon } from './Icon'
+import './RateButtons.css'
 
 /** Like / dislike toggles for one track. A rating matched from another release shows faded until set here. */
 export function RateButtons({

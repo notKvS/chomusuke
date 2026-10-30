@@ -1,0 +1,12 @@
+/* Every global stylesheet, in cascade-layer order. Later layers win regardless of selector specificity: theme
+   surfaces beat component styles, and reduced motion beats everything. Component sheets sit next to their
+   components and are imported by them, into the components layer. Nothing is left unlayered, since unlayered
+   rules would beat every layer. */
+
+@layer tokens, base, layout, components, theme, motion;
+
+@import './tokens.css';
+@import './base.css';
+@import './layout.css';
+@import './theme.css';
+@import './motion.css';

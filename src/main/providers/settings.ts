@@ -102,6 +102,10 @@ function toRawManifest(manifest: ExtensionManifest): Record<string, unknown> {
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null
 const archiveEntry = (): StoredProvider => ({ type: 'archive', id: 'archive', enabled: true })
 
+/**
+ * Checks a Torznab feed URL and returns it normalised. Throws {@link SettingsError} for anything unusable, including
+ * credentials or a query string in the URL, and plain http outside the local network (the API key travels in the query).
+ */
 export function validateTorznabUrl(raw: unknown): string {
   if (typeof raw !== 'string' || raw.length > 2048) throw new SettingsError('Enter the indexer’s Torznab URL.')
   let url: URL
@@ -120,6 +124,11 @@ export function validateTorznabUrl(raw: unknown): string {
   return url.toString()
 }
 
+/**
+ * The user's sources (`providers.json`): the Internet Archive, Torznab indexers and installed extensions. API keys are
+ * encrypted with the OS credential store ({@link SecretBox}) and never returned to the renderer; extension code lives
+ * in its own files and is checked against its SHA-256 on load, so code edited on disk is not run.
+ */
 export class ProviderSettingsStore {
   private entries: StoredProvider[] = [archiveEntry()]
   private readonly codes = new Map<string, string>()

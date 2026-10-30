@@ -1,5 +1,6 @@
 import { Cover } from './Cover'
 import { Icon } from './Icon'
+import './Card.css'
 
 interface CardProps {
   artwork?: string

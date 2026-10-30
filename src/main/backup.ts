@@ -29,6 +29,7 @@ export interface Backup {
   appearance?: unknown
 }
 
+/** A backup that can't be read or imported; the message is shown to the user as is. */
 export class BackupError extends Error {
   name = 'BackupError'
 }
@@ -42,6 +43,10 @@ function text(value: unknown, max: number): string | undefined {
   return clean ? clean.slice(0, max) : undefined
 }
 
+/**
+ * The backup file's content, stamped with the format, version and time. Callers pass already-validated data; an
+ * appearance that isn't an object or is unreasonably large is left out rather than failing the export.
+ */
 export function buildBackup(input: {
   app: string
   ratings: RatedSong[]

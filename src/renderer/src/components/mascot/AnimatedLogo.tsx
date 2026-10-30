@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Chomu } from './Chomu'
+import './AnimatedLogo.css'
 
 const NYAS = ['nya~', 'nyaa!', '♪ ♫ ♪', 'feed me seeders', '(=^･ω･^=)', 'boop!', 'more bass pls', 'nyan nyan']
 

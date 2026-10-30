@@ -2,6 +2,7 @@ import type { Album } from '../../../shared/types'
 import { FEATURED, type FeaturedAlbum } from '../featured'
 import { Card } from './Card'
 import { Chomu } from './mascot/Chomu'
+import './Home.css'
 
 const GREETINGS: Array<[number, string, string]> = [
   [5, 'おはよう', 'Good morning'],

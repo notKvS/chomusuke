@@ -12,6 +12,7 @@ import sleepyArt from '../../assets/mascot/chomusuke-sleepy.png'
 import sleepyFace from '../../assets/mascot/chomusuke-sleepy-face.png'
 import squintArt from '../../assets/mascot/chomusuke-squint.png'
 import squintFace from '../../assets/mascot/chomusuke-squint-face.png'
+import './Chomu.css'
 
 /**
  * idle: wide open eyes · listening/happy: ^ ^ · sad: crying · sleep: closed · confused: spirals ·

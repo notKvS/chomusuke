@@ -74,6 +74,7 @@ const pickBool = (value: unknown, fallback: boolean) => (typeof value === 'boole
 const pickFrom = (options: number[], value: unknown, fallback: number) =>
   typeof value === 'number' && options.includes(value) ? value : fallback
 
+/** Sharing settings from the renderer or disk: each field is kept if valid, otherwise taken from `fallback`. */
 export function sanitizeSharing(raw: unknown, fallback: SharingSettings = DEFAULT_SHARING): SharingSettings {
   const v = isRecord(raw) ? raw : {}
   return {
@@ -119,6 +120,10 @@ export async function folderSize(dir: string): Promise<number> {
 
 const newestFirst = (a: LibraryEntry, b: LibraryEntry) => b.addedAt.localeCompare(a.addedAt)
 
+/**
+ * The kept and streamed albums on disk (layout above). Removing an album only forgets it: its files are deleted by
+ * {@link SeedLibrary.purge} on quit, once the torrent client has let go of them. Lists are capped at 1000 albums each.
+ */
 export class SeedLibrary {
   private readonly dir: string
   private readonly kept = new Map<string, LibraryEntry>()

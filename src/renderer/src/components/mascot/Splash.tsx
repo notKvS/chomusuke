@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { LoaderScene } from './LoaderScene'
+import './Splash.css'
 
 const SHOW_MS = 2200
 const FADE_MS = 600

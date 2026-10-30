@@ -10,6 +10,7 @@ import { LoaderScene } from './mascot/LoaderScene'
 import { Sticker } from './mascot/Sticker'
 import { RateButtons } from './RateButtons'
 import { KeepButton, TorrentPanel, useTorrentDetails } from './TorrentPanel'
+import './AlbumView.css'
 
 interface Props {
   album: Album
@@ -23,6 +24,10 @@ interface Props {
   playlists: Playlists
 }
 
+/**
+ * An album's page: header with play, save offline and torrent details, then the track list with ratings and
+ * add-to-playlist. Disliked tracks are dimmed, not hidden; lengths the player has measured (`durations`) win over tags.
+ */
 export function AlbumView({
   album,
   stats,

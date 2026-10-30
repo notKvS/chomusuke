@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { Appearance } from '../../theme/appearance'
+import './Particles.css'
 
 // Decorative particles drifting behind the whole app: sakura petals, snow, leaves and more. Each particle is an outer
 // span that travels and an inner element that sways, spins or pulses, both animating only transform and opacity, so
@@ -50,6 +51,7 @@ function layout(kind: Kind, count: number) {
   })
 }
 
+/** The particle layer behind the app. `count` particles of one kind; the reduced-motion stylesheet hides it. */
 export function Particles({ kind, count }: { kind: Kind; count: number }) {
   const list = useMemo(() => layout(kind, count), [kind, count])
   const { motion } = KINDS[kind]

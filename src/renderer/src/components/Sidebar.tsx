@@ -2,6 +2,7 @@ import { type FormEvent, useState } from 'react'
 import type { Album, Playlist } from '../../../shared/types'
 import { Cover } from './Cover'
 import { Icon, type IconName } from './Icon'
+import './Sidebar.css'
 
 interface Props {
   active: 'home' | string
@@ -24,6 +25,10 @@ interface Props {
   onOpenFile: () => void
 }
 
+/**
+ * Main navigation, playlists, and the albums loaded this session. Collapsed, it shows icons only and names move into
+ * tooltips; the collapse animation itself is run by the caller (see useSidebarCollapsed).
+ */
 export function Sidebar({
   active,
   albums,

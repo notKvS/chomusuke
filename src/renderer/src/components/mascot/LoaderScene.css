@@ -1,0 +1,170 @@
+@layer components {
+  .loader-scene {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    min-height: 320px;
+    border-radius: 24px;
+    background: #000;
+    isolation: isolate;
+  }
+
+  .loader-scene.is-compact {
+    height: min(62vh, 520px);
+    border: 1px solid rgba(255, 190, 70, 0.25);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
+  }
+
+  .loader-scene__art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 45%;
+    will-change: transform, filter;
+    animation:
+      scene-zoom 14s ease-in-out infinite alternate,
+      scene-flicker 2.2s ease-in-out infinite alternate;
+  }
+
+  @keyframes scene-flicker {
+    from {
+      filter: brightness(0.95) saturate(1);
+    }
+    to {
+      filter: brightness(1.08) saturate(1.15);
+    }
+  }
+
+  @keyframes scene-zoom {
+    from {
+      transform: scale(1.02);
+    }
+    to {
+      transform: scale(1.12);
+    }
+  }
+
+  .loader-scene__glow {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 50% 45%, rgba(255, 170, 60, 0.18), transparent 38%),
+      radial-gradient(ellipse at 50% 120%, rgb(var(--accent-rgb) / 0.25), transparent 55%),
+      radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.75));
+    animation: glow-pulse 2.4s ease-in-out infinite alternate;
+  }
+
+  @keyframes glow-pulse {
+    from {
+      opacity: 0.7;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .loader-scene__embers span {
+    position: absolute;
+    bottom: -10px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff3c4, #ffb347 60%, transparent 70%);
+    box-shadow: 0 0 8px #ffb347;
+    animation-name: ember-rise;
+    animation-timing-function: ease-out;
+    animation-iteration-count: infinite;
+  }
+
+  @keyframes ember-rise {
+    0% {
+      opacity: 0;
+      transform: translate(0, 0) scale(1);
+    }
+    15% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translate(40px, -70vh) scale(0.4);
+    }
+  }
+
+  .loader-scene__caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 6%;
+    text-align: center;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85);
+  }
+
+  .loader-scene__title {
+    margin: 0;
+    color: #ffd25c;
+    font-family: var(--font-display);
+    font-size: clamp(26px, 4vw, 44px);
+    font-weight: 800;
+    letter-spacing: 6px;
+  }
+
+  .is-compact .loader-scene__title {
+    font-size: 28px;
+  }
+
+  .loader-scene__subtitle {
+    margin: 4px 0 0;
+    color: #ffe2a8;
+    font-weight: 700;
+  }
+
+  .loader-scene__quip {
+    margin: 6px 0 0;
+    color: var(--text-2);
+    animation: quip-in 0.5s ease-out;
+  }
+
+  @keyframes quip-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+
+  .loader-dots {
+    display: inline-flex;
+    gap: 5px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  .loader-dots i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ffb347;
+    animation: dot-hop 1s ease-in-out infinite;
+  }
+
+  @keyframes dot-hop {
+    0%,
+    60%,
+    100% {
+      transform: translateY(0);
+    }
+    30% {
+      transform: translateY(-8px);
+    }
+  }
+
+  .loader-dots i:nth-child(2) {
+    animation-delay: 0.15s;
+    background: #ff8a3d;
+  }
+
+  .loader-dots i:nth-child(3) {
+    animation-delay: 0.3s;
+    background: #ff5c8a;
+  }
+}

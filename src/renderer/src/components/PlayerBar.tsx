@@ -8,6 +8,7 @@ import { AddToPlaylist } from './AddToPlaylist'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
 import { RateButtons } from './RateButtons'
+import './PlayerBar.css'
 
 interface Props {
   player: Player
@@ -19,6 +20,10 @@ interface Props {
   queue?: { label: string; hasNext: boolean; hasPrev: boolean }
 }
 
+/**
+ * The bar at the bottom while something plays: transport, seek bar, now playing, rating, swarm and volume. Renders
+ * nothing until a track is loaded. Previous/next also step through `queue` when a playlist spans several albums.
+ */
 export function PlayerBar({ player, stats, onOpenAlbum, ratings, playlists, queue }: Props) {
   const { state, track, audio } = player
   const progressRef = useRef<HTMLDivElement>(null)

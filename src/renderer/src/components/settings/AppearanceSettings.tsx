@@ -1,4 +1,4 @@
-import { type ChangeEvent, type CSSProperties, type ReactNode, useRef, useState } from 'react'
+import { type ChangeEvent, type CSSProperties, useRef, useState } from 'react'
 import {
   type Appearance,
   BACKGROUNDS,
@@ -16,7 +16,14 @@ import {
 } from '../../theme/appearance'
 import { encodeBackgroundImage } from '../../theme/dom'
 import type { AppearanceControls } from '../../theme/useAppearance'
+import { Range } from '../controls/Range'
+import { Segmented } from '../controls/Segmented'
+import { SettingField } from '../controls/SettingField'
+import { StatusLine } from '../controls/StatusLine'
+import { Swatches } from '../controls/Swatches'
+import { Switch } from '../controls/Switch'
 import { Icon } from '../Icon'
+import './AppearanceSettings.css'
 
 const ACCENTS = [
   '#ff5c8a',
@@ -155,45 +162,46 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
       <section className="shelf">
         <h2 className="shelf__title">Colours</h2>
         <div className="setting-grid">
-          <Setting label="Mode">
-            <Segmented options={['dark', 'light']} value={a.mode} onChange={mode => update({ mode })} />
-          </Setting>
-          <Setting
+          <SettingField label="Mode">
+            <Segmented labels={LABELS} options={['dark', 'light']} value={a.mode} onChange={mode => update({ mode })} />
+          </SettingField>
+          <SettingField
             label="Background tint"
             value={`${a.tint}%`}
             hint="How much the secondary colour tints backgrounds and panels."
           >
             <Range min={0} max={100} value={a.tint} onChange={tint => update({ tint })} />
-          </Setting>
-          <Setting label="Accent">
+          </SettingField>
+          <SettingField label="Accent">
             <Swatches colors={ACCENTS} value={a.accent} onChange={accent => update({ accent })} />
-          </Setting>
-          <Setting label="Secondary accent">
+          </SettingField>
+          <SettingField label="Secondary accent">
             <Swatches colors={ACCENTS_2} value={a.accent2} onChange={accent2 => update({ accent2 })} />
-          </Setting>
+          </SettingField>
         </div>
       </section>
 
       <section className="shelf">
         <h2 className="shelf__title">Background</h2>
         <div className="setting-grid">
-          <Setting label="Style">
+          <SettingField label="Style">
             <Segmented
+              labels={LABELS}
               options={BACKGROUNDS}
               value={a.background}
               onChange={background =>
                 background === 'image' && !image ? fileInput.current?.click() : update({ background })
               }
             />
-          </Setting>
-          <Setting label="Animated" row>
-            <Toggle
+          </SettingField>
+          <SettingField label="Animated" row>
+            <Switch
               checked={a.animatedBackground}
               onChange={animatedBackground => update({ animatedBackground })}
               label="Animate the background"
             />
-          </Setting>
-          <Setting
+          </SettingField>
+          <SettingField
             label="Your image"
             hint="Pick any picture from your computer. It's resized and kept on this device only."
           >
@@ -225,20 +233,20 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
                 onChange={e => void pickImage(e)}
               />
             </div>
-          </Setting>
+          </SettingField>
           {a.background === 'image' && (
             <>
-              <Setting label="Image blur" value={`${a.backgroundBlur}px`}>
+              <SettingField label="Image blur" value={`${a.backgroundBlur}px`}>
                 <Range
                   min={0}
                   max={40}
                   value={a.backgroundBlur}
                   onChange={backgroundBlur => update({ backgroundBlur })}
                 />
-              </Setting>
-              <Setting label={a.mode === 'dark' ? 'Darken' : 'Lighten'} value={`${a.backgroundDim}%`}>
+              </SettingField>
+              <SettingField label={a.mode === 'dark' ? 'Darken' : 'Lighten'} value={`${a.backgroundDim}%`}>
                 <Range min={0} max={90} value={a.backgroundDim} onChange={backgroundDim => update({ backgroundDim })} />
-              </Setting>
+              </SettingField>
             </>
           )}
         </div>
@@ -247,20 +255,20 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
       <section className="shelf">
         <h2 className="shelf__title">Panels</h2>
         <div className="setting-grid">
-          <Setting label="Surface" hint="Glass and Frosted look best over Mesh, Starfield or your own image.">
-            <Segmented options={SURFACES} value={a.surface} onChange={surface => update({ surface })} />
-          </Setting>
-          <Setting label="Corner radius" value={`${a.radius}px`}>
+          <SettingField label="Surface" hint="Glass and Frosted look best over Mesh, Starfield or your own image.">
+            <Segmented labels={LABELS} options={SURFACES} value={a.surface} onChange={surface => update({ surface })} />
+          </SettingField>
+          <SettingField label="Corner radius" value={`${a.radius}px`}>
             <Range min={0} max={28} value={a.radius} onChange={radius => update({ radius })} />
-          </Setting>
+          </SettingField>
           {(a.surface === 'glass' || a.surface === 'frosted') && (
             <>
-              <Setting label="Glass blur" value={`${a.glassBlur}px`}>
+              <SettingField label="Glass blur" value={`${a.glassBlur}px`}>
                 <Range min={0} max={48} value={a.glassBlur} onChange={glassBlur => update({ glassBlur })} />
-              </Setting>
-              <Setting label="Glass opacity" value={`${a.glassOpacity}%`}>
+              </SettingField>
+              <SettingField label="Glass opacity" value={`${a.glassOpacity}%`}>
                 <Range min={10} max={95} value={a.glassOpacity} onChange={glassOpacity => update({ glassOpacity })} />
-              </Setting>
+              </SettingField>
             </>
           )}
         </div>
@@ -269,21 +277,23 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
       <section className="shelf">
         <h2 className="shelf__title">Buttons</h2>
         <div className="setting-grid">
-          <Setting label="Shape">
+          <SettingField label="Shape">
             <Segmented
+              labels={LABELS}
               options={BUTTON_SHAPES}
               value={a.buttonShape}
               onChange={buttonShape => update({ buttonShape })}
             />
-          </Setting>
-          <Setting label="Style">
+          </SettingField>
+          <SettingField label="Style">
             <Segmented
+              labels={LABELS}
               options={BUTTON_STYLES}
               value={a.buttonStyle}
               onChange={buttonStyle => update({ buttonStyle })}
             />
-          </Setting>
-          <Setting label="Preview">
+          </SettingField>
+          <SettingField label="Preview">
             <div className="button-preview">
               <button type="button" className="big-play" aria-label="Sample play button">
                 <Icon name="play" size={28} />
@@ -303,14 +313,14 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
                 </button>
               </span>
             </div>
-          </Setting>
+          </SettingField>
         </div>
       </section>
 
       <section className="shelf">
         <h2 className="shelf__title">Text & size</h2>
         <div className="setting-grid">
-          <Setting label="Font">
+          <SettingField label="Font">
             <div className="segmented">
               {FONTS.map(font => (
                 <button
@@ -324,23 +334,31 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
                 </button>
               ))}
             </div>
-          </Setting>
-          <Setting label="Interface size" value={`${a.uiScale}%`}>
+          </SettingField>
+          <SettingField label="Interface size" value={`${a.uiScale}%`}>
             <Range min={80} max={130} step={5} value={a.uiScale} onChange={uiScale => update({ uiScale })} />
-          </Setting>
+          </SettingField>
         </div>
       </section>
 
       <section className="shelf">
         <h2 className="shelf__title">Effects</h2>
         <div className="setting-grid">
-          <Setting label="Glow" value={`${a.glow}%`}>
+          <SettingField label="Glow" value={`${a.glow}%`}>
             <Range min={0} max={200} step={10} value={a.glow} onChange={glow => update({ glow })} />
-          </Setting>
-          <Setting label="Particles" hint="Drifts behind everything. Hidden if your system asks for reduced motion.">
-            <Segmented options={PARTICLES} value={a.particles} onChange={particles => update({ particles })} />
-          </Setting>
-          <Setting label="Amount" value={a.particles === 'off' ? 'Off' : String(a.particleCount)}>
+          </SettingField>
+          <SettingField
+            label="Particles"
+            hint="Drifts behind everything. Hidden if your system asks for reduced motion."
+          >
+            <Segmented
+              labels={LABELS}
+              options={PARTICLES}
+              value={a.particles}
+              onChange={particles => update({ particles })}
+            />
+          </SettingField>
+          <SettingField label="Amount" value={a.particles === 'off' ? 'Off' : String(a.particleCount)}>
             <Range
               min={4}
               max={40}
@@ -348,24 +366,24 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
               onChange={particleCount => update({ particleCount })}
               disabled={a.particles === 'off'}
             />
-          </Setting>
-          <Setting label="Animated mascot" row>
-            <Toggle
+          </SettingField>
+          <SettingField label="Animated mascot" row>
+            <Switch
               checked={a.mascotMotion}
               onChange={mascotMotion => update({ mascotMotion })}
               label="Animate Chomusuke"
             />
-          </Setting>
-          <Setting label="Splash screen on launch" row>
-            <Toggle checked={a.splash} onChange={splash => update({ splash })} label="Show the splash screen" />
-          </Setting>
+          </SettingField>
+          <SettingField label="Splash screen on launch" row>
+            <Switch checked={a.splash} onChange={splash => update({ splash })} label="Show the splash screen" />
+          </SettingField>
         </div>
       </section>
 
       <section className="shelf">
         <h2 className="shelf__title">Share a theme</h2>
         <div className="setting-grid">
-          <Setting
+          <SettingField
             label="This theme's code"
             hint="Copy it to keep or share your look. (Your background image isn't included.)"
           >
@@ -375,8 +393,8 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
               value={JSON.stringify(a)}
               onFocus={e => e.currentTarget.select()}
             />
-          </Setting>
-          <Setting label="Use a theme code">
+          </SettingField>
+          <SettingField label="Use a theme code">
             <textarea
               className="theme-code"
               value={code}
@@ -389,14 +407,9 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
                 Apply code
               </button>
             </div>
-          </Setting>
+          </SettingField>
         </div>
-        {message && (
-          <p className={`torznab-form__status is-${message.kind}`} role="status">
-            {message.kind === 'ok' ? <Icon name="check" size={18} /> : <Icon name="error" size={18} />}
-            {message.text}
-          </p>
-        )}
+        {message && <StatusLine status={message} as="p" />}
       </section>
     </div>
   )
@@ -431,131 +444,6 @@ function PresetCard({
       </span>
       <span className="preset__name">{name}</span>
       <span className="preset__blurb">{blurb}</span>
-    </button>
-  )
-}
-
-function Setting({
-  label,
-  value,
-  hint,
-  row,
-  children
-}: {
-  label: string
-  value?: string
-  hint?: string
-  row?: boolean
-  children: ReactNode
-}) {
-  return (
-    <div className={`setting ${row ? 'setting--row' : ''}`}>
-      <span className="setting__label">
-        <span>{label}</span>
-        {value && <span className="setting__value">{value}</span>}
-      </span>
-      {children}
-      {hint && <p className="setting__hint">{hint}</p>}
-    </div>
-  )
-}
-
-function Segmented<T extends string>({
-  options,
-  value,
-  onChange
-}: {
-  options: readonly T[]
-  value: T
-  onChange: (value: T) => void
-}) {
-  return (
-    <fieldset className="segmented">
-      {options.map(option => (
-        <button key={option} type="button" aria-pressed={value === option} onClick={() => onChange(option)}>
-          {LABELS[option] ?? option}
-        </button>
-      ))}
-    </fieldset>
-  )
-}
-
-function Swatches({ colors, value, onChange }: { colors: string[]; value: string; onChange: (color: string) => void }) {
-  return (
-    <div className="swatches">
-      {colors.map(color => (
-        <button
-          key={color}
-          type="button"
-          className="swatch"
-          style={{ background: color }}
-          aria-label={color}
-          aria-pressed={value === color}
-          onClick={() => onChange(color)}
-        />
-      ))}
-      <label
-        className="color-picker"
-        title="Pick any colour"
-        style={colors.includes(value) ? undefined : { background: value, borderStyle: 'solid' }}
-      >
-        <Icon name="add" size={16} />
-        <input type="color" value={value} onChange={e => onChange(e.target.value)} aria-label="Pick any colour" />
-      </label>
-    </div>
-  )
-}
-
-function Range({
-  min,
-  max,
-  step = 1,
-  value,
-  onChange,
-  disabled
-}: {
-  min: number
-  max: number
-  step?: number
-  value: number
-  onChange: (value: number) => void
-  disabled?: boolean
-}) {
-  const fill = `${((value - min) / (max - min)) * 100}%`
-  return (
-    <input
-      className="range"
-      type="range"
-      min={min}
-      max={max}
-      step={step}
-      value={value}
-      disabled={disabled}
-      onChange={e => onChange(Number(e.target.value))}
-      style={{ '--fill': fill } as CSSProperties}
-    />
-  )
-}
-
-function Toggle({
-  checked,
-  onChange,
-  label
-}: {
-  checked: boolean
-  onChange: (checked: boolean) => void
-  label: string
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      className="switch"
-      onClick={() => onChange(!checked)}
-    >
-      <span className="switch__knob" />
     </button>
   )
 }

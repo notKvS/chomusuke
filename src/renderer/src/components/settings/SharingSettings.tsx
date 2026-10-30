@@ -1,9 +1,11 @@
-import type { ReactNode } from 'react'
 import type { SharingSettings as Sharing } from '../../../../shared/types'
 import { formatBytes, formatSpeed } from '../../format'
 import { useLibrary } from '../../useLibrary'
+import { SettingRow } from '../controls/SettingRow'
+import { Switch } from '../controls/Switch'
 import { Icon } from '../Icon'
 import { LibraryAlbumRow, libraryStatus } from '../LibraryAlbumRow'
+import './SharingSettings.css'
 
 const UPLOAD_LIMITS: Array<[number, string]> = [
   [0, 'Unlimited'],
@@ -166,53 +168,5 @@ export function SharingSettings({ onOpenAlbum }: { onOpenAlbum: (infoHash: strin
         )}
       </section>
     </>
-  )
-}
-
-function SettingRow({
-  title,
-  hint,
-  off,
-  children
-}: {
-  title: string
-  hint: string
-  off?: boolean
-  children: ReactNode
-}) {
-  return (
-    <div className={`sharing__row ${off ? 'is-off' : ''}`}>
-      <span>
-        <strong>{title}</strong>
-        <small>{hint}</small>
-      </span>
-      {children}
-    </div>
-  )
-}
-
-function Switch({
-  checked,
-  label,
-  disabled,
-  onChange
-}: {
-  checked: boolean
-  label: string
-  disabled?: boolean
-  onChange: (checked: boolean) => void
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      className="switch"
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-    >
-      <span className="switch__knob" />
-    </button>
   )
 }

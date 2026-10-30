@@ -53,6 +53,11 @@ export function sanitizePlaylist(raw: unknown): Playlist | undefined {
   }
 }
 
+/**
+ * The playlists file, held in memory. Every change validates its input (ids, names, songs come from the renderer or
+ * a backup), throws {@link PlaylistError} with a user-facing message, and is written straight away through a temp file
+ * and rename, so a crash never leaves half a file. Capped at 500 playlists of 5000 songs.
+ */
 export class PlaylistStore {
   private readonly file: string
   private playlists: Playlist[] = []

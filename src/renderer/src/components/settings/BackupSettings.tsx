@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { sanitizeAppearance } from '../../theme/appearance'
 import type { AppearanceControls } from '../../theme/useAppearance'
 import type { Ratings } from '../../useRatings'
+import { type Status, StatusLine } from '../controls/StatusLine'
 import { Icon } from '../Icon'
-
-type Status = { kind: 'ok' | 'error' | 'busy'; text: string } | null
+import './BackupSettings.css'
 
 /** Export and import of ratings, saved albums and appearance. */
 export function BackupSettings({ ratings, looks }: { ratings: Ratings; looks: AppearanceControls }) {
-  const [status, setStatus] = useState<Status>(null)
+  const [status, setStatus] = useState<Status | null>(null)
 
   const exportBackup = async () => {
     const result = await window.chomusuke.exportBackup(looks.appearance)
@@ -46,12 +46,7 @@ export function BackupSettings({ ratings, looks }: { ratings: Ratings; looks: Ap
             <Icon name="upload" size={18} /> Import backup…
           </button>
         </div>
-        {status && (
-          <p className={`torznab-form__status is-${status.kind}`} role="status">
-            <Icon name={status.kind === 'error' ? 'error' : 'check'} size={18} />
-            {status.text}
-          </p>
-        )}
+        {status && <StatusLine status={status} as="p" />}
       </section>
     </>
   )

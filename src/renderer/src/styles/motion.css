@@ -1,0 +1,19 @@
+/* Reduced motion: when the system asks for it, everything that moves stops. */
+
+@layer motion {
+  /* ---------- Reduced motion ---------- */
+
+  @media (prefers-reduced-motion: reduce) {
+    .particles {
+      display: none;
+    }
+
+    .chomu *,
+    .chomu,
+    .loader-scene *,
+    .brand__name {
+      /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat every component's animation */
+      animation: none !important;
+    }
+  }
+}

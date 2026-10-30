@@ -1,0 +1,49 @@
+@layer components {
+  .sharing {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 820px;
+  }
+
+  .sharing__select {
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    background: var(--surface);
+    font: inherit;
+  }
+
+  .sharing__stats {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0 0;
+    color: var(--text-2);
+  }
+
+  .sharing__stats svg {
+    color: var(--accent);
+  }
+
+  .library__heading {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .library__heading .shelf__title {
+    margin-right: auto;
+  }
+
+  .sharing + .library__heading {
+    margin-top: 32px;
+  }
+
+  .library__usage,
+  .library__hint {
+    color: var(--text-3);
+  }
+}

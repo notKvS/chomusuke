@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useState } from 'react'
 import type { Album, TorrentDetails } from '../../../shared/types'
 import { formatBytes, formatSpeed, plural } from '../format'
 import { Icon } from './Icon'
+import './TorrentPanel.css'
 
 const REFRESH_MS = 2000
 const SHOWN_FILES = 60

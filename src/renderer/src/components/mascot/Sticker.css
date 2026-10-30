@@ -1,0 +1,76 @@
+@layer components {
+  .sticker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+  }
+
+  .sticker__stage {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    max-width: 640px;
+  }
+
+  .sticker__art {
+    flex: none;
+    width: auto;
+    max-width: 240px;
+    object-fit: contain;
+    filter: drop-shadow(0 10px 24px rgb(0 0 0 / 0.35));
+    animation: chomu-float 3.6s ease-in-out infinite;
+  }
+
+  .sticker__bubble {
+    position: relative;
+    margin: 0;
+    padding: 14px 18px;
+    border: 1px solid rgb(var(--accent-rgb) / 0.35);
+    border-radius: 18px 18px 18px 4px;
+    background: rgb(var(--surface-raised-rgb) / 0.9);
+    box-shadow: var(--glow);
+    text-align: left;
+    animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .sticker__bubble::before {
+    position: absolute;
+    bottom: 14px;
+    left: -8px;
+    width: 14px;
+    height: 14px;
+    border-bottom: 1px solid rgb(var(--accent-rgb) / 0.35);
+    border-left: 1px solid rgb(var(--accent-rgb) / 0.35);
+    background: rgb(var(--surface-raised-rgb) / 0.9);
+    content: '';
+    transform: rotate(45deg);
+  }
+
+  .sticker__name {
+    margin-bottom: 4px;
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1px;
+  }
+
+  .sticker__bubble blockquote {
+    margin: 0;
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  .sticker p {
+    margin: 0;
+    color: var(--text-2);
+  }
+
+  .library__empty .sticker {
+    align-items: flex-start;
+    text-align: left;
+  }
+}

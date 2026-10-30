@@ -22,6 +22,10 @@ function magnetOrThrow(uri: string): string {
   return sanitizeThirdPartyMagnet(source.uri)
 }
 
+/**
+ * Adapts an extension to the provider interface. Whatever the extension returns is re-validated, and opening a result
+ * downloads only from the extension's declared hosts (or uses its magnet link), with private trackers stripped.
+ */
 export function createExtensionProvider(
   manifest: ExtensionManifest,
   runtime: ExtensionRuntime,

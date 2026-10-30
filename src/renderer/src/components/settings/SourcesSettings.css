@@ -1,0 +1,130 @@
+@layer components {
+  .import-form {
+    display: flex;
+    gap: 10px;
+    max-width: 760px;
+    margin: 20px 0 10px;
+  }
+
+  .import-form input {
+    flex: 1;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid rgb(var(--ink-rgb) / 0.15);
+    border-radius: 8px;
+    outline: none;
+    font: inherit;
+    color: var(--text);
+    background: var(--bg);
+    user-select: text;
+  }
+
+  .torznab-form label.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text);
+  }
+
+  .torznab-form label.checkbox input {
+    width: 18px;
+    height: 18px;
+  }
+
+  .source-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    max-width: 900px;
+    padding: 12px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .source-row.is-off .source-row__text {
+    opacity: 0.5;
+  }
+
+  .source-row__icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    color: var(--accent);
+    background: rgb(var(--accent-rgb) / 0.12);
+  }
+
+  .source-row__text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .source-row__name {
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .source-row__sub {
+    overflow: hidden;
+    color: var(--text-2);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .source-row__note {
+    color: var(--text-2);
+    font-size: 0.85em;
+    line-height: 1.35;
+  }
+
+  .torznab-form {
+    display: grid;
+    gap: 14px;
+    max-width: 640px;
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid rgb(var(--tint-rgb) / 0.12);
+    border-radius: 18px;
+    background: rgb(var(--surface-raised-rgb) / 0.35);
+  }
+
+  .torznab-form label {
+    display: grid;
+    gap: 6px;
+    color: var(--text-2);
+  }
+
+  .torznab-form input {
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid rgb(var(--ink-rgb) / 0.15);
+    border-radius: 8px;
+    outline: none;
+    font: inherit;
+    color: var(--text);
+    background: var(--bg);
+    user-select: text;
+  }
+
+  .torznab-form input:focus {
+    border-color: rgb(var(--ink-rgb) / 0.4);
+  }
+
+  .torznab-form__note {
+    margin: 0;
+    color: var(--text-3);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .torznab-form__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+}

@@ -1,0 +1,81 @@
+@layer components {
+  .topbar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 0 var(--window-controls) 0 16px;
+    border-bottom: 1px solid transparent;
+    -webkit-app-region: drag;
+    position: relative;
+    z-index: 3;
+    background: linear-gradient(180deg, rgb(var(--bg-rgb) / 0.96), rgb(var(--bg-rgb) / 0.75));
+    backdrop-filter: blur(12px);
+  }
+
+  .source-form {
+    -webkit-app-region: no-drag;
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 0 1 560px;
+    padding: 0 4px 0 12px;
+    transition:
+      background 0.15s,
+      border-color 0.15s;
+    height: 42px;
+    border: 1px solid rgb(var(--tint-rgb) / 0.18);
+    border-radius: 21px;
+    background: rgb(var(--surface-raised-rgb) / 0.55);
+  }
+
+  .source-form:focus-within {
+    border-color: rgb(var(--accent-rgb) / 0.6);
+    background: rgb(var(--surface-rgb) / 0.95);
+    box-shadow: var(--glow);
+  }
+
+  .source-form__icon {
+    flex: none;
+    color: var(--accent);
+  }
+
+  .source-form input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    margin-left: 12px;
+    border: 0;
+    outline: none;
+    font: inherit;
+    font-size: 15px;
+    color: var(--text);
+    background: transparent;
+    user-select: text;
+  }
+
+  .source-form input::placeholder {
+    color: var(--text-3);
+  }
+
+  .history-nav {
+    display: flex;
+    gap: 4px;
+    -webkit-app-region: no-drag;
+  }
+
+  .history-nav .icon-button {
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgb(var(--tint-rgb) / 0.16);
+    border-radius: 50%;
+    background: rgb(var(--surface-raised-rgb) / 0.45);
+  }
+
+  .history-nav .icon-button:not(:disabled):hover {
+    /* The shared icon-button hover background; .history-nav .icon-button would hide it. */
+    background: rgb(var(--accent-rgb) / 0.15);
+    border-color: rgb(var(--accent-rgb) / 0.5);
+    color: var(--accent);
+  }
+}

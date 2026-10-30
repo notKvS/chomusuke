@@ -4,6 +4,9 @@ import { formatTime, plural } from '../format'
 import type { Playlists } from '../usePlaylists'
 import { Icon } from './Icon'
 import { Sticker } from './mascot/Sticker'
+import './AlbumView.css'
+import './LikedView.css'
+import './PlaylistView.css'
 
 /** One playlist: play / shuffle, rename, reorder, remove songs, delete. */
 export function PlaylistView({
