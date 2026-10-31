@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { ExtensionError, hostAllowed, parseRepository, sanitizeResults } from './manifest.ts'
+import { ExtensionError, hostAllowed, parseRepository, sanitizeChartEntries, sanitizeResults } from './manifest.ts'
 
 const REPO = 'https://example.github.io/chomusuke-ext/index.json'
 const valid = {
@@ -60,6 +60,50 @@ test('hostAllowed', () => {
   assert.equal(hostAllowed('ia800.us.archive.org', hosts), true)
   assert.equal(hostAllowed('evilarchive.org', hosts), false)
   assert.equal(hostAllowed('archive.org.evil.com', hosts), false)
+})
+
+test('chart manifests are browse-only cards and need categories', () => {
+  const chart = { ...valid, type: 'chart', layout: 'list' }
+  const [manifest] = parseRepository([chart], REPO)
+  assert.equal(manifest.type, 'chart')
+  assert.equal(manifest.layout, 'cards')
+  assert.equal(parseRepository([valid], REPO)[0].type, 'torrent')
+  assert.throws(() => parseRepository([{ ...chart, categories: [] }], REPO), /categories/)
+})
+
+test('sanitizeChartEntries keeps entries with a title and an artist, once each', () => {
+  const [manifest] = parseRepository([{ ...valid, type: 'chart' }], REPO)
+  const entries = sanitizeChartEntries(
+    [
+      {
+        kind: 'song',
+        title: 'Espresso',
+        artist: 'Sabrina Carpenter',
+        album: 'Short n’ Sweet',
+        artwork: 'https://x/y.jpg'
+      },
+      { kind: 'song', title: 'Espresso', artist: 'Sabrina Carpenter', album: 'Short n’ Sweet' },
+      { kind: 'weird', title: 'Mayhem', artist: 'Lady Gaga', album: 'ignored', link: 'magnet:?xt=urn:btih:x' },
+      { title: 'No artist' },
+      { artist: 'No title' },
+      'junk'
+    ],
+    manifest
+  )
+  assert.deepEqual(
+    entries.map(e => [e.title, e.artist, e.chart, e.artwork !== undefined, JSON.parse(e.ref)]),
+    [
+      [
+        'Espresso',
+        'Sabrina Carpenter',
+        'song',
+        true,
+        { kind: 'song', title: 'Espresso', artist: 'Sabrina Carpenter', album: 'Short n’ Sweet' }
+      ],
+      ['Mayhem', 'Lady Gaga', 'album', false, { kind: 'album', title: 'Mayhem', artist: 'Lady Gaga' }]
+    ]
+  )
+  assert.throws(() => sanitizeChartEntries({ not: 'an array' }, manifest), ExtensionError)
 })
 
 test('sanitizeResults keeps only well-formed, allowed results', () => {

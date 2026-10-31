@@ -149,12 +149,22 @@ function SwarmStatus({ stats }: { stats?: TorrentStats }) {
   )
 }
 
-export function AlbumLoading({ title, artist }: { title?: string; artist?: string; artwork?: string }) {
+/** `finding`: a chart entry, so the torrent sources are being searched for it first. */
+export function AlbumLoading({
+  title,
+  artist,
+  finding = false
+}: {
+  title?: string
+  artist?: string
+  artwork?: string
+  finding?: boolean
+}) {
   return (
     <div className="page album is-loading">
       <LoaderScene
         compact
-        title="Loading"
+        title={finding ? 'Finding a torrent' : 'Loading'}
         subtitle={[title ?? 'Opening torrent', artist].filter(Boolean).join(' — ')}
       />
     </div>

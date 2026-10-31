@@ -8,6 +8,7 @@ Explore category) into albums/songs, and turns a chosen album into a torrent to 
 | Internet Archive (built in) | HTTP API → `.torrent` with web seeds | Trending this week, live concerts, netlabels, 78s, classical, jazz |
 | Torznab indexers | Torznab XML API → magnet / `.torrent` | Popular audio, MP3, Lossless, Other audio (newest releases ranked by seeders) |
 | Extensions | TypeScript modules in a sandbox → magnet / `.torrent` | Whatever the extension declares |
+| Chart extensions | TypeScript modules in a sandbox → top albums/songs, played through the sources above | Whatever the extension declares |
 
 ## Bundled extensions
 
@@ -26,6 +27,30 @@ on first launch, updated when the shipped code changes, and never reinstalled on
 | Public Domain Classical | Public-domain classical recordings | Trending, most played, Musopen, piano |
 
 All are hosted on the Internet Archive, so their torrents carry web seeds and play without peers.
+
+### Charts (on by default)
+
+Chart extensions (`"type": "chart"`) show what's popular right now on *Explore*, above the other sources. They have
+no torrents of their own: opening an entry searches your other enabled sources for it and plays the best match.
+
+| Extension | Source file | Catalogue | Explore categories | Options |
+|---|---|---|---|---|
+| Apple Music charts | `apple-music-charts.ts` | Apple Music most-played feed and iTunes Store top charts (public JSON, no key) | Most played songs/albums, iTunes top songs/albums, 12 genres | Country (two-letter store code) |
+| ListenBrainz charts | `listenbrainz-charts.ts` | ListenBrainz sitewide listening statistics (public API, no key) | Top albums/songs this week and month, albums this year and all time | — |
+
+**How an entry is found** (`src/main/providers/chart-match.ts`, `ProviderRegistry.findRelease`):
+
+1. Your torrent sources (every enabled source except charts) are searched for *artist + title*. For songs, the next
+   tries are *first artist + album* and *first artist + title*. The next query runs only if nothing matched.
+2. Results are matched on normalised words: the release name must contain the artist and at least 75% of the
+   title (for songs, the song title or its album; failing both, an artist's discography). Karaoke, tribute, cover,
+   instrumental and similar releases are skipped unless the chart entry is one. Dead torrents (0 seeders) are skipped.
+3. Matches are ranked by how closely the name fits (few extra words) and by seeders. The top three are tried in turn.
+4. For a song, the track with the same title is played (track numbers, "Artist - " prefixes, edition tags and guest
+   artists ignored). If it can't be spotted, the album opens with a note instead.
+
+Charts need at least one source that carries popular music — the Internet Archive collections mostly don't. Turn on a
+tracker template or add a Torznab indexer. If nothing matches, the error says so; searching by hand still works.
 
 ### Tracker templates (installed off)
 
@@ -89,6 +114,10 @@ them until they remove them.
    - For an Internet Archive collection, `archiveCollection()` in `extensions/src/lib/` does it in a few lines.
    - For a tracker site, copy the closest template and use the helpers in `extensions/src/lib/torrent-kit.ts`:
      HTML/RSS parsing without a DOM, release-name parsing, mirrors, magnets and friendly error messages.
+   - For a chart, implement `ChartExtension` instead: `browse` returns `ChartEntry` items
+     (`{ kind: 'album' | 'song', title, artist, album?, artwork? }`), and the manifest says `"type": "chart"` with at
+     least one category. Copy `listenbrainz-charts.ts`. Artwork shows only from hosts allowed by the `img-src` policy
+     in `src/renderer/index.html`.
 2. Add its manifest entry to `extensions/index.json`: `"code": "<id>.js"`, the hosts it may reach, categories,
    options, and `"enabledByDefault": false` if it should install switched off. To ship it with the app, also
    add it to `src/main/extension-host/defaults.ts`.

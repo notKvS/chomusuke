@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
-import type { BrowseResponse, ExploreSource, SearchResponse } from '../../shared/types.ts'
+import type { BrowseResponse, ExploreSource, LoadResult, SearchResponse } from '../../shared/types.ts'
+import { findTrack } from '../providers/chart-match.ts'
 import { SourceError } from '../source.ts'
 import type { IpcDeps } from './deps.ts'
 import { MAX_QUERY_LENGTH, toResult } from './guard.ts'
@@ -29,9 +30,16 @@ export function register(deps: IpcDeps): void {
     }
   })
 
-  ipcMain.handle('search:open', (event, albumId: unknown) => {
+  ipcMain.handle('search:open', async (event, albumId: unknown): Promise<LoadResult> => {
     assertTrustedSender(event)
-    return toResult(library, async () => playableToAlbum(torrents, await registry.open(albumId)))
+    let startKey: string | undefined
+    const result = await toResult(library, async () => {
+      const playable = await registry.open(albumId)
+      const album = await playableToAlbum(torrents, playable)
+      if (playable.startAt) startKey = findTrack(album.tracks, playable.startAt)
+      return album
+    })
+    return result.ok && startKey ? { ...result, startKey } : result
   })
 
   ipcMain.handle('explore:sources', (event): ExploreSource[] => {

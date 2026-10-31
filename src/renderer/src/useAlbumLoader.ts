@@ -6,6 +6,13 @@ import type { Navigation } from './useNavigation'
 /** What to start once an album has loaded: nothing, its first track, or a specific song. */
 export type Autoplay = boolean | { key: string }
 
+/**
+ * Playing a chart song starts its own track, wherever it is in the torrent that was found for it. An empty key
+ * matches no track, so if the song couldn't be spotted the album opens with a note instead of playing track 1.
+ */
+const chartAutoplay = (album: SearchAlbum, autoplay: Autoplay, startKey: string | undefined): Autoplay =>
+  album.chart === 'song' && autoplay === true ? { key: startKey ?? '' } : autoplay
+
 /** Albums loaded this session, newest first (the sidebar list and Home's "Listen again"). */
 export function useLoadedAlbums() {
   const [albums, setAlbums] = useState<Album[]>([])
@@ -51,6 +58,8 @@ export function useAlbumLoader({
   const { navigate, setOverlay, beginLoad } = nav
   /** Loaded albums by the URL or search-result id they came from, so reopening is instant. */
   const sourceToHash = useRef(new Map<string, string>())
+  /** For chart songs: the track the song turned out to be, by search-result id. */
+  const startKeys = useRef(new Map<string, string>())
 
   const showAlbum = useCallback(
     (album: Album, autoplay: Autoplay) => {
@@ -70,7 +79,7 @@ export function useAlbumLoader({
     async (
       load: () => Promise<LoadResult | null>,
       placeholder: Omit<Extract<Overlay, { kind: 'loading' }>, 'kind'>,
-      onLoaded: (album: Album) => void,
+      onLoaded: (album: Album, startKey?: string) => void,
       retry: () => void
     ) => {
       const isCurrent = beginLoad()
@@ -78,7 +87,7 @@ export function useAlbumLoader({
       const result = await load()
       if (!isCurrent()) return // a newer request or a navigation superseded this one
       if (!result) setOverlay(null)
-      else if (result.ok) onLoaded(result.album)
+      else if (result.ok) onLoaded(result.album, result.startKey)
       else setOverlay({ kind: 'error', message: result.error, retry })
     },
     [beginLoad, setOverlay]
@@ -122,11 +131,14 @@ export function useAlbumLoader({
 
   const openSearchAlbum = useCallback(
     (album: SearchAlbum, autoplay: Autoplay) => {
-      if (showKnown(album.id, autoplay)) return
+      if (showKnown(album.id, chartAutoplay(album, autoplay, startKeys.current.get(album.id)))) return
       void runLoad(
         () => window.chomusuke.openResult(album.id),
-        { title: album.title, artist: album.artist, artwork: album.artwork },
-        loaded => showLoaded(album.id, loaded, album.artwork, autoplay),
+        { title: album.title, artist: album.artist, artwork: album.artwork, finding: album.chart !== undefined },
+        (loaded, startKey) => {
+          if (startKey) startKeys.current.set(album.id, startKey)
+          showLoaded(album.id, loaded, album.artwork, chartAutoplay(album, autoplay, startKey))
+        },
         () => openSearchAlbum(album, autoplay)
       )
     },

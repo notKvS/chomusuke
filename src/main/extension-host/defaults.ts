@@ -2,13 +2,16 @@
 // into extensions/dist, and embedded into the main bundle at build time.
 // Installed on first launch and refreshed when the bundled version changes; users can still disable or remove them.
 // The tracker templates (The Pirate Bay … LimeTorrents) install switched off: see docs/sources.md.
+// The charts (Apple Music, ListenBrainz) list top albums/songs and play them through the torrent sources.
 
 import x1337x from '../../../extensions/dist/1337x.js?raw'
+import appleMusicCharts from '../../../extensions/dist/apple-music-charts.js?raw'
 import freeMusicArchive from '../../../extensions/dist/free-music-archive.js?raw'
 import great78 from '../../../extensions/dist/great-78.js?raw'
 import jamendo from '../../../extensions/dist/jamendo.js?raw'
 import knaben from '../../../extensions/dist/knaben.js?raw'
 import limetorrents from '../../../extensions/dist/limetorrents.js?raw'
+import listenbrainzCharts from '../../../extensions/dist/listenbrainz-charts.js?raw'
 import liveMusicArchive from '../../../extensions/dist/live-music-archive.js?raw'
 import netlabels from '../../../extensions/dist/netlabels.js?raw'
 import nyaa from '../../../extensions/dist/nyaa.js?raw'
@@ -22,11 +25,13 @@ export const BUNDLED_REPOSITORY = 'https://bundled.chomusuke.invalid/extensions/
 
 const CODE: Record<string, string> = {
   '1337x.js': x1337x,
+  'apple-music-charts.js': appleMusicCharts,
   'free-music-archive.js': freeMusicArchive,
   'great-78.js': great78,
   'jamendo.js': jamendo,
   'knaben.js': knaben,
   'limetorrents.js': limetorrents,
+  'listenbrainz-charts.js': listenbrainzCharts,
   'live-music-archive.js': liveMusicArchive,
   'netlabels.js': netlabels,
   'nyaa.js': nyaa,

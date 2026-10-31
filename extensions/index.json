@@ -1,6 +1,62 @@
 [
   {
     "manifestVersion": 1,
+    "id": "apple-music-charts",
+    "name": "Apple Music charts",
+    "description": "Most played on Apple Music, plus the iTunes Store's top albums and songs overall and by genre. Plays each one through your torrent sources.",
+    "version": "1.0.0",
+    "type": "chart",
+    "code": "apple-music-charts.js",
+    "hosts": ["rss.marketingtools.apple.com", "itunes.apple.com"],
+    "layout": "cards",
+    "categories": [
+      { "id": "most-played-songs", "name": "Most played songs" },
+      { "id": "most-played-albums", "name": "Most played albums" },
+      { "id": "top-songs", "name": "iTunes top songs" },
+      { "id": "top-albums", "name": "iTunes top albums" },
+      { "id": "pop", "name": "Pop" },
+      { "id": "hip-hop", "name": "Hip-hop/rap" },
+      { "id": "rock", "name": "Rock" },
+      { "id": "alternative", "name": "Alternative" },
+      { "id": "electronic", "name": "Electronic" },
+      { "id": "rnb", "name": "R&B/soul" },
+      { "id": "country", "name": "Country" },
+      { "id": "latin", "name": "Latin" },
+      { "id": "k-pop", "name": "K-pop" },
+      { "id": "jazz", "name": "Jazz" },
+      { "id": "classical", "name": "Classical" },
+      { "id": "soundtrack", "name": "Soundtrack" }
+    ],
+    "options": {
+      "country": {
+        "type": "string",
+        "label": "Country",
+        "description": "Two-letter store country, e.g. us, gb, in, jp",
+        "default": "us"
+      }
+    }
+  },
+  {
+    "manifestVersion": 1,
+    "id": "listenbrainz-charts",
+    "name": "ListenBrainz charts",
+    "description": "The most listened-to albums and songs on ListenBrainz, the open listening-history service. Plays each one through your torrent sources.",
+    "version": "1.0.0",
+    "type": "chart",
+    "code": "listenbrainz-charts.js",
+    "hosts": ["api.listenbrainz.org"],
+    "layout": "cards",
+    "categories": [
+      { "id": "week-albums", "name": "Top albums this week" },
+      { "id": "week-songs", "name": "Top songs this week" },
+      { "id": "month-albums", "name": "Top albums this month" },
+      { "id": "month-songs", "name": "Top songs this month" },
+      { "id": "year-albums", "name": "Top albums this year" },
+      { "id": "all-time-albums", "name": "All-time top albums" }
+    ]
+  },
+  {
+    "manifestVersion": 1,
     "id": "live-music-archive",
     "name": "Live Music Archive",
     "description": "Concert recordings from bands that allow taping and trading (etree.org), hosted by the Internet Archive.",

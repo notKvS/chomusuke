@@ -15,7 +15,7 @@ const FEATURING = [/\s*[([]\s*(?:feat\.?|ft\.?|featuring|with)\s[^)\]]*[)\]]/gi,
 const LEADING_NUMBER = /^\s*\d{1,3}(?:\s*[.)-]\s*|\s+)/
 
 /** Removes edition/format tags and guest artists; different recordings ("Live", "Acoustic") are kept. */
-function stripReleaseInfo(text: string): string {
+export function stripReleaseInfo(text: string): string {
   let value = text.replace(/_/g, ' ')
   value = value.replace(/\s*[([{]([^)\]}]*)[)\]}]/g, (group, inner: string) => (RELEASE_WORDS.test(inner) ? '' : group))
   value = value.replace(/\s+[-–—]\s+([^-–—]+)$/, (suffix, inner: string) => (RELEASE_WORDS.test(inner) ? '' : suffix))

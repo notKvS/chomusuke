@@ -10,11 +10,13 @@ Desktop music player that streams audio straight from torrents 🎶
   controls.
 - 🔍 **Search** across all enabled sources at once.
 - 🧭 **Explore** each source by category (trending, top charts, lossless, genres…).
+- 📈 **Charts** — Apple Music / iTunes and ListenBrainz top albums and songs on Explore. Pick one and Chomusuke
+  finds it on your torrent sources and plays it (a chart song starts at that song).
 - 🔌 **Sources**
   - Internet Archive (built in).
   - Torznab indexers, with API keys stored in the OS credential store.
-  - Extensions: TypeScript sources running in a sandbox. Six Internet Archive collections are bundled and on; five
-    public-tracker templates (The Pirate Bay, 1337x, Nyaa, Knaben, LimeTorrents) are bundled and off.
+  - Extensions: TypeScript sources running in a sandbox. Six Internet Archive collections and two charts are bundled
+    and on; five public-tracker templates (The Pirate Bay, 1337x, Nyaa, Knaben, LimeTorrents) are bundled and off.
 - 📄 **Torrent details** — files, trackers, pieces, peers and transfer stats; save the `.torrent` file or copy the
   magnet link.
 - 💾 **Save offline** — download a whole album to *Saved albums* so it plays instantly, even offline; recently streamed
@@ -42,7 +44,7 @@ Desktop music player that streams audio straight from torrents 🎶
 | Torrent engine | `src/main/engine.ts` | WebTorrent client; adds torrents with nothing selected, streams byte ranges on demand, sharing on/off |
 | Stream server | `src/main/stream-server.ts` | Loopback HTTP server (random port, per-launch token) serving audio with Range support to the player |
 | Album builder | `src/main/library.ts` | Turns a torrent's file list into an album (tracks, titles, cover) |
-| Providers | `src/main/providers/` | Internet Archive, Torznab and extension sources: search, browse, open a result as a torrent |
+| Providers | `src/main/providers/` | Internet Archive, Torznab and extension sources: search, browse, open a result as a torrent; chart entries are matched to a torrent (`chart-match.ts`) |
 | Extension host | `src/main/extension-host/` | Validates extension manifests and runs each extension in a sandboxed window limited to its declared hosts |
 | Playlists | `src/main/playlists.ts`, `src/main/song-ref.ts` | Playlists (`<userData>/playlists.json`) and the shared song reference used by ratings and playlists |
 | Ratings & backup | `src/main/ratings.ts`, `src/main/backup.ts`, `src/shared/fingerprint.ts` | Liked/disliked songs (`<userData>/ratings.json`), song matching across torrents, backup file |

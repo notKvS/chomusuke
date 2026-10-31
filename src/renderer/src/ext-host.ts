@@ -17,7 +17,8 @@ const errorText = error => String((error && error.message) || error).slice(0, 30
 let extension
 try {
   extension = (await import(${JSON.stringify(codeUrl)})).default
-  if (!extension || typeof extension.search !== 'function') throw new Error('The extension has no search() function.')
+  if (!extension || (typeof extension.search !== 'function' && typeof extension.browse !== 'function'))
+    throw new Error('The extension has no search() or browse() function.')
 } catch (error) {
   send({ id: 0, ok: false, error: errorText(error) })
   throw error

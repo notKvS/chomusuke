@@ -2,15 +2,18 @@ import type { SourceCategory } from '../../shared/types.ts'
 import type { ProviderAlbum } from '../providers/types.ts'
 
 /**
- * Extensions add search sources. Users import a repository (a JSON manifest listing extensions); each
- * extension is a bundled ES module that runs in a sandboxed worker and turns queries into torrent results. The manifest declares which https hosts it may contact.
+ * Extensions add sources. Users import a repository (a JSON manifest listing extensions); each extension is a
+ * bundled ES module that runs in a sandboxed worker. The manifest declares which https hosts it may contact.
+ * - `"type": "torrent"` extensions turn queries and Explore categories into torrent results.
+ * - `"type": "chart"` extensions list top albums/songs from a public chart (browse only, at least one category);
+ *   the app plays an entry by searching the torrent sources for it (ProviderRegistry.findRelease).
  *
  * Manifest (array of these, or { "extensions": [...] }):
  * {
- *   "manifestVersion": 1, "id": "my-source", "name": "My Source", "version": "1.0.0", "type": "torrent",
+ *   "manifestVersion": 1, "id": "my-source", "name": "My Source", "version": "1.0.0", "type": "torrent" | "chart",
  *   "description": "…", "code": "extension.js",          // relative to the manifest URL
  *   "hosts": ["example.org", "*.example.org"],          // the only hosts the code may reach (https)
- *   "layout": "list" | "cards",
+ *   "layout": "list" | "cards",                         // charts are always cards
  *   "categories": [{ "id": "top", "name": "Top this week" }],
  *   "options": { "apiKey": { "type": "string", "label": "API key", "secret": true } },
  *   "enabledByDefault": false                           // optional: install switched off (default true)
@@ -18,10 +21,11 @@ import type { ProviderAlbum } from '../providers/types.ts'
  *
  * Extension module: export default {
  *   test?(ctx) → true | throw, search(ctx: { query, options }) → TorrentResult[],
- *   browse?(ctx: { category, options }) → TorrentResult[]
+ *   browse?(ctx: { category, options }) → TorrentResult[]            (chart: browse → ChartEntry[], no search)
  * }
  * TorrentResult: { title, link?: magnet | https .torrent URL, hash?: 40-hex, size?, seeders?, leechers?,
  *                  artist?, year?, artwork?: https URL, tags?: string[] }  (link or hash required)
+ * ChartEntry: { kind: 'album' | 'song', title, artist, album?: string (songs), year?, artwork?, tags? }
  */
 
 export interface ExtensionOption {
@@ -36,6 +40,8 @@ export interface ExtensionManifest {
   id: string
   name: string
   version: string
+  /** torrent: search/browse torrents; chart: browse top albums/songs that play through the torrent sources */
+  type: 'torrent' | 'chart'
   description: string
   codeUrl: string
   hosts: string[]
@@ -87,7 +93,9 @@ export function hostAllowed(hostname: string, hosts: string[]): boolean {
 function parseOne(raw: unknown, base: URL, sameOriginHttp: boolean): ExtensionManifest {
   if (!isRecord(raw)) throw new ExtensionError('The extension manifest is malformed.')
   if (raw.manifestVersion !== 1) throw new ExtensionError('Unsupported extension manifest version.')
-  if (raw.type !== 'torrent') throw new ExtensionError('Only torrent extensions are supported.')
+  if (raw.type !== 'torrent' && raw.type !== 'chart')
+    throw new ExtensionError('Only torrent and chart extensions are supported.')
+  const type = raw.type
   const id = typeof raw.id === 'string' && ID.test(raw.id) ? raw.id : undefined
   if (!id) throw new ExtensionError('The extension has an invalid id.')
 
@@ -105,6 +113,7 @@ function parseOne(raw: unknown, base: URL, sameOriginHttp: boolean): ExtensionMa
     if (!isRecord(category) || typeof category.id !== 'string' || !ID.test(category.id)) continue
     categories.push({ id: category.id, name: text(category.name, 40) ?? category.id })
   }
+  if (type === 'chart' && categories.length === 0) throw new ExtensionError('A chart extension needs categories.')
 
   const options: Record<string, ExtensionOption> = {}
   const rawOptions = isRecord(raw.options) ? Object.entries(raw.options).slice(0, MAX_OPTIONS) : []
@@ -124,10 +133,11 @@ function parseOne(raw: unknown, base: URL, sameOriginHttp: boolean): ExtensionMa
     id,
     name: requireText(raw.name, 60, 'a name'),
     version: requireText(raw.version, 20, 'a version'),
+    type,
     description: text(raw.description, 300) ?? '',
     codeUrl: codeUrl.toString(),
     hosts: [...new Set(hosts)],
-    layout: raw.layout === 'cards' ? 'cards' : 'list',
+    layout: raw.layout === 'cards' || type === 'chart' ? 'cards' : 'list',
     categories,
     options,
     enabledByDefault: raw.enabledByDefault !== false
@@ -148,6 +158,31 @@ export function parseRepository(json: unknown, repositoryUrl: string, sameOrigin
     throw new ExtensionError('The repository lists an extension twice.')
   return manifests
 }
+
+const count = (value: unknown): number | undefined => {
+  const n = Number(value)
+  return Number.isFinite(n) && n >= 0 ? n : undefined
+}
+
+function httpsUrl(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' ? url.toString() : undefined
+  } catch {
+    return undefined
+  }
+}
+
+const yearOf = (value: unknown): string | undefined => /^\d{4}$/.exec(text(value, 4) ?? '')?.[0]
+
+const tagList = (value: unknown): string[] | undefined =>
+  Array.isArray(value)
+    ? value
+        .map(t => text(t, 12))
+        .filter((t): t is string => Boolean(t))
+        .slice(0, 4)
+    : undefined
 
 /** Turns untrusted extension output into albums; anything malformed is dropped. */
 export function sanitizeResults(raw: unknown, manifest: ExtensionManifest): ProviderAlbum[] {
@@ -173,35 +208,48 @@ export function sanitizeResults(raw: unknown, manifest: ExtensionManifest): Prov
     const hash = typeof item.hash === 'string' && INFO_HASH.test(item.hash) ? item.hash.toLowerCase() : undefined
     if (!link && !hash) continue
 
-    const number = (value: unknown) => {
-      const n = Number(value)
-      return Number.isFinite(n) && n >= 0 ? n : undefined
-    }
-    let artwork: string | undefined
-    if (typeof item.artwork === 'string') {
-      try {
-        const url = new URL(item.artwork)
-        if (url.protocol === 'https:') artwork = url.toString()
-      } catch {
-        // ignore
-      }
-    }
     albums.push({
       ref: JSON.stringify({ link, hash }),
       title,
       artist: text(item.artist, 120),
-      year: /^\d{4}$/.exec(text(item.year, 4) ?? '')?.[0],
-      artwork,
-      seeders: number(item.seeders),
-      peers: number(item.leechers),
-      size: number(item.size),
-      tags: Array.isArray(item.tags)
-        ? item.tags
-            .map(t => text(t, 12))
-            .filter((t): t is string => Boolean(t))
-            .slice(0, 4)
-        : undefined
+      year: yearOf(item.year),
+      artwork: httpsUrl(item.artwork),
+      seeders: count(item.seeders),
+      peers: count(item.leechers),
+      size: count(item.size),
+      tags: tagList(item.tags)
     })
   }
   return albums
+}
+
+/**
+ * Turns untrusted chart extension output into chart entries; each needs a title and an artist to search for.
+ * The ref holds what to search the torrent sources for (see ChartWanted in providers/chart-match.ts).
+ */
+export function sanitizeChartEntries(raw: unknown, manifest: ExtensionManifest): ProviderAlbum[] {
+  if (!Array.isArray(raw)) throw new ExtensionError(`${manifest.name} returned an invalid response.`)
+  const entries: ProviderAlbum[] = []
+  const seen = new Set<string>()
+  for (const item of raw.slice(0, MAX_RESULTS)) {
+    if (!isRecord(item)) continue
+    const title = text(item.title, 200)
+    const artist = text(item.artist, 120)
+    if (!title || !artist) continue
+    const kind = item.kind === 'song' ? 'song' : 'album'
+    const album = kind === 'song' ? text(item.album, 200) : undefined
+    const ref = JSON.stringify({ kind, title, artist, album })
+    if (seen.has(ref)) continue
+    seen.add(ref)
+    entries.push({
+      ref,
+      title,
+      artist,
+      year: yearOf(item.year),
+      artwork: httpsUrl(item.artwork),
+      tags: tagList(item.tags),
+      chart: kind
+    })
+  }
+  return entries
 }

@@ -67,7 +67,12 @@ export function register(deps: IpcDeps): void {
   const { assertTrustedSender, registry, settings, extensionRuntime, disposeUnusedHosts } = deps
   const rebuildProviders = () => {
     const enabled = settings.enabled()
-    registry.setProviders(buildProviders(enabled, { extensionRuntime }))
+    registry.setProviders(
+      buildProviders(enabled, {
+        extensionRuntime,
+        findRelease: (wanted, signal) => registry.findRelease(wanted, signal)
+      })
+    )
     disposeUnusedHosts(new Set(enabled.flatMap(p => (p.type === 'extension' ? [p.manifest.id] : []))))
   }
   rebuildProviders()

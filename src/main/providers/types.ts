@@ -21,6 +21,11 @@ export interface MusicProvider {
   /** Categories for the Explore page (trending, genres, formats…). Omit if the source can't be browsed. */
   readonly categories?: SourceCategory[]
   browse?(categoryId: string, signal: AbortSignal): Promise<ProviderResults>
+  /**
+   * Chart sources (top albums/songs) list music without torrents: they're only browsed, never searched, and
+   * opening an entry finds a matching release on the other providers (see ProviderRegistry.findRelease).
+   */
+  readonly chart?: boolean
 }
 
 export interface ProviderAlbum {
@@ -41,6 +46,8 @@ export interface ProviderAlbum {
   size?: number
   /** Short labels such as FLAC, MP3 320 */
   tags?: string[]
+  /** Set for chart entries: an album or a song that opens by searching the torrent sources for it. */
+  chart?: 'album' | 'song'
 }
 
 export interface ProviderSong {
@@ -65,4 +72,6 @@ export type Playable = {
   hints?: SourceHints
   /** Better titles/durations for the tracks, keyed by trackKey; may resolve to null. */
   annotations?: Promise<Map<string, TrackAnnotation> | null>
+  /** The song to start with once loaded (chart songs found inside an album torrent). */
+  startAt?: { title: string; artist?: string }
 }

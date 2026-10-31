@@ -22,7 +22,7 @@ interface Props {
 }
 
 const albumSubtitle = (album: SearchAlbum): string =>
-  ['Album', album.artist ?? 'Unknown artist', album.year].filter(Boolean).join(' • ')
+  [album.chart === 'song' ? 'Song' : 'Album', album.artist ?? 'Unknown artist', album.year].filter(Boolean).join(' • ')
 
 const isEmpty = (results: SearchResults): boolean =>
   results.songs.length === 0 && results.sections.every(section => section.albums.length === 0)
@@ -146,13 +146,13 @@ export function SectionBody({ section, onOpenAlbum }: { section: ProviderSection
       )}
       {section.layout === 'cards' ? (
         <div className="shelf__grid">
-          {section.albums.map(album => (
+          {section.albums.map((album, index) => (
             <Card
               key={album.id}
               artwork={album.artwork}
               title={album.title}
               subtitle={albumSubtitle(album)}
-              badge={album.license}
+              badge={album.license ?? (album.chart ? `#${index + 1}` : undefined)}
               onOpen={autoplay => onOpenAlbum(album, autoplay)}
             />
           ))}

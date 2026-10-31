@@ -57,8 +57,9 @@ function ExploreShelf({ source, onOpenAlbum }: { source: ExploreSource; onOpenAl
 
   return (
     <section className="shelf">
-      <p className="shelf__eyebrow">{source.layout === 'list' ? 'Torrents' : 'Albums'}</p>
+      <p className="shelf__eyebrow">{source.chart ? 'Charts' : source.layout === 'list' ? 'Torrents' : 'Albums'}</p>
       <h2 className="shelf__title">{source.name}</h2>
+      {source.chart && <p className="sources__help">Plays through your torrent sources — turn on more to find more.</p>}
       <div className="chips" role="tablist" aria-label={`${source.name} categories`}>
         {source.categories.map(c => (
           <button

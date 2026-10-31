@@ -19,7 +19,7 @@ test('bundled manifests are valid and have sources', () => {
   }
 })
 
-test('tracker templates install switched off; the Internet Archive collections stay on', () => {
+test('tracker templates install switched off; the Internet Archive collections and charts stay on', () => {
   for (const manifest of manifests)
     assert.equal(manifest.enabledByDefault, !TEMPLATES.includes(manifest.id), manifest.id)
 })

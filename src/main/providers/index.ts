@@ -1,5 +1,5 @@
 import type { ExtensionManifest } from '../extension-host/manifest.ts'
-import { createExtensionProvider, type ExtensionRuntime } from '../extension-host/provider.ts'
+import { createExtensionProvider, type ExtensionRuntime, type FindRelease } from '../extension-host/provider.ts'
 import { fetchJson } from '../http.ts'
 import { fetchTorrentFile } from '../torrent-fetch.ts'
 import { createArchiveProvider, isArchiveHost, type JsonFetcher } from './archive.ts'
@@ -16,6 +16,8 @@ export const archiveJsonFetcher: JsonFetcher = (url, maxBytes, signal) =>
 export interface ProviderDeps {
   /** Returns the (lazily started) sandbox for an extension's code; reused while the code is unchanged. */
   extensionRuntime(manifest: ExtensionManifest, code: string, codeSha256: string): ExtensionRuntime
+  /** How chart extensions play an entry: by finding it on the other (torrent) providers. */
+  findRelease: FindRelease
 }
 
 /**
@@ -34,7 +36,8 @@ export function buildProviders(configs: EnabledProvider[], deps: ProviderDeps): 
         return createExtensionProvider(
           config.manifest,
           deps.extensionRuntime(config.manifest, config.code, config.codeSha256),
-          config.options
+          config.options,
+          deps.findRelease
         )
       default:
         throw new Error(`Unknown provider type: ${(config as { type: string }).type}`)

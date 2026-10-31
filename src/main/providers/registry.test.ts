@@ -97,3 +97,122 @@ test('explore lists browsable providers and browse remembers results', async () 
   await assert.rejects(registry.browse('archive', 'nope', new AbortController().signal), SourceError)
   await assert.rejects(registry.browse('torznab-1', 'trending', new AbortController().signal), SourceError)
 })
+
+const chartProvider = (behaviour: Partial<MusicProvider> = {}) =>
+  fakeProvider('ext-charts', {
+    chart: true,
+    categories: [{ id: 'top', name: 'Top' }],
+    browse: async () => ({
+      albums: [{ ...album('chart-ref', 'Mayhem'), artist: 'Lady Gaga', chart: 'album' }],
+      songs: []
+    }),
+    ...behaviour
+  })
+
+test('charts are listed first on Explore and never searched', async () => {
+  const registry = new ProviderRegistry()
+  let searched = false
+  registry.setProviders([
+    fakeProvider('archive', {
+      categories: [{ id: 'trending', name: 'Trending' }],
+      browse: async () => ({ albums: [], songs: [] })
+    }),
+    chartProvider({
+      search: async () => {
+        searched = true
+        return { albums: [], songs: [] }
+      }
+    })
+  ])
+  assert.deepEqual(
+    registry.explore().map(s => [s.id, s.chart]),
+    [
+      ['ext-charts', true],
+      ['archive', undefined]
+    ]
+  )
+  const { sections } = await registry.search('q', new AbortController().signal)
+  assert.deepEqual(
+    sections.map(s => s.id),
+    ['archive']
+  )
+  assert.equal(searched, false)
+  const section = await registry.browse('ext-charts', 'top', new AbortController().signal)
+  assert.equal(section.albums[0].chart, 'album')
+})
+
+test('findRelease searches the torrent providers and opens the best match', async () => {
+  const registry = new ProviderRegistry()
+  const queries: string[] = []
+  const tracker = fakeProvider('tracker', {
+    search: async query => {
+      queries.push(query)
+      return {
+        albums: [
+          { ...album('karaoke', 'Lady Gaga - Mayhem Karaoke'), seeders: 900 },
+          { ...album('flac', 'Lady Gaga - Mayhem (2025) [FLAC]'), seeders: 40 },
+          { ...album('other', 'Lady Gaga - Chromatica'), seeders: 99 }
+        ],
+        songs: []
+      }
+    }
+  })
+  registry.setProviders([chartProvider(), tracker])
+
+  const playable = await registry.findRelease({ kind: 'album', title: 'Mayhem', artist: 'Lady Gaga' })
+  assert.deepEqual(queries, ['Lady Gaga Mayhem'])
+  assert.deepEqual(tracker.opened, ['flac'])
+  assert.deepEqual(playable.hints, { title: 'Mayhem', artist: 'Lady Gaga' })
+  assert.equal(playable.startAt, undefined)
+
+  const forSong = await registry.findRelease({
+    kind: 'song',
+    title: 'Abracadabra',
+    artist: 'Lady Gaga',
+    album: 'Mayhem'
+  })
+  // The fake tracker answers every query with the album, so the first query is enough.
+  assert.deepEqual(queries.slice(1), ['Lady Gaga Abracadabra'])
+  assert.deepEqual(tracker.opened, ['flac', 'flac'])
+  assert.deepEqual(forSong.startAt, { title: 'Abracadabra', artist: 'Lady Gaga' })
+})
+
+test('findRelease tries the next match when one fails, and explains when nothing is found', async () => {
+  const registry = new ProviderRegistry()
+  const flaky = fakeProvider('tracker', {
+    search: async () => ({
+      albums: [
+        { ...album('broken', 'Drake - HABIBTI (FOMO) [FLAC]'), seeders: 80 },
+        { ...album('works', 'Drake - HABIBTI (FOMO) [MP3]'), seeders: 5 }
+      ],
+      songs: []
+    }),
+    open: async a => {
+      flaky.opened.push(a.ref)
+      if (a.ref === 'broken') throw new Error('download failed')
+      return { kind: 'torrent', torrent: `magnet:?xt=urn:btih:${'b'.repeat(40)}` }
+    }
+  })
+  registry.setProviders([flaky])
+  await registry.findRelease({ kind: 'album', title: 'HABIBTI (FOMO)', artist: 'Drake' })
+  assert.deepEqual(flaky.opened, ['broken', 'works'])
+
+  await assert.rejects(
+    registry.findRelease({ kind: 'album', title: 'Nothing Like It', artist: 'Nobody' }),
+    /Couldn’t find/
+  )
+  registry.setProviders([chartProvider()])
+  await assert.rejects(
+    registry.findRelease({ kind: 'album', title: 'Mayhem', artist: 'Lady Gaga' }),
+    /Turn on a torrent source/
+  )
+})
+
+test('opening a chart entry goes through its provider', async () => {
+  const registry = new ProviderRegistry()
+  const charts = chartProvider()
+  registry.setProviders([charts])
+  const section = await registry.browse('ext-charts', 'top', new AbortController().signal)
+  await registry.open(section.albums[0].id)
+  assert.deepEqual(charts.opened, ['chart-ref'])
+})

@@ -85,7 +85,8 @@ export function validateRepositoryUrl(raw: unknown): { url: string; privateHttp:
 function toRawManifest(manifest: ExtensionManifest): Record<string, unknown> {
   return {
     manifestVersion: 1,
-    type: 'torrent',
+    // Saved before chart extensions existed: those were all torrent extensions.
+    type: manifest.type ?? 'torrent',
     id: manifest.id,
     name: manifest.name,
     version: manifest.version,
@@ -365,7 +366,8 @@ export class ProviderSettingsStore {
         version: entry.manifest.version,
         description: entry.manifest.description,
         hosts: entry.manifest.hosts,
-        options
+        options,
+        ...(entry.manifest.type === 'chart' ? { chart: true } : {})
       }
     })
   }

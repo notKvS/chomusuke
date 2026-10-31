@@ -61,3 +61,43 @@ test('testExtension', async () => {
   assert.equal(await testExtension(manifest, fakeRuntime(), {}), 'Demo is working.')
   await assert.rejects(testExtension(manifest, { call: async () => 'nope' }, {}), /reported a problem/)
 })
+
+test('a chart extension browses entries and opens them through findRelease', async () => {
+  const [chart] = parseRepository(
+    [
+      {
+        manifestVersion: 1,
+        id: 'charts',
+        name: 'Charts',
+        version: '1.0.0',
+        type: 'chart',
+        code: 'c.js',
+        hosts: ['example.org'],
+        categories: [{ id: 'top', name: 'Top' }]
+      }
+    ],
+    'https://example.org/index.json'
+  )
+  const calls: Array<[string, unknown]> = []
+  const runtime: ExtensionRuntime = {
+    async call(method, args) {
+      calls.push([method, args])
+      return [{ kind: 'song', title: 'Espresso', artist: 'Sabrina Carpenter', album: 'Short n’ Sweet' }]
+    }
+  }
+  const wanted: unknown[] = []
+  const provider = createExtensionProvider(chart, runtime, { country: 'gb' }, async w => {
+    wanted.push(w)
+    return { kind: 'torrent', torrent: `magnet:?xt=urn:btih:${HASH}` }
+  })
+  assert.equal(provider.chart, true)
+  assert.equal(provider.layout, 'cards')
+  assert.deepEqual(await provider.search('anything', new AbortController().signal), { albums: [], songs: [] })
+
+  const { albums } = (await provider.browse?.('top', new AbortController().signal)) ?? { albums: [] }
+  assert.deepEqual(calls, [['browse', { category: 'top', options: { country: 'gb' } }]])
+  assert.equal(albums[0].chart, 'song')
+  await provider.open(albums[0])
+  assert.deepEqual(wanted, [{ kind: 'song', title: 'Espresso', artist: 'Sabrina Carpenter', album: 'Short n’ Sweet' }])
+  await assert.rejects(provider.open({ ref: 'not json', title: 'x' }), /no longer available/)
+})

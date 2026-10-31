@@ -16,7 +16,7 @@ export type Page =
 
 /** Shown in place of the current page while an album loads or fails to; not part of the history. */
 export type Overlay =
-  | { kind: 'loading'; title?: string; artist?: string; artwork?: string }
+  | { kind: 'loading'; title?: string; artist?: string; artwork?: string; finding?: boolean }
   | { kind: 'error'; message: string; retry?: () => void }
 
 export type View = Page | Overlay

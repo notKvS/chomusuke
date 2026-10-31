@@ -159,7 +159,7 @@ export interface SourceHints {
   artist?: string
 }
 
-export type LoadResult = { ok: true; album: Album } | { ok: false; error: string }
+export type LoadResult = { ok: true; album: Album; startKey?: string } | { ok: false; error: string }
 
 /** One album/release found by a provider. `id` is opaque: pass it back to openResult(). */
 export interface SearchAlbum {
@@ -175,6 +175,11 @@ export interface SearchAlbum {
   peers?: number
   size?: number
   tags?: string[]
+  /**
+   * Chart entries (top albums/songs) have no torrent of their own: opening one searches the torrent sources for
+   * it, and for a song the load result says which track it is (`startKey`).
+   */
+  chart?: 'album' | 'song'
 }
 
 export interface SearchSong {
@@ -216,6 +221,8 @@ export interface ExploreSource {
   name: string
   layout: 'cards' | 'list'
   categories: SourceCategory[]
+  /** A chart (top albums/songs) rather than a torrent source */
+  chart?: boolean
 }
 
 export type BrowseResponse = { ok: true; section: ProviderSection } | { ok: false; error: string }
@@ -247,6 +254,8 @@ export interface ProviderSettingsView {
   description?: string
   hosts?: string[]
   options?: ExtensionOptionView[]
+  /** Chart extensions list top albums/songs and play them through the torrent sources */
+  chart?: boolean
 }
 
 export interface TorznabForm {

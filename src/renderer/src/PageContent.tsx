@@ -106,7 +106,7 @@ export function PageContent(props: Props) {
     case 'saved':
       return <SavedAlbumsView onOpen={props.onOpenLibraryAlbum} />
     case 'loading':
-      return <AlbumLoading title={view.title} artist={view.artist} artwork={view.artwork} />
+      return <AlbumLoading title={view.title} artist={view.artist} artwork={view.artwork} finding={view.finding} />
     case 'error':
       return <AlbumError message={view.message} onRetry={view.retry} onHome={props.onHome} />
     case 'album': {

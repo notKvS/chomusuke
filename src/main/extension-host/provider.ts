@@ -1,8 +1,15 @@
 import { FetchError, fetchBodyOrMagnet } from '../http.ts'
 import { sanitizeThirdPartyMagnet, stripPrivateEndpoints } from '../net.ts'
+import type { ChartWanted } from '../providers/chart-match.ts'
 import type { MusicProvider, Playable, ProviderResults } from '../providers/types.ts'
 import { parseSource, SourceError } from '../source.ts'
-import { ExtensionError, type ExtensionManifest, hostAllowed, sanitizeResults } from './manifest.ts'
+import {
+  ExtensionError,
+  type ExtensionManifest,
+  hostAllowed,
+  sanitizeChartEntries,
+  sanitizeResults
+} from './manifest.ts'
 
 export type ExtensionMethod = 'test' | 'search' | 'browse'
 
@@ -10,6 +17,9 @@ export type ExtensionMethod = 'test' | 'search' | 'browse'
 export interface ExtensionRuntime {
   call(method: ExtensionMethod, args: unknown, signal?: AbortSignal): Promise<unknown>
 }
+
+/** Finds a chart entry on the torrent providers and opens it (ProviderRegistry.findRelease). */
+export type FindRelease = (wanted: ChartWanted, signal?: AbortSignal) => Promise<Playable>
 
 const TORRENT_MAX_BYTES = 10 * 1024 * 1024
 const TIMEOUT_MS = 20_000
@@ -25,12 +35,15 @@ function magnetOrThrow(uri: string): string {
 /**
  * Adapts an extension to the provider interface. Whatever the extension returns is re-validated, and opening a result
  * downloads only from the extension's declared hosts (or uses its magnet link), with private trackers stripped.
+ * Chart extensions never supply torrents: their entries open through `findRelease`.
  */
 export function createExtensionProvider(
   manifest: ExtensionManifest,
   runtime: ExtensionRuntime,
-  options: Record<string, string | boolean>
+  options: Record<string, string | boolean>,
+  findRelease?: FindRelease
 ): MusicProvider {
+  if (manifest.type === 'chart') return createChartProvider(manifest, runtime, options, findRelease)
   const results = async (
     method: ExtensionMethod,
     args: Record<string, unknown>,
@@ -85,6 +98,45 @@ export function createExtensionProvider(
       }
       if (ref.hash) return { kind: 'torrent', torrent: magnetOrThrow(`magnet:?xt=urn:btih:${ref.hash}`) }
       throw new SourceError('That result has no download link.')
+    }
+  }
+}
+
+/** A chart extension: browse-only; opening an entry searches the torrent providers for it. */
+function createChartProvider(
+  manifest: ExtensionManifest,
+  runtime: ExtensionRuntime,
+  options: Record<string, string | boolean>,
+  findRelease: FindRelease | undefined
+): MusicProvider {
+  return {
+    id: extensionProviderId(manifest),
+    name: manifest.name,
+    layout: 'cards',
+    chart: true,
+    search: async () => ({ albums: [], songs: [] }),
+    categories: manifest.categories,
+    browse: async (category, signal) => ({
+      albums: sanitizeChartEntries(await runtime.call('browse', { category, options }, signal), manifest),
+      songs: []
+    }),
+
+    async open(album, signal): Promise<Playable> {
+      let wanted: ChartWanted
+      try {
+        const ref = JSON.parse(album.ref) as Record<string, unknown>
+        if (typeof ref.title !== 'string' || typeof ref.artist !== 'string') throw new Error('incomplete')
+        wanted = {
+          kind: ref.kind === 'song' ? 'song' : 'album',
+          title: ref.title,
+          artist: ref.artist,
+          album: typeof ref.album === 'string' ? ref.album : undefined
+        }
+      } catch {
+        throw new SourceError('That chart entry is no longer available.')
+      }
+      if (!findRelease) throw new SourceError('Charts can’t be played here.')
+      return findRelease(wanted, signal)
     }
   }
 }

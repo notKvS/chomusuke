@@ -1,12 +1,17 @@
 import { createHash } from 'node:crypto'
 import type { ExploreSource, ProviderSection, SearchAlbum, SearchResults, SearchSong } from '../../shared/types.ts'
 import { SourceError } from '../source.ts'
+import { type ChartWanted, chartQueries, rankReleases } from './chart-match.ts'
 import { TorznabError } from './torznab.ts'
 import type { MusicProvider, Playable, ProviderAlbum } from './types.ts'
 
 const PROVIDER_TIMEOUT_MS = 25_000
 const MAX_REMEMBERED_RESULTS = 5000
 const RESULT_ID = /^[a-z0-9-]{1,40}:[a-f0-9]{24}$/
+/** Best-ranked releases tried, in order, when opening a chart entry (one may fail to download). */
+const CHART_ATTEMPTS = 3
+
+type Candidate = { provider: MusicProvider; album: ProviderAlbum }
 
 /**
  * Fans a query out to every enabled provider and remembers which provider/locator each result came from,
@@ -29,8 +34,9 @@ export class ProviderRegistry {
   }
 
   async search(query: string, signal: AbortSignal): Promise<SearchResults> {
+    const providers = this.torrentProviders()
     const settled = await Promise.allSettled(
-      this.providers.map(provider =>
+      providers.map(provider =>
         provider.search(query, AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)]))
       )
     )
@@ -39,7 +45,7 @@ export class ProviderRegistry {
     const songs: SearchSong[] = []
     const sections: ProviderSection[] = []
     settled.forEach((outcome, index) => {
-      const provider = this.providers[index]
+      const provider = providers[index]
       const section: ProviderSection = { id: provider.id, name: provider.name, layout: provider.layout, albums: [] }
       sections.push(section)
       if (outcome.status === 'rejected') {
@@ -66,11 +72,18 @@ export class ProviderRegistry {
     return { query, songs, sections }
   }
 
-  /** Providers that can be browsed, with their categories, for the Explore page. */
+  /** Providers that can be browsed, with their categories, for the Explore page; charts first. */
   explore(): ExploreSource[] {
     return this.providers
       .filter(p => p.browse && p.categories?.length)
-      .map(p => ({ id: p.id, name: p.name, layout: p.layout, categories: p.categories ?? [] }))
+      .sort((a, b) => Number(Boolean(b.chart)) - Number(Boolean(a.chart)))
+      .map(p => ({
+        id: p.id,
+        name: p.name,
+        layout: p.layout,
+        categories: p.categories ?? [],
+        ...(p.chart ? { chart: true } : {})
+      }))
   }
 
   async browse(providerId: unknown, categoryId: unknown, signal: AbortSignal): Promise<ProviderSection> {
@@ -102,6 +115,70 @@ export class ProviderRegistry {
       console.error(`[search] opening a ${entry.provider.id} result failed:`, err instanceof Error ? err.message : err)
       throw new SourceError(userMessage(err, entry.provider.name))
     }
+  }
+
+  /**
+   * Plays a chart entry: searches the torrent providers (one query at a time, stopping at the first that finds a
+   * match), then opens the best-ranked releases until one works. Songs also say which track to start with.
+   */
+  async findRelease(wanted: ChartWanted, signal?: AbortSignal): Promise<Playable> {
+    const providers = this.torrentProviders()
+    const what = `“${wanted.title}” by ${wanted.artist}`
+    if (providers.length === 0) {
+      throw new SourceError(`Turn on a torrent source (Settings → Sources) to play ${what}.`)
+    }
+    let ranked: Candidate[] = []
+    for (const query of chartQueries(wanted)) {
+      const found = await this.searchAll(providers, query, signal)
+      ranked = rankReleases(wanted, found)
+      if (ranked.length > 0 || signal?.aborted) break
+    }
+    for (const { provider, album } of ranked.slice(0, CHART_ATTEMPTS)) {
+      try {
+        const playable = await provider.open(album, signal)
+        return {
+          ...playable,
+          hints:
+            wanted.kind === 'album'
+              ? { title: wanted.title, artist: wanted.artist }
+              : { title: album.title, artist: album.artist ?? wanted.artist },
+          startAt: wanted.kind === 'song' ? { title: wanted.title, artist: wanted.artist } : undefined
+        }
+      } catch (err) {
+        if (signal?.aborted) throw err
+        console.error(`[charts] opening a ${provider.id} release failed:`, err instanceof Error ? err.message : err)
+      }
+    }
+    throw new SourceError(
+      ranked.length > 0
+        ? `Found ${what}, but couldn’t open it. Try again later.`
+        : `Couldn’t find ${what} on your torrent sources. Turn on more sources in Settings → Sources, or search for it.`
+    )
+  }
+
+  /** Every album (and every song's album) the providers find for a query; failing providers are skipped. */
+  private async searchAll(providers: MusicProvider[], query: string, signal?: AbortSignal): Promise<Candidate[]> {
+    const timeout = AbortSignal.timeout(PROVIDER_TIMEOUT_MS)
+    const settled = await Promise.allSettled(
+      providers.map(provider => provider.search(query, signal ? AbortSignal.any([signal, timeout]) : timeout))
+    )
+    const seen = new Set<string>()
+    const found: Candidate[] = []
+    settled.forEach((outcome, index) => {
+      if (outcome.status === 'rejected') return
+      const provider = providers[index]
+      for (const album of [...outcome.value.albums, ...outcome.value.songs.map(song => song.album)]) {
+        const key = `${provider.id}\n${album.ref}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        found.push({ provider, album })
+      }
+    })
+    return found
+  }
+
+  private torrentProviders(): MusicProvider[] {
+    return this.providers.filter(p => !p.chart)
   }
 
   private remember(provider: MusicProvider, album: ProviderAlbum): SearchAlbum {
