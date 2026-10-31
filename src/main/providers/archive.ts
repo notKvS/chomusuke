@@ -105,7 +105,7 @@ export function buildQueries(tokens: string[]): { strict: string; broad: string;
   }
 }
 
-export function searchUrl(query: string, rows: number, sort = 'downloads desc'): URL {
+export function searchUrl(query: string, rows: number, sort = 'downloads desc', page = 1): URL {
   const url = new URL('/advancedsearch.php', ARCHIVE_ORIGIN)
   url.searchParams.set('q', query)
   for (const field of ['identifier', 'title', 'creator', 'year', 'date', 'downloads', 'licenseurl']) {
@@ -113,8 +113,15 @@ export function searchUrl(query: string, rows: number, sort = 'downloads desc'):
   }
   url.searchParams.append('sort[]', sort)
   url.searchParams.set('rows', String(rows))
+  if (page > 1) url.searchParams.set('page', String(page))
   url.searchParams.set('output', 'json')
   return url
+}
+
+/** Whether an advancedsearch response has items beyond `page` pages of `rows`. */
+export function hasMorePages(json: unknown, page: number, rows: number): boolean {
+  const found = (json as { response?: { numFound?: unknown } } | null)?.response?.numFound
+  return typeof found === 'number' && found > page * rows
 }
 
 export const filesUrl = (id: string): URL => new URL(`/metadata/${encodeURIComponent(id)}/files`, ARCHIVE_ORIGIN)
@@ -260,14 +267,24 @@ function uniqueById<T>(items: T[], idOf: (item: T) => string): T[] {
  * (strict, broad, and partial for multi-word queries); it fails only if both main queries do, and the song lookup is
  * time-boxed so a slow item doesn't hold up the results.
  */
-export async function searchArchive(query: string, fetchJson: JsonFetcher): Promise<ProviderResults> {
+export async function searchArchive(query: string, fetchJson: JsonFetcher, page = 1): Promise<ProviderResults> {
   const tokens = tokenize(query)
   if (tokens.length === 0) return { songs: [], albums: [] }
 
   const queries = buildQueries(tokens)
-  const run = async (q: string, rows: number) => parseAlbums(await fetchJson(searchUrl(q, rows), SEARCH_MAX_BYTES))
+  if (page > 1) {
+    // Later pages continue the strict (title/creator) match; songs only come with the first page.
+    const json = await fetchJson(searchUrl(queries.strict, ALBUM_ROWS, undefined, page), SEARCH_MAX_BYTES)
+    return { albums: parseAlbums(json), songs: [], hasMore: hasMorePages(json, page, ALBUM_ROWS) }
+  }
+  let strictHasMore = false
+  const run = async (q: string, rows: number, strict = false) => {
+    const json = await fetchJson(searchUrl(q, rows), SEARCH_MAX_BYTES)
+    if (strict) strictHasMore = hasMorePages(json, 1, rows)
+    return parseAlbums(json)
+  }
   const [strict, broad, ...partials] = await Promise.allSettled([
-    run(queries.strict, ALBUM_ROWS),
+    run(queries.strict, ALBUM_ROWS, true),
     run(queries.broad, ALBUM_ROWS),
     ...queries.partial.map(q => run(q, PARTIAL_ROWS))
   ])
@@ -322,7 +339,7 @@ export async function searchArchive(query: string, fetchJson: JsonFetcher): Prom
     0,
     ALBUM_ROWS
   )
-  return { songs, albums }
+  return { songs, albums, hasMore: strictHasMore }
 }
 
 /** Tag-derived titles, artists and durations for an item's tracks, keyed by trackKey(). */
@@ -345,11 +362,14 @@ export const ARCHIVE_CATEGORIES = [
 ] as const
 
 /** One Explore category's most downloaded items this week. Throws for an unknown category id. */
-export async function browseArchive(categoryId: string, fetchJson: JsonFetcher): Promise<ProviderResults> {
+export async function browseArchive(categoryId: string, fetchJson: JsonFetcher, page = 1): Promise<ProviderResults> {
   const category = ARCHIVE_CATEGORIES.find(c => c.id === categoryId)
   if (!category) throw new Error('Unknown category')
-  const json = await fetchJson(searchUrl(`${category.query} AND ${FILTER}`, ALBUM_ROWS, 'week desc'), SEARCH_MAX_BYTES)
-  return { albums: parseAlbums(json), songs: [] }
+  const json = await fetchJson(
+    searchUrl(`${category.query} AND ${FILTER}`, ALBUM_ROWS, 'week desc', page),
+    SEARCH_MAX_BYTES
+  )
+  return { albums: parseAlbums(json), songs: [], hasMore: hasMorePages(json, page, ALBUM_ROWS) }
 }
 
 /** Tag-derived track details for an archive.org item torrent URL, or null when it isn't one / the lookup fails. */
@@ -371,9 +391,11 @@ export function createArchiveProvider(deps: {
     id: 'archive',
     name: 'Internet Archive',
     layout: 'cards',
-    search: (query, signal) => searchArchive(query, (url, maxBytes) => deps.fetchJson(url, maxBytes, signal)),
+    search: (query, signal, page) =>
+      searchArchive(query, (url, maxBytes) => deps.fetchJson(url, maxBytes, signal), page),
     categories: ARCHIVE_CATEGORIES.map(({ id, name }) => ({ id, name })),
-    browse: (categoryId, signal) => browseArchive(categoryId, (url, maxBytes) => deps.fetchJson(url, maxBytes, signal)),
+    browse: (categoryId, signal, page) =>
+      browseArchive(categoryId, (url, maxBytes) => deps.fetchJson(url, maxBytes, signal), page),
     async open(album, signal) {
       if (!IDENTIFIER.test(album.ref)) throw new Error('Invalid archive.org identifier')
       // Fetch tags in parallel with the torrent; they only improve titles, so failures are ignored.

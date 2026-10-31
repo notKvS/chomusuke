@@ -3,10 +3,11 @@
 // API: POST https://api.knaben.org/v1 with a JSON body.
 
 import { cleanQuery, getJson, magnet, parseRelease } from './lib/torrent-kit.ts'
-import type { Extension, Options, TorrentResult } from './sdk.ts'
+import type { Extension, Options, Paged, TorrentResult } from './sdk.ts'
 
 const API = 'https://api.knaben.org/v1'
 const SITE = 'Knaben'
+const PAGE_SIZE = 60
 
 // Knaben categories: 1000000 Audio, 1001000 MP3, 1002000 Lossless, 1003000 Audiobook, 1004000 Video,
 // 1005000 Radio, 1006000 Other.
@@ -74,9 +75,15 @@ async function query(body: Record<string, unknown>): Promise<KnabenHit[]> {
   const response = await getJson<KnabenResponse>(API, SITE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: 0, size: 60, hide_unsafe: true, hide_xxx: true, ...body })
+    body: JSON.stringify({ from: 0, size: PAGE_SIZE, hide_unsafe: true, hide_xxx: true, ...body })
   })
   return Array.isArray(response.hits) ? response.hits : []
+}
+
+/** One page of hits as results; a full page means Knaben probably has more. */
+async function fetchPage(body: Record<string, unknown>, page: number, options: Options): Promise<Paged<TorrentResult>> {
+  const hits = await query({ ...body, from: (page - 1) * PAGE_SIZE })
+  return { results: toResults(hits, options), hasMore: hits.length >= PAGE_SIZE }
 }
 
 const extension: Extension = {
@@ -85,24 +92,27 @@ const extension: Extension = {
     return true
   },
 
-  async search({ query: text, options }) {
+  async search({ query: text, page = 1, options }) {
     const q = cleanQuery(text)
     if (!q) return []
     const categories = options.losslessOnly === true ? [LOSSLESS] : [AUDIO]
-    const hits = await query({
-      search_type: '100%',
-      search_field: 'title',
-      query: q,
-      categories,
-      order_by: 'seeders',
-      order_direction: 'desc'
-    })
-    return toResults(hits, options)
+    return fetchPage(
+      {
+        search_type: '100%',
+        search_field: 'title',
+        query: q,
+        categories,
+        order_by: 'seeders',
+        order_direction: 'desc'
+      },
+      page,
+      options
+    )
   },
 
-  async browse({ category, options }) {
+  async browse({ category, page = 1, options }) {
     const { categories, order } = BROWSE[category] ?? BROWSE['lossless-top']
-    return toResults(await query({ categories, order_by: order, order_direction: 'desc' }), options)
+    return fetchPage({ categories, order_by: order, order_direction: 'desc' }, page, options)
   }
 }
 

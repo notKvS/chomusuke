@@ -1,0 +1,16 @@
+@layer components {
+  .artist-link {
+    display: inline;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
+    cursor: pointer;
+  }
+
+  .artist-link:hover,
+  .artist-link:focus-visible {
+    color: var(--accent-light);
+    text-decoration: underline;
+  }
+}

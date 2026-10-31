@@ -3,13 +3,15 @@ import type { ExploreSource, ProviderSection, SearchAlbum, SearchResults, Search
 import { SourceError } from '../source.ts'
 import { type ChartWanted, chartQueries, rankReleases } from './chart-match.ts'
 import { TorznabError } from './torznab.ts'
-import type { MusicProvider, Playable, ProviderAlbum } from './types.ts'
+import type { MusicProvider, Playable, ProviderAlbum, ProviderResults } from './types.ts'
 
 const PROVIDER_TIMEOUT_MS = 25_000
 const MAX_REMEMBERED_RESULTS = 5000
 const RESULT_ID = /^[a-z0-9-]{1,40}:[a-f0-9]{24}$/
 /** Best-ranked releases tried, in order, when opening a chart entry (one may fail to download). */
 const CHART_ATTEMPTS = 3
+/** How far "Load more" can go for one search or category. */
+export const MAX_PAGE = 20
 
 type Candidate = { provider: MusicProvider; album: ProviderAlbum }
 
@@ -57,6 +59,7 @@ export class ProviderRegistry {
         return
       }
       section.albums = outcome.value.albums.map(album => this.remember(provider, album))
+      if (outcome.value.hasMore) section.hasMore = true
       for (const song of outcome.value.songs) {
         const album = this.remember(provider, song.album)
         songs.push({
@@ -86,18 +89,46 @@ export class ProviderRegistry {
       }))
   }
 
-  async browse(providerId: unknown, categoryId: unknown, signal: AbortSignal): Promise<ProviderSection> {
+  async browse(
+    providerId: unknown,
+    categoryId: unknown,
+    signal: AbortSignal,
+    page: unknown = 1
+  ): Promise<ProviderSection> {
     const provider = this.providers.find(p => p.id === providerId)
-    if (!provider?.browse || !provider.categories?.some(c => c.id === categoryId)) {
+    const browse = provider?.browse
+    if (!provider || !browse || !provider.categories?.some(c => c.id === categoryId)) {
       throw new SourceError('That source can no longer be browsed.')
     }
+    const pageNumber = validPage(page)
+    return this.section(provider, () =>
+      browse.call(
+        provider,
+        categoryId as string,
+        AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)]),
+        pageNumber
+      )
+    )
+  }
+
+  /** Another page of one provider's albums for a search; songs only come with the first page. */
+  async searchMore(providerId: unknown, query: unknown, page: unknown, signal: AbortSignal): Promise<ProviderSection> {
+    const provider = this.torrentProviders().find(p => p.id === providerId)
+    if (!provider) throw new SourceError('That source is no longer available.')
+    if (typeof query !== 'string' || !query.trim()) throw new SourceError('Search again to see more.')
+    const pageNumber = validPage(page)
+    return this.section(provider, () =>
+      provider.search(query.trim(), AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)]), pageNumber)
+    )
+  }
+
+  /** One provider's albums as a section; a failure becomes the section's error message. */
+  private async section(provider: MusicProvider, load: () => Promise<ProviderResults>): Promise<ProviderSection> {
     const section: ProviderSection = { id: provider.id, name: provider.name, layout: provider.layout, albums: [] }
     try {
-      const results = await provider.browse(
-        categoryId as string,
-        AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)])
-      )
+      const results = await load()
       section.albums = results.albums.map(album => this.remember(provider, album))
+      if (results.hasMore) section.hasMore = true
     } catch (err) {
       console.error(`[explore] ${provider.id} failed:`, err instanceof Error ? err.message : err)
       section.error = userMessage(err, provider.name)
@@ -198,4 +229,11 @@ export class ProviderRegistry {
 function userMessage(err: unknown, name: string): string {
   if (err instanceof TorznabError || err instanceof SourceError) return err.message
   return `Couldn't reach ${name}.`
+}
+
+/** Page numbers from the renderer: whole numbers from 1 to MAX_PAGE. */
+function validPage(page: unknown): number {
+  if (typeof page !== 'number' || !Number.isInteger(page) || page < 1 || page > MAX_PAGE)
+    throw new SourceError('That page isn’t available.')
+  return page
 }

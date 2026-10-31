@@ -4,6 +4,7 @@ import {
   archiveIdFromTorrentUrl,
   buildQueries,
   createArchiveProvider,
+  hasMorePages,
   type JsonFetcher,
   licenseLabel,
   parseAlbums,
@@ -11,6 +12,7 @@ import {
   parseLength,
   pickSongs,
   searchArchive,
+  searchUrl,
   tokenize
 } from './archive.ts'
 
@@ -213,4 +215,24 @@ test('archive provider opens an item as its torrent plus tag annotations', async
   ])
   assert.equal((await playable.annotations)?.get('04_discipline')?.title, 'Discipline')
   await assert.rejects(provider.open({ ref: '../evil', title: 'x' }))
+})
+
+test('later pages continue the strict match without songs; numFound says whether there is more', async () => {
+  const urls: string[] = []
+  const fetchJson: JsonFetcher = async url => {
+    urls.push(url.toString())
+    return { response: { numFound: 60, docs: [doc('page-two-item')] } }
+  }
+  const results = await searchArchive('nine inch nails', fetchJson, 2)
+  assert.equal(urls.length, 1)
+  assert.match(urls[0], /[?&]page=2(&|$)/)
+  assert.deepEqual(
+    results.albums.map(a => a.ref),
+    ['page-two-item']
+  )
+  assert.deepEqual(results.songs, [])
+  assert.equal(results.hasMore, true) // 60 found > 2 pages of 24
+  assert.equal(hasMorePages({ response: { numFound: 48 } }, 2, 24), false)
+  assert.equal(hasMorePages(null, 1, 24), false)
+  assert.doesNotMatch(searchUrl('q', 24).toString(), /page=/)
 })

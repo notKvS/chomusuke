@@ -47,14 +47,32 @@ export function register(deps: IpcDeps): void {
     return registry.explore()
   })
 
-  ipcMain.handle('explore:browse', async (event, sourceId: unknown, categoryId: unknown): Promise<BrowseResponse> => {
-    assertTrustedSender(event)
-    try {
-      return { ok: true, section: await registry.browse(sourceId, categoryId, AbortSignal.timeout(30_000)) }
-    } catch (err) {
-      if (err instanceof SourceError) return { ok: false, error: err.message }
-      console.error('[explore] failed:', err instanceof Error ? err.message : err)
-      return { ok: false, error: 'Couldn’t load that category.' }
+  ipcMain.handle(
+    'explore:browse',
+    async (event, sourceId: unknown, categoryId: unknown, page: unknown = 1): Promise<BrowseResponse> => {
+      assertTrustedSender(event)
+      try {
+        return { ok: true, section: await registry.browse(sourceId, categoryId, AbortSignal.timeout(30_000), page) }
+      } catch (err) {
+        if (err instanceof SourceError) return { ok: false, error: err.message }
+        console.error('[explore] failed:', err instanceof Error ? err.message : err)
+        return { ok: false, error: 'Couldn’t load that category.' }
+      }
     }
-  })
+  )
+
+  ipcMain.handle(
+    'search:more',
+    async (event, sourceId: unknown, query: unknown, page: unknown): Promise<BrowseResponse> => {
+      assertTrustedSender(event)
+      if (typeof query !== 'string' || query.length > MAX_QUERY_LENGTH) return { ok: false, error: 'Search again.' }
+      try {
+        return { ok: true, section: await registry.searchMore(sourceId, query, page, AbortSignal.timeout(30_000)) }
+      } catch (err) {
+        if (err instanceof SourceError) return { ok: false, error: err.message }
+        console.error('[search] more failed:', err instanceof Error ? err.message : err)
+        return { ok: false, error: 'Couldn’t load more results.' }
+      }
+    }
+  )
 }

@@ -9,6 +9,8 @@ import type { ChartEntry, ChartExtension } from './sdk.ts'
 const API = 'https://api.listenbrainz.org/1/stats/sitewide'
 const SITE = 'ListenBrainz'
 const LIMIT = 50
+/** A top-500 is plenty for a chart; ListenBrainz's sitewide stats stop around there anyway. */
+const MAX_PAGES = 10
 
 type Range = 'week' | 'month' | 'year' | 'all_time'
 
@@ -82,8 +84,8 @@ export function parseRecordings(recordings: RecordingStat[]): ChartEntry[] {
   })
 }
 
-async function stats<T>(path: string, range: Range, count: number): Promise<T | undefined> {
-  const url = `${API}/${path}?range=${range}&count=${count}`
+async function stats<T>(path: string, range: Range, count: number, offset = 0): Promise<T | undefined> {
+  const url = `${API}/${path}?range=${range}&count=${count}&offset=${offset}`
   const body = await getJson<{ payload?: T }>(url, SITE)
   return body.payload
 }
@@ -95,15 +97,34 @@ const extension: ChartExtension = {
     return true
   },
 
-  async browse({ category }) {
+  async browse({ category, page = 1 }) {
     const { kind, range } = CATEGORIES[category] ?? CATEGORIES['week-albums']
-    // Ask for extra: duplicates (other editions of the same album) are dropped.
+    const offset = (page - 1) * LIMIT
+    // Editions of the same album chart separately; they're merged, so a page can have fewer than LIMIT entries.
     if (kind === 'album') {
-      const payload = await stats<{ release_groups?: ReleaseGroupStat[] }>('release-groups', range, LIMIT + 25)
-      return parseReleaseGroups(payload?.release_groups ?? []).slice(0, LIMIT)
+      const payload = await stats<{ release_groups?: ReleaseGroupStat[]; total_release_group_count?: number }>(
+        'release-groups',
+        range,
+        LIMIT,
+        offset
+      )
+      const raw = payload?.release_groups ?? []
+      return {
+        results: parseReleaseGroups(raw),
+        hasMore: raw.length === LIMIT && (payload?.total_release_group_count ?? 0) > offset + LIMIT && page < MAX_PAGES
+      }
     }
-    const payload = await stats<{ recordings?: RecordingStat[] }>('recordings', range, LIMIT + 25)
-    return parseRecordings(payload?.recordings ?? []).slice(0, LIMIT)
+    const payload = await stats<{ recordings?: RecordingStat[]; total_recording_count?: number }>(
+      'recordings',
+      range,
+      LIMIT,
+      offset
+    )
+    const raw = payload?.recordings ?? []
+    return {
+      results: parseRecordings(raw),
+      hasMore: raw.length === LIMIT && (payload?.total_recording_count ?? 0) > offset + LIMIT && page < MAX_PAGES
+    }
   }
 }
 

@@ -229,9 +229,7 @@
   }
 
   html[data-btn-style='glow'] :is(.solid-button, .big-play, .chip.is-active, .card__play) {
-    box-shadow:
-      0 0 16px rgb(var(--accent-rgb) / 0.6),
-      0 0 40px rgb(var(--accent-2-rgb) / 0.35);
+    box-shadow: var(--glow-strong);
   }
 
   html[data-btn-style='soft'] :is(.solid-button, .big-play, .chip.is-active, .card__play) {

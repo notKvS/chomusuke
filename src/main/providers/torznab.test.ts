@@ -97,6 +97,17 @@ test('search asks for audio, drops non-audio and undownloadable items, sorts by 
   )
   assert.equal(results.albums[0].size, 734003200)
   assert.deepEqual(results.songs, [])
+  // Five items is less than a full page of 50: nothing more to ask for.
+  assert.equal(results.hasMore, false)
+  assert.equal(sent.searchParams.get('offset'), null)
+})
+
+test('later pages ask the indexer for an offset', async () => {
+  const provider = createTorznabProvider(config())
+  await provider.search('some band', new AbortController().signal, 3)
+  assert.equal(requests.at(-1)?.searchParams.get('offset'), '100')
+  await provider.browse?.('3040', new AbortController().signal, 2)
+  assert.equal(requests.at(-1)?.searchParams.get('offset'), '50')
 })
 
 test('open resolves magnets, downloads .torrent links and follows magnet redirects', async () => {

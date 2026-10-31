@@ -5,6 +5,21 @@ import path from 'node:path'
 import { test } from 'node:test'
 import { biggerArtwork, country, FEEDS, feedUrl, parseAppleMusic, parseITunes } from '../src/apple-music-charts.ts'
 import { CATEGORIES, coverArt, parseRecordings, parseReleaseGroups } from '../src/listenbrainz-charts.ts'
+import {
+  kworbUrl,
+  pageOf,
+  parseKworb,
+  parseSpotify,
+  FEEDS as SPOTIFY_FEEDS,
+  country as spotifyCountry
+} from '../src/spotify-charts.ts'
+import {
+  cleanVideoTitle,
+  parseChart,
+  requestBody,
+  CHARTS as YT_CHARTS,
+  country as ytCountry
+} from '../src/youtube-music-charts.ts'
 
 const manifest = (id: string) =>
   JSON.parse(readFileSync(path.join(import.meta.dirname, '..', 'index.json'), 'utf8')).find(
@@ -123,4 +138,148 @@ test('ListenBrainz: songs carry their release; bad cover ids give no artwork', (
   ])
   assert.deepEqual(songs, [{ kind: 'song', title: 'SWIM', artist: 'BTS', album: 'ARIRANG', artwork: undefined }])
   assert.equal(coverArt({ caa_release_mbid: '909d000d-56e9-4b38-aa3f-008d38436ea2' }), undefined)
+})
+
+// --- Spotify ---
+
+test('Spotify: categories match the manifest; global charts from the official feed', () => {
+  assert.deepEqual(
+    manifest('spotify-charts').categories.map(c => c.id),
+    Object.keys(SPOTIFY_FEEDS)
+  )
+  const body = {
+    chartEntryViewResponses: [
+      {
+        displayChart: { chartMetadata: { alias: 'REGIONAL_GLOBAL_WEEKLY' } },
+        entries: [
+          {
+            trackMetadata: {
+              trackName: 'BbY WOW',
+              displayImageUri: 'https://i.scdn.co/image/abc',
+              artists: [{ name: 'KAROL G' }, { name: 'Judeline' }]
+            }
+          },
+          { trackMetadata: { trackName: 'No artists', artists: [] } }
+        ]
+      },
+      {
+        displayChart: { chartMetadata: { alias: 'ALBUM_GLOBAL_WEEKLY' } },
+        entries: [
+          { albumMetadata: { albumName: 'ARIRANG', displayImageUri: 'http://insecure/x', artists: [{ name: 'BTS' }] } }
+        ]
+      }
+    ]
+  }
+  assert.deepEqual(parseSpotify(body, 'REGIONAL_GLOBAL_WEEKLY'), [
+    { kind: 'song', title: 'BbY WOW', artist: 'KAROL G, Judeline', artwork: 'https://i.scdn.co/image/abc' }
+  ])
+  assert.deepEqual(parseSpotify(body, 'ALBUM_GLOBAL_WEEKLY'), [
+    { kind: 'album', title: 'ARIRANG', artist: 'BTS', artwork: undefined }
+  ])
+  assert.deepEqual(parseSpotify({}, 'REGIONAL_GLOBAL_WEEKLY'), [])
+})
+
+test('Spotify: kworb country charts, with guests, series names and entities handled; served 50 a page', () => {
+  const row = (cell: string) =>
+    `<tr><td class="np">1</td><td class="np">=</td><td class="text mp"><div>${cell}</div></td><td>14</td></tr>`
+  const html = [
+    row('<a href="../artist/1.html">Tate McRae</a> - <a href="../track/1.html">Housewife</a>'),
+    row(
+      '<a href="../artist/2.html">KAROL G</a> - <a href="../track/2.html">BbY WOW</a> (w/ <a>Judeline</a>, <a>rusowsky</a>)'
+    ),
+    row('<a>Anuv Jain</a> - <a>Arz Kiya Hai | Coke Studio Bharat</a>'),
+    row('<a>Simon &amp; Garfunkel</a> - <a>Mrs. Robinson</a>'),
+    row('<a>No title here</a>')
+  ].join('\n')
+  assert.deepEqual(parseKworb(html), [
+    { kind: 'song', title: 'Housewife', artist: 'Tate McRae' },
+    { kind: 'song', title: 'BbY WOW', artist: 'KAROL G, Judeline, rusowsky' },
+    { kind: 'song', title: 'Arz Kiya Hai', artist: 'Anuv Jain' },
+    { kind: 'song', title: 'Mrs. Robinson', artist: 'Simon & Garfunkel' }
+  ])
+  const top200 = Array.from({ length: 200 }, (_, i) => ({ kind: 'song' as const, title: `#${i + 1}`, artist: 'A' }))
+  const first = pageOf(top200, 1)
+  const last = pageOf(top200, 4)
+  assert.ok(!Array.isArray(first) && first.results.length === 50 && first.hasMore)
+  assert.ok(!Array.isArray(last) && last.results[0].title === '#151' && !last.hasMore)
+  assert.equal(kworbUrl('in', 'daily'), 'https://kworb.net/spotify/country/in_daily.html')
+  assert.equal(spotifyCountry({ country: 'IN' }), 'in')
+  assert.equal(spotifyCountry({ country: '' }), 'global')
+  assert.equal(spotifyCountry({ country: '../x' }), 'global')
+})
+
+// --- YouTube Music ---
+
+test('YouTube Music: categories match the manifest; songs and videos from the analytics response', () => {
+  assert.deepEqual(
+    manifest('youtube-music-charts').categories.map(c => c.id),
+    Object.keys(YT_CHARTS)
+  )
+  const songs = {
+    contents: {
+      sectionListRenderer: {
+        contents: [
+          {
+            musicAnalyticsSectionRenderer: {
+              content: {
+                trackTypes: [
+                  {
+                    trackViews: [
+                      {
+                        name: 'Dai Dai',
+                        artists: [{ name: 'Shakira' }, { name: 'Burna Boy' }],
+                        thumbnail: { thumbnails: [{ url: 'https://yt3.googleusercontent.com/x=w180-h180-l90-rj' }] }
+                      },
+                      { name: 'No artist', artists: [] }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+  assert.deepEqual(parseChart(songs, YT_CHARTS['top-songs']), [
+    {
+      kind: 'song',
+      title: 'Dai Dai',
+      artist: 'Shakira, Burna Boy',
+      artwork: 'https://yt3.googleusercontent.com/x=w400-h400-l90-rj'
+    }
+  ])
+  const videos = {
+    content: {
+      videos: [
+        {
+          videoViews: [
+            { id: 'fcnDmrtj6Sk', title: 'Shakira - Dai Dai (Official Video)', artists: [{ name: 'Shakira' }] },
+            { id: 'bad id!', title: 'Song', artists: [{ name: 'X' }] }
+          ]
+        }
+      ]
+    }
+  }
+  assert.deepEqual(parseChart(videos, YT_CHARTS['top-videos']), [
+    { kind: 'song', title: 'Dai Dai', artist: 'Shakira', artwork: 'https://i.ytimg.com/vi/fcnDmrtj6Sk/hqdefault.jpg' },
+    { kind: 'song', title: 'Song', artist: 'X', artwork: undefined }
+  ])
+  assert.deepEqual(parseChart({ error: { code: 400 } }, YT_CHARTS['top-songs']), [])
+  const body = JSON.parse(requestBody('VIDEOS', 'in'))
+  assert.match(body.query, /chart_params_country_code=in&chart_params_chart_type=VIDEOS/)
+  assert.equal(ytCountry({ country: 'GB' }), 'gb')
+  assert.equal(ytCountry({}), 'global')
+})
+
+test('YouTube Music: video titles lose "(Official Video)", lyric tags, "| extras" and an "Artist - " prefix', () => {
+  assert.equal(cleanVideoTitle('Shakira - Dai Dai (Official Music Video)', 'Shakira, Burna Boy'), 'Dai Dai')
+  assert.equal(cleanVideoTitle('Espresso [Lyric Video]', 'Sabrina Carpenter'), 'Espresso')
+  assert.equal(
+    cleanVideoTitle('Casa Tupka Anthem | Yo Yo Honey Singh | New Song 2026', 'Yo Yo Honey Singh'),
+    'Casa Tupka Anthem'
+  )
+  // A dash that isn't the artist's name stays
+  assert.equal(cleanVideoTitle('Love Me - Remix', 'Someone'), 'Love Me - Remix')
+  assert.equal(cleanVideoTitle('(Official Video)', 'X'), '(Official Video)')
 })

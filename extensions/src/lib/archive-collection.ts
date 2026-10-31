@@ -1,4 +1,4 @@
-import type { Extension, Options, TorrentResult } from '../sdk'
+import type { Extension, Options, Paged, TorrentResult } from '../sdk'
 
 /** [extra search clause, sort] for an Explore category, e.g. ['subject:(jazz)', 'downloads desc'] */
 export type Category = readonly [clause: string, sort: string]
@@ -26,6 +26,7 @@ export interface ArchiveDoc {
 }
 
 const ORIGIN = 'https://archive.org'
+const ROWS = 30
 const EXCLUDED = '-access-restricted-item:(true) AND -collection:(librivoxaudio OR audio_bookspoetry OR podcasts)'
 const FIELDS = ['identifier', 'title', 'creator', 'year', 'item_size', 'licenseurl']
 
@@ -72,7 +73,7 @@ export function toResult(doc: ArchiveDoc, tags: string[]): TorrentResult {
 export function archiveCollection(config: CollectionConfig): Extension {
   const mediatype = config.mediatype ?? 'mediatype:(audio)'
 
-  async function find(clause: string, sort: string, options: Options): Promise<TorrentResult[]> {
+  async function find(clause: string, sort: string, options: Options, page: number): Promise<Paged<TorrentResult>> {
     const extra = config.optionClause?.(options)
     const url = new URL('/advancedsearch.php', ORIGIN)
     url.searchParams.set(
@@ -81,14 +82,18 @@ export function archiveCollection(config: CollectionConfig): Extension {
     )
     for (const field of FIELDS) url.searchParams.append('fl[]', field)
     url.searchParams.append('sort[]', sort)
-    url.searchParams.set('rows', '30')
+    url.searchParams.set('rows', String(ROWS))
+    url.searchParams.set('page', String(page))
     url.searchParams.set('output', 'json')
     const res = await fetch(url)
     if (!res.ok) throw new Error(`archive.org answered ${res.status}`)
-    const body = (await res.json()) as { response: { docs: ArchiveDoc[] } }
-    return body.response.docs.map(doc =>
-      toResult(doc, [...(config.tags?.(doc) ?? []), ...licenseTags(String(first(doc.licenseurl) ?? ''))])
-    )
+    const body = (await res.json()) as { response: { docs: ArchiveDoc[]; numFound?: number } }
+    return {
+      results: body.response.docs.map(doc =>
+        toResult(doc, [...(config.tags?.(doc) ?? []), ...licenseTags(String(first(doc.licenseurl) ?? ''))])
+      ),
+      hasMore: (body.response.numFound ?? 0) > page * ROWS
+    }
   }
 
   return {
@@ -105,15 +110,15 @@ export function archiveCollection(config: CollectionConfig): Extension {
       return true
     },
 
-    async search({ query, options }) {
+    async search({ query, page = 1, options }) {
       const terms = words(query)
       if (terms.length === 0) return []
-      return find(terms.map(t => `(title:(${t}) OR creator:(${t}))`).join(' AND '), 'downloads desc', options)
+      return find(terms.map(t => `(title:(${t}) OR creator:(${t}))`).join(' AND '), 'downloads desc', options, page)
     },
 
-    async browse({ category, options }) {
+    async browse({ category, page = 1, options }) {
       const [clause, sort] = config.categories[category] ?? Object.values(config.categories)[0]
-      return find(clause, sort, options)
+      return find(clause, sort, options, page)
     }
   }
 }

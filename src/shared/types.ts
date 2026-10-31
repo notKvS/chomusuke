@@ -200,6 +200,8 @@ export interface ProviderSection {
   albums: SearchAlbum[]
   /** Set when this provider failed; other providers' results are still shown. */
   error?: string
+  /** The provider has another page of results (ask with searchMore / browse with the next page number). */
+  hasMore?: boolean
 }
 
 export interface SearchResults {
@@ -274,6 +276,8 @@ export interface ChomusukeApi {
   loadSource(source: string, hints?: SourceHints): Promise<LoadResult>
   openTorrentFile(): Promise<LoadResult | null>
   search(query: string): Promise<SearchResponse>
+  /** The next page of one source's albums for a search (page 2, 3…), when its section said `hasMore`. */
+  searchMore(sourceId: string, query: string, page: number): Promise<BrowseResponse>
   openResult(albumId: string): Promise<LoadResult>
   listProviders(): Promise<ProvidersResponse>
   saveTorznab(form: TorznabForm): Promise<ProvidersResponse>
@@ -284,7 +288,8 @@ export interface ChomusukeApi {
   setExtensionOptions(id: string, values: Record<string, string | boolean>): Promise<ProvidersResponse>
   testExtension(id: string): Promise<TestResponse>
   exploreSources(): Promise<ExploreSource[]>
-  browse(sourceId: string, categoryId: string): Promise<BrowseResponse>
+  /** One page (default 1) of a source's category. */
+  browse(sourceId: string, categoryId: string, page?: number): Promise<BrowseResponse>
   onStats(listener: (stats: TorrentStats[]) => void): () => void
   /** Window chrome that follows the theme: zoom factor and the native title-bar overlay colours. */
   setWindowAppearance(appearance: WindowAppearance): Promise<void>

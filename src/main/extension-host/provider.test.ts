@@ -45,8 +45,8 @@ test('search and browse pass the query/category and user options to the extensio
   assert.equal(albums.length, 2)
   await provider.browse?.('top', new AbortController().signal)
   assert.deepEqual(runtime.calls, [
-    ['search', { query: 'query', options: { apiKey: 'k' } }],
-    ['browse', { category: 'top', options: { apiKey: 'k' } }]
+    ['search', { query: 'query', page: 1, options: { apiKey: 'k' } }],
+    ['browse', { category: 'top', page: 1, options: { apiKey: 'k' } }]
   ])
 })
 
@@ -55,6 +55,34 @@ test('open validates magnets (stripping xs) and builds magnets from hashes', asy
   const { albums } = await provider.search('q', new AbortController().signal)
   assert.equal((await provider.open(albums[0])).torrent, `magnet:?xt=urn:btih:${HASH}`)
   assert.equal((await provider.open(albums[1])).torrent, `magnet:?xt=urn:btih:${HASH}`)
+})
+
+test('extensions can page: { results, hasMore } and the page number', async () => {
+  const pages: unknown[] = []
+  const runtime: ExtensionRuntime = {
+    async call(_method, args) {
+      const { page } = args as { page: number }
+      pages.push(page)
+      return page === 1 ? { results: [{ title: 'First', hash: HASH }], hasMore: true } : { results: [], hasMore: true }
+    }
+  }
+  const provider = createExtensionProvider(manifest, runtime, {})
+  assert.equal((await provider.search('q', new AbortController().signal)).hasMore, true)
+  // An empty page never claims more, whatever the extension says.
+  assert.equal((await provider.browse?.('top', new AbortController().signal, 2))?.hasMore, false)
+  assert.deepEqual(pages, [1, 2])
+  // A plain list means a single page
+  assert.equal(
+    (await createExtensionProvider(manifest, fakeRuntime(), {}).search('q', new AbortController().signal)).hasMore,
+    false
+  )
+  await assert.rejects(
+    createExtensionProvider(manifest, { call: async () => ({ results: 'nope' }) }, {}).search(
+      'q',
+      new AbortController().signal
+    ),
+    /invalid response/
+  )
 })
 
 test('testExtension', async () => {
@@ -95,7 +123,7 @@ test('a chart extension browses entries and opens them through findRelease', asy
   assert.deepEqual(await provider.search('anything', new AbortController().signal), { albums: [], songs: [] })
 
   const { albums } = (await provider.browse?.('top', new AbortController().signal)) ?? { albums: [] }
-  assert.deepEqual(calls, [['browse', { category: 'top', options: { country: 'gb' } }]])
+  assert.deepEqual(calls, [['browse', { category: 'top', page: 1, options: { country: 'gb' } }]])
   assert.equal(albums[0].chart, 'song')
   await provider.open(albums[0])
   assert.deepEqual(wanted, [{ kind: 'song', title: 'Espresso', artist: 'Sabrina Carpenter', album: 'Short n’ Sweet' }])

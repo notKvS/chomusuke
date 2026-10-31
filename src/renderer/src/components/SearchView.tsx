@@ -1,5 +1,7 @@
-import type { ProviderSection, SearchAlbum, SearchResults, SearchSong } from '../../../shared/types'
+import { useEffect, useRef, useState } from 'react'
+import type { BrowseResponse, ProviderSection, SearchAlbum, SearchResults, SearchSong } from '../../../shared/types'
 import { formatBytes, formatTime, plural } from '../format'
+import { ArtistLink } from './ArtistLink'
 import { Card } from './Card'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
@@ -117,25 +119,112 @@ export function SearchView({ search, isPlaying, onPlaySong, onOpenAlbum, onRetry
         .filter(section => section.layout === 'list')
         .concat(results.sections.filter(section => section.layout !== 'list'))
         .map(section => (
-          <Section key={section.id} section={section} onOpenAlbum={onOpenAlbum} />
+          <Section key={section.id} section={section} query={search.query} onOpenAlbum={onOpenAlbum} />
         ))}
     </div>
   )
 }
 
-function Section({ section, onOpenAlbum }: { section: ProviderSection; onOpenAlbum: Props['onOpenAlbum'] }) {
+function Section({
+  section,
+  query,
+  onOpenAlbum
+}: {
+  section: ProviderSection
+  query: string
+  onOpenAlbum: Props['onOpenAlbum']
+}) {
   if (!section.error && section.albums.length === 0) return null
   return (
     <section className="shelf">
       <p className="shelf__eyebrow">{section.layout === 'list' ? 'Torrents' : 'Albums'}</p>
       <h2 className="shelf__title">{section.name}</h2>
-      <SectionBody section={section} onOpenAlbum={onOpenAlbum} />
+      <SectionBody
+        section={section}
+        onOpenAlbum={onOpenAlbum}
+        fetchPage={page => window.chomusuke.searchMore(section.id, query, page)}
+      />
     </section>
   )
 }
 
+/**
+ * A section's albums plus any later pages loaded with "Load more". Starts over whenever a new first page arrives
+ * (another search, category or source).
+ */
+function usePages(section: ProviderSection, fetchPage?: (page: number) => Promise<BrowseResponse>) {
+  const [more, setMore] = useState<{ albums: SearchAlbum[]; page: number; hasMore: boolean }>({
+    albums: [],
+    page: 1,
+    hasMore: Boolean(section.hasMore)
+  })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const generation = useRef(0)
+
+  useEffect(() => {
+    generation.current++
+    setMore({ albums: [], page: 1, hasMore: Boolean(section.hasMore) })
+    setLoading(false)
+    setError(null)
+  }, [section])
+
+  const loadMore = async () => {
+    if (!fetchPage || loading) return
+    const current = generation.current
+    setLoading(true)
+    setError(null)
+    const response = await fetchPage(more.page + 1)
+    if (current !== generation.current) return
+    setLoading(false)
+    if (!response.ok || response.section.error) {
+      setError(response.ok ? (response.section.error ?? null) : response.error)
+      return
+    }
+    const added = response.section.albums
+    setMore(prev => {
+      const seen = new Set([...section.albums, ...prev.albums].map(album => album.id))
+      const fresh = added.filter(album => !seen.has(album.id))
+      return {
+        albums: [...prev.albums, ...fresh],
+        page: prev.page + 1,
+        hasMore: Boolean(response.section.hasMore) && fresh.length > 0
+      }
+    })
+  }
+
+  return {
+    albums: more.albums.length > 0 ? [...section.albums, ...more.albums] : section.albums,
+    canLoadMore: fetchPage !== undefined && more.hasMore,
+    loading,
+    error,
+    loadMore
+  }
+}
+
+/** "Album • Artist • 2024", with the artist searchable. */
+function AlbumSubtitle({ album }: { album: SearchAlbum }) {
+  return (
+    <>
+      {album.chart === 'song' ? 'Song' : 'Album'} •{' '}
+      {album.artist ? <ArtistLink name={album.artist} /> : 'Unknown artist'}
+      {album.year && ` • ${album.year}`}
+    </>
+  )
+}
+
 /** A provider's albums: artwork cards, or torrent-release rows. Shared by Search and Explore. */
-export function SectionBody({ section, onOpenAlbum }: { section: ProviderSection; onOpenAlbum: Props['onOpenAlbum'] }) {
+export function SectionBody({
+  section,
+  onOpenAlbum,
+  fetchPage
+}: {
+  section: ProviderSection
+  onOpenAlbum: Props['onOpenAlbum']
+  /** Loads page 2, 3… when the section has more */
+  fetchPage?: (page: number) => Promise<BrowseResponse>
+}) {
+  const pages = usePages(section, fetchPage)
   return (
     <>
       {section.error && (
@@ -146,20 +235,22 @@ export function SectionBody({ section, onOpenAlbum }: { section: ProviderSection
       )}
       {section.layout === 'cards' ? (
         <div className="shelf__grid">
-          {section.albums.map((album, index) => (
+          {pages.albums.map((album, index) => (
             <Card
               key={album.id}
               artwork={album.artwork}
               title={album.title}
-              subtitle={albumSubtitle(album)}
+              subtitle={<AlbumSubtitle album={album} />}
+              subtitleText={albumSubtitle(album)}
               badge={album.license ?? (album.chart ? `#${index + 1}` : undefined)}
+              tags={album.tags}
               onOpen={autoplay => onOpenAlbum(album, autoplay)}
             />
           ))}
         </div>
       ) : (
         <ol className="song-list">
-          {section.albums.map(album => (
+          {pages.albums.map(album => (
             <li key={album.id} className="release">
               <button
                 type="button"
@@ -201,6 +292,27 @@ export function SectionBody({ section, onOpenAlbum }: { section: ProviderSection
             </li>
           ))}
         </ol>
+      )}
+      {(pages.canLoadMore || pages.error) && (
+        <div className="load-more">
+          {pages.error && (
+            <p className="section-error">
+              <Icon name="error" size={18} />
+              {pages.error}
+            </p>
+          )}
+          {pages.canLoadMore && (
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => void pages.loadMore()}
+              disabled={pages.loading}
+              aria-busy={pages.loading}
+            >
+              {pages.loading ? 'Loading…' : pages.error ? 'Try again' : 'Load more'}
+            </button>
+          )}
+        </div>
       )}
     </>
   )

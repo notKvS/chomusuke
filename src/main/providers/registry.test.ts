@@ -216,3 +216,33 @@ test('opening a chart entry goes through its provider', async () => {
   await registry.open(section.albums[0].id)
   assert.deepEqual(charts.opened, ['chart-ref'])
 })
+
+test('search sections say when a provider has more, and searchMore pages one provider', async () => {
+  const registry = new ProviderRegistry()
+  const pages: Array<number | undefined> = []
+  const paged = fakeProvider('torznab-1', {
+    search: async (_query, _signal, page) => {
+      pages.push(page)
+      return { albums: [album(`p${page ?? 1}`, `Page ${page ?? 1}`)], songs: [], hasMore: (page ?? 1) < 2 }
+    }
+  })
+  registry.setProviders([paged, chartProvider()])
+  const { sections } = await registry.search('q', new AbortController().signal)
+  assert.equal(sections[0].hasMore, true)
+
+  const more = await registry.searchMore('torznab-1', 'q', 2, new AbortController().signal)
+  assert.deepEqual(
+    more.albums.map(a => a.title),
+    ['Page 2']
+  )
+  assert.equal(more.hasMore, undefined)
+  assert.deepEqual(pages, [undefined, 2])
+  await registry.open(more.albums[0].id)
+  assert.deepEqual(paged.opened, ['p2'])
+
+  for (const bad of [0, 1.5, 21, '2', null]) {
+    await assert.rejects(registry.searchMore('torznab-1', 'q', bad, new AbortController().signal), /page/)
+  }
+  await assert.rejects(registry.searchMore('ext-charts', 'q', 2, new AbortController().signal), /no longer available/)
+  await assert.rejects(registry.browse('ext-charts', 'top', new AbortController().signal, 99), /page/)
+})

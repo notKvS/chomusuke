@@ -147,12 +147,12 @@ function ExtensionsSection({ extensions, apply, onToggle, onRemove }: Extensions
     <section className="shelf">
       <h2 className="shelf__title">Extensions</h2>
       <p className="sources__help">
-        Extensions add sources. The Internet Archive collections and the charts (Apple Music, ListenBrainz) come
-        switched on; the tracker templates (The Pirate Bay, 1337x, Nyaa, Knaben, LimeTorrents) come switched off — turn
-        one on and press Test to use it. Charts list top albums and songs in Explore and play them by searching your
-        other sources, so they need at least one tracker or indexer that carries popular music. To add more, paste the
-        URL of an extension repository (a JSON manifest). Each extension runs in an isolated sandbox and can only reach
-        the websites it declares. Only install repositories you trust.
+        Extensions add sources. The Internet Archive collections and the charts (Spotify, YouTube Music, Apple Music,
+        ListenBrainz) come switched on; the tracker templates (The Pirate Bay, 1337x, Nyaa, Knaben, LimeTorrents) come
+        switched off — turn one on and press Test to use it. Charts list top albums and songs in Explore and play them
+        by searching your other sources, so they need at least one tracker or indexer that carries popular music. To add
+        more, paste the URL of an extension repository (a JSON manifest). Each extension runs in an isolated sandbox and
+        can only reach the websites it declares. Only install repositories you trust.
       </p>
 
       {extensions.map(provider => (

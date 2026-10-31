@@ -2,7 +2,8 @@
 // into extensions/dist, and embedded into the main bundle at build time.
 // Installed on first launch and refreshed when the bundled version changes; users can still disable or remove them.
 // The tracker templates (The Pirate Bay … LimeTorrents) install switched off: see docs/sources.md.
-// The charts (Apple Music, ListenBrainz) list top albums/songs and play them through the torrent sources.
+// The charts (Spotify, YouTube Music, Apple Music, ListenBrainz) list top albums/songs and play them through the
+// torrent sources.
 
 import x1337x from '../../../extensions/dist/1337x.js?raw'
 import appleMusicCharts from '../../../extensions/dist/apple-music-charts.js?raw'
@@ -16,7 +17,9 @@ import liveMusicArchive from '../../../extensions/dist/live-music-archive.js?raw
 import netlabels from '../../../extensions/dist/netlabels.js?raw'
 import nyaa from '../../../extensions/dist/nyaa.js?raw'
 import publicDomainClassical from '../../../extensions/dist/public-domain-classical.js?raw'
+import spotifyCharts from '../../../extensions/dist/spotify-charts.js?raw'
 import thePirateBay from '../../../extensions/dist/the-pirate-bay.js?raw'
+import youtubeMusicCharts from '../../../extensions/dist/youtube-music-charts.js?raw'
 import repository from '../../../extensions/index.json?raw'
 import { type ExtensionManifest, parseRepository } from './manifest.ts'
 
@@ -36,7 +39,9 @@ const CODE: Record<string, string> = {
   'netlabels.js': netlabels,
   'nyaa.js': nyaa,
   'public-domain-classical.js': publicDomainClassical,
-  'the-pirate-bay.js': thePirateBay
+  'spotify-charts.js': spotifyCharts,
+  'the-pirate-bay.js': thePirateBay,
+  'youtube-music-charts.js': youtubeMusicCharts
 }
 
 /** The extensions shipped in the app bundle, validated like any repository; entries without bundled code are skipped. */

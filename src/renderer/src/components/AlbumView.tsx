@@ -4,6 +4,7 @@ import { formatBytes, formatSpeed, formatTime, plural } from '../format'
 import type { Playlists } from '../usePlaylists'
 import type { Ratings } from '../useRatings'
 import { AddToPlaylist } from './AddToPlaylist'
+import { ArtistLink } from './ArtistLink'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
 import { LoaderScene } from './mascot/LoaderScene'
@@ -49,7 +50,15 @@ export function AlbumView({
         <Cover src={album.coverUrl} className="album__cover" />
         <div className="album__meta">
           <h1 className="album__title">{album.title}</h1>
-          <p className="album__subtitle">Album{album.artist && <> • {album.artist}</>}</p>
+          <p className="album__subtitle">
+            Album
+            {album.artist && (
+              <>
+                {' '}
+                • <ArtistLink name={album.artist} />
+              </>
+            )}
+          </p>
           <p className="album__details">
             {plural(album.tracks.length, 'song')} • {formatBytes(album.totalSize)}
           </p>

@@ -1,6 +1,54 @@
 [
   {
     "manifestVersion": 1,
+    "id": "spotify-charts",
+    "name": "Spotify charts",
+    "description": "Spotify's weekly global top songs and albums, plus daily and weekly top songs for any country (via kworb.net). Plays each one through your torrent sources.",
+    "version": "1.0.0",
+    "type": "chart",
+    "code": "spotify-charts.js",
+    "hosts": ["charts-spotify-com-service.spotify.com", "kworb.net"],
+    "layout": "cards",
+    "categories": [
+      { "id": "global-songs", "name": "Top songs (global, weekly)" },
+      { "id": "global-albums", "name": "Top albums (global, weekly)" },
+      { "id": "country-daily", "name": "Top songs today" },
+      { "id": "country-weekly", "name": "Top songs this week" }
+    ],
+    "options": {
+      "country": {
+        "type": "string",
+        "label": "Country",
+        "description": "Two-letter code for the daily/weekly charts, e.g. us, gb, in; blank for global",
+        "default": ""
+      }
+    }
+  },
+  {
+    "manifestVersion": 1,
+    "id": "youtube-music-charts",
+    "name": "YouTube Music charts",
+    "description": "The weekly top songs and music videos on YouTube, worldwide or for one country (charts.youtube.com). Plays each one through your torrent sources.",
+    "version": "1.0.0",
+    "type": "chart",
+    "code": "youtube-music-charts.js",
+    "hosts": ["charts.youtube.com"],
+    "layout": "cards",
+    "categories": [
+      { "id": "top-songs", "name": "Top songs this week" },
+      { "id": "top-videos", "name": "Top music videos this week" }
+    ],
+    "options": {
+      "country": {
+        "type": "string",
+        "label": "Country",
+        "description": "Two-letter code, e.g. us, gb, in; blank for global",
+        "default": ""
+      }
+    }
+  },
+  {
+    "manifestVersion": 1,
     "id": "apple-music-charts",
     "name": "Apple Music charts",
     "description": "Most played on Apple Music, plus the iTunes Store's top albums and songs overall and by genre. Plays each one through your torrent sources.",

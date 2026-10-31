@@ -91,7 +91,11 @@ function ExploreShelf({ source, onOpenAlbum }: { source: ExploreSource; onOpenAl
         (shelf.section.albums.length === 0 && !shelf.section.error ? (
           <p className="sources__help">Nothing here right now.</p>
         ) : (
-          <SectionBody section={shelf.section} onOpenAlbum={onOpenAlbum} />
+          <SectionBody
+            section={shelf.section}
+            onOpenAlbum={onOpenAlbum}
+            fetchPage={page => window.chomusuke.browse(source.id, category, page)}
+          />
         ))}
     </section>
   )

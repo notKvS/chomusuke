@@ -35,8 +35,15 @@ no torrents of their own: opening an entry searches your other enabled sources f
 
 | Extension | Source file | Catalogue | Explore categories | Options |
 |---|---|---|---|---|
+| Spotify charts | `spotify-charts.ts` | Spotify's public chart feed (global weekly) and kworb.net's copies of every Spotify country chart (HTML) | Top songs and albums (global, weekly), top songs today / this week | Country (two-letter code; blank = global) |
+| YouTube Music charts | `youtube-music-charts.ts` | The endpoint behind charts.youtube.com (undocumented, no key) | Top songs, top music videos (weekly) | Country (two-letter code; blank = global) |
 | Apple Music charts | `apple-music-charts.ts` | Apple Music most-played feed and iTunes Store top charts (public JSON, no key) | Most played songs/albums, iTunes top songs/albums, 12 genres | Country (two-letter store code) |
 | ListenBrainz charts | `listenbrainz-charts.ts` | ListenBrainz sitewide listening statistics (public API, no key) | Top albums/songs this week and month, albums this year and all time | — |
+
+Spotify's own feed has no country charts without a login, which is why those come from kworb.net; kworb pages
+carry no artwork. YouTube Music's endpoint isn't a documented API and may change; video titles are cleaned up
+("Artist - Song (Official Video)" → "Song") before matching. Deezer's chart API was left out: it returns empty charts
+in some regions.
 
 **How an entry is found** (`src/main/providers/chart-match.ts`, `ProviderRegistry.findRelease`):
 
@@ -118,6 +125,18 @@ them until they remove them.
      (`{ kind: 'album' | 'song', title, artist, album?, artwork? }`), and the manifest says `"type": "chart"` with at
      least one category. Copy `listenbrainz-charts.ts`. Artwork shows only from hosts allowed by the `img-src` policy
      in `src/renderer/index.html`.
+
+   **What the app does with what you return** (types in `extensions/src/sdk.ts`):
+
+   | Field / shape | Shown as |
+   |---|---|
+   | `title`, `artist`, `year` | Card or row text; the artist is a link that searches every source for them |
+   | `artwork` (https) | Card cover (`"layout": "cards"`) |
+   | `tags` (up to 4, ≤ 12 characters) | Chips on cards and release rows (formats, licences, genres…) |
+   | `seeders`, `size` | Release-row details (`"layout": "list"`) and match ranking for charts |
+   | `{ results, hasMore: true }` instead of a plain list | A **Load more** button; the next call gets `page: 2`, then 3… (up to 20) |
+
+   Every call gets `page` (1 for the first). Returning a plain list means "that's all"; old extensions keep working.
 2. Add its manifest entry to `extensions/index.json`: `"code": "<id>.js"`, the hosts it may reach, categories,
    options, and `"enabledByDefault": false` if it should install switched off. To ship it with the app, also
    add it to `src/main/extension-host/defaults.ts`.

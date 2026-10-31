@@ -20,9 +20,10 @@ import type { ProviderAlbum } from '../providers/types.ts'
  * }
  *
  * Extension module: export default {
- *   test?(ctx) → true | throw, search(ctx: { query, options }) → TorrentResult[],
- *   browse?(ctx: { category, options }) → TorrentResult[]            (chart: browse → ChartEntry[], no search)
+ *   test?(ctx) → true | throw, search(ctx: { query, page, options }) → TorrentResult[],
+ *   browse?(ctx: { category, page, options }) → TorrentResult[]      (chart: browse → ChartEntry[], no search)
  * }
+ * Any list may instead be `{ results: [...], hasMore: true }` to offer the next page (`page` starts at 1).
  * TorrentResult: { title, link?: magnet | https .torrent URL, hash?: 40-hex, size?, seeders?, leechers?,
  *                  artist?, year?, artwork?: https URL, tags?: string[] }  (link or hash required)
  * ChartEntry: { kind: 'album' | 'song', title, artist, album?: string (songs), year?, artwork?, tags? }

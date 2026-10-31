@@ -42,6 +42,8 @@ test('light mode flips the canvas and overlays', () => {
 
 test('glow 0 turns glows off; frosted is stronger than glass', () => {
   assert.equal(computeTheme({ ...DEFAULT_APPEARANCE, glow: 0 }).tokens['--glow'], 'none')
+  assert.equal(computeTheme({ ...DEFAULT_APPEARANCE, glow: 0 }).tokens['--glow-strong'], 'none')
+  assert.match(computeTheme(DEFAULT_APPEARANCE).tokens['--glow-strong'], /^0 0 16px .*, 0 0 40px /)
   const glass = computeTheme({ ...DEFAULT_APPEARANCE, surface: 'glass' }).tokens
   const frosted = computeTheme({ ...DEFAULT_APPEARANCE, surface: 'frosted' }).tokens
   assert.ok(Number(frosted['--panel-alpha']) > Number(glass['--panel-alpha']))

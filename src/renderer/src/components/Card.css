@@ -90,16 +90,29 @@
     text-overflow: ellipsis;
   }
 
-  .card__badge {
-    align-self: flex-start;
+  .card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
     margin-top: 8px;
+  }
+
+  .card__badge,
+  .card__tag {
     padding: 1px 6px;
     border: 1px solid var(--border);
     font-size: 11px;
     letter-spacing: 0.3px;
+    border-radius: 999px;
+  }
+
+  .card__badge {
     border-color: rgb(var(--accent-soft-rgb) / 0.35);
     color: var(--accent-light);
-    border-radius: 999px;
+  }
+
+  .card__tag {
+    color: var(--text-2);
   }
 
   .card:hover .card__art {

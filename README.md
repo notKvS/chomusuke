@@ -8,14 +8,16 @@ Desktop music player that streams audio straight from torrents 🎶
   with tracks, artist and cover.
 - ▶️ **Streaming playback** — starts as soon as the first pieces arrive; seeking, album queue, media keys and OS media
   controls.
-- 🔍 **Search** across all enabled sources at once.
+- 🔍 **Search** across all enabled sources at once, with **Load more** for sources that have more pages. Click an
+  artist's name (album page, player, cards) to search for everything by them.
 - 🧭 **Explore** each source by category (trending, top charts, lossless, genres…).
-- 📈 **Charts** — Apple Music / iTunes and ListenBrainz top albums and songs on Explore. Pick one and Chomusuke
-  finds it on your torrent sources and plays it (a chart song starts at that song).
+- 📈 **Charts** — Spotify, YouTube Music, Apple Music / iTunes and ListenBrainz top albums and songs on Explore,
+  worldwide or by country. Pick one and Chomusuke finds it on your torrent sources and plays it (a chart song starts
+  at that song).
 - 🔌 **Sources**
   - Internet Archive (built in).
   - Torznab indexers, with API keys stored in the OS credential store.
-  - Extensions: TypeScript sources running in a sandbox. Six Internet Archive collections and two charts are bundled
+  - Extensions: TypeScript sources running in a sandbox. Six Internet Archive collections and four charts are bundled
     and on; five public-tracker templates (The Pirate Bay, 1337x, Nyaa, Knaben, LimeTorrents) are bundled and off.
 - 📄 **Torrent details** — files, trackers, pieces, peers and transfer stats; save the `.torrent` file or copy the
   magnet link.

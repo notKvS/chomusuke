@@ -33,6 +33,18 @@ function magnetOrThrow(uri: string): string {
 }
 
 /**
+ * An extension answers with a list (one page only) or `{ results, hasMore }` when it can page. Anything else is
+ * passed through so the sanitizers reject it.
+ */
+export function unpage(raw: unknown): { items: unknown; hasMore: boolean } {
+  if (typeof raw === 'object' && raw !== null && !Array.isArray(raw) && 'results' in raw) {
+    const { results, hasMore } = raw as { results: unknown; hasMore?: unknown }
+    return { items: results, hasMore: hasMore === true }
+  }
+  return { items: raw, hasMore: false }
+}
+
+/**
  * Adapts an extension to the provider interface. Whatever the extension returns is re-validated, and opening a result
  * downloads only from the extension's declared hosts (or uses its magnet link), with private trackers stripped.
  * Chart extensions never supply torrents: their entries open through `findRelease`.
@@ -47,20 +59,22 @@ export function createExtensionProvider(
   const results = async (
     method: ExtensionMethod,
     args: Record<string, unknown>,
-    signal: AbortSignal
-  ): Promise<ProviderResults> => ({
-    albums: sanitizeResults(await runtime.call(method, { ...args, options }, signal), manifest),
-    songs: []
-  })
+    signal: AbortSignal,
+    page = 1
+  ): Promise<ProviderResults> => {
+    const { items, hasMore } = unpage(await runtime.call(method, { ...args, page, options }, signal))
+    const albums = sanitizeResults(items, manifest)
+    return { albums, songs: [], hasMore: hasMore && albums.length > 0 }
+  }
   const browsable = manifest.categories.length > 0
 
   return {
     id: extensionProviderId(manifest),
     name: manifest.name,
     layout: manifest.layout,
-    search: (query, signal) => results('search', { query }, signal),
+    search: (query, signal, page) => results('search', { query }, signal, page),
     categories: browsable ? manifest.categories : undefined,
-    browse: browsable ? (category, signal) => results('browse', { category }, signal) : undefined,
+    browse: browsable ? (category, signal, page) => results('browse', { category }, signal, page) : undefined,
 
     async open(album, signal): Promise<Playable> {
       let ref: { link?: string; hash?: string }
@@ -116,10 +130,11 @@ function createChartProvider(
     chart: true,
     search: async () => ({ albums: [], songs: [] }),
     categories: manifest.categories,
-    browse: async (category, signal) => ({
-      albums: sanitizeChartEntries(await runtime.call('browse', { category, options }, signal), manifest),
-      songs: []
-    }),
+    browse: async (category, signal, page = 1) => {
+      const { items, hasMore } = unpage(await runtime.call('browse', { category, page, options }, signal))
+      const albums = sanitizeChartEntries(items, manifest)
+      return { albums, songs: [], hasMore: hasMore && albums.length > 0 }
+    },
 
     async open(album, signal): Promise<Playable> {
       let wanted: ChartWanted

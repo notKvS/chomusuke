@@ -362,6 +362,12 @@ export function computeTheme(a: Appearance): ThemeOutput {
       glow > 0
         ? `0 0 ${Math.round(24 * glow)}px rgb(${channels(accent)} / ${Math.min(0.8, 0.35 * glow).toFixed(2)})`
         : 'none',
+    // The "Glow" button style: a bigger two-colour halo, scaled by the same slider.
+    '--glow-strong':
+      glow > 0
+        ? `0 0 ${Math.round(16 * glow)}px rgb(${channels(accent)} / ${Math.min(0.9, 0.6 * glow).toFixed(2)}), ` +
+          `0 0 ${Math.round(40 * glow)}px rgb(${channels(accent2)} / ${Math.min(0.7, 0.35 * glow).toFixed(2)})`
+        : 'none',
     '--radius': `${a.radius}px`,
     '--btn-radius': BUTTON_RADII[a.buttonShape],
     '--font-body': FONT_STACKS[a.font][0],

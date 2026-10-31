@@ -16,11 +16,12 @@ export interface MusicProvider {
   readonly name: string
   /** How the UI lays out this provider's albums: artwork cards, or rows for torrent releases. */
   readonly layout: 'cards' | 'list'
-  search(query: string, signal: AbortSignal): Promise<ProviderResults>
+  /** `page` starts at 1; later pages are only asked for when the previous one said `hasMore`. */
+  search(query: string, signal: AbortSignal, page?: number): Promise<ProviderResults>
   open(album: ProviderAlbum, signal?: AbortSignal): Promise<Playable>
   /** Categories for the Explore page (trending, genres, formats…). Omit if the source can't be browsed. */
   readonly categories?: SourceCategory[]
-  browse?(categoryId: string, signal: AbortSignal): Promise<ProviderResults>
+  browse?(categoryId: string, signal: AbortSignal, page?: number): Promise<ProviderResults>
   /**
    * Chart sources (top albums/songs) list music without torrents: they're only browsed, never searched, and
    * opening an entry finds a matching release on the other providers (see ProviderRegistry.findRelease).
@@ -62,6 +63,8 @@ export interface ProviderSong {
 export interface ProviderResults {
   albums: ProviderAlbum[]
   songs: ProviderSong[]
+  /** Another page of albums can be asked for. */
+  hasMore?: boolean
 }
 
 export type Playable = {

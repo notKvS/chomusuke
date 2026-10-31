@@ -5,6 +5,7 @@ import type { Player } from '../usePlayer'
 import type { Playlists } from '../usePlaylists'
 import type { Ratings } from '../useRatings'
 import { AddToPlaylist } from './AddToPlaylist'
+import { ArtistLink } from './ArtistLink'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
 import { RateButtons } from './RateButtons'
@@ -94,15 +95,25 @@ export function PlayerBar({ player, stats, onOpenAlbum, ratings, playlists, queu
         </span>
       </div>
 
-      <button type="button" className="player__now" onClick={onOpenAlbum} title="Go to album">
-        <Cover src={state.album.coverUrl} size={40} />
+      <div className="player__now">
+        <button type="button" className="player__now-cover" onClick={onOpenAlbum} title="Go to album">
+          <Cover src={state.album.coverUrl} size={40} />
+        </button>
         <span className="player__text">
-          <span className="player__title">{track.title}</span>
+          <button type="button" className="player__title" onClick={onOpenAlbum} title="Go to album">
+            {track.title}
+          </button>
           <span className="player__subtitle">
-            {[track.artist, state.album.title, queue && `from ${queue.label}`].filter(Boolean).join(' • ')}
+            {track.artist && (
+              <>
+                <ArtistLink name={track.artist} />
+                {' • '}
+              </>
+            )}
+            {[state.album.title, queue && `from ${queue.label}`].filter(Boolean).join(' • ')}
           </span>
         </span>
-      </button>
+      </div>
 
       <div className="player__side">
         <AddToPlaylist

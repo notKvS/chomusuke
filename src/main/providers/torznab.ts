@@ -199,14 +199,18 @@ export function createTorznabProvider(config: TorznabConfig): MusicProvider {
     }
   }
 
-  const releases = async (params: Record<string, string>, signal: AbortSignal): Promise<ProviderResults> => {
-    const albums = parseTorznab(await request(params, signal))
+  const releases = async (params: Record<string, string>, signal: AbortSignal, page = 1): Promise<ProviderResults> => {
+    const items = parseTorznab(
+      await request({ ...params, ...(page > 1 ? { offset: String((page - 1) * MAX_RESULTS) } : {}) }, signal)
+    )
+    const albums = items
       .filter(isAudio)
       .sort((a, b) => (b.seeders ?? -1) - (a.seeders ?? -1))
       .map(toAlbum)
       .filter((album): album is ProviderAlbum => album !== undefined)
       .slice(0, MAX_RESULTS)
-    return { albums, songs: [] }
+    // A full page means the indexer probably has more.
+    return { albums, songs: [], hasMore: items.length >= MAX_RESULTS }
   }
 
   return {
@@ -214,7 +218,7 @@ export function createTorznabProvider(config: TorznabConfig): MusicProvider {
     name: config.name,
     layout: 'list',
 
-    async search(query, signal): Promise<ProviderResults> {
+    async search(query, signal, page): Promise<ProviderResults> {
       const q = query
         .replace(/[\p{Cc}]/gu, ' ')
         .trim()
@@ -222,16 +226,17 @@ export function createTorznabProvider(config: TorznabConfig): MusicProvider {
       if (!q) return { albums: [], songs: [] }
       return releases(
         { t: 'search', q, cat: String(AUDIO_CATEGORY), limit: String(MAX_RESULTS), extended: '1' },
-        signal
+        signal,
+        page
       )
     },
 
     categories: TORZNAB_CATEGORIES.map(({ id, name }) => ({ id, name })),
 
     // An empty query returns the indexer's newest releases (its RSS feed); ranked by seeders that's "what's hot".
-    browse(categoryId, signal) {
+    browse(categoryId, signal, page) {
       if (!TORZNAB_CATEGORIES.some(c => c.id === categoryId)) throw new TorznabError('Unknown category.')
-      return releases({ t: 'search', cat: categoryId, limit: String(MAX_RESULTS), extended: '1' }, signal)
+      return releases({ t: 'search', cat: categoryId, limit: String(MAX_RESULTS), extended: '1' }, signal, page)
     },
 
     async open(album, signal): Promise<Playable> {

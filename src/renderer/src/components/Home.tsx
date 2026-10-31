@@ -1,5 +1,6 @@
 import type { Album } from '../../../shared/types'
 import { FEATURED, type FeaturedAlbum } from '../featured'
+import { ArtistLink } from './ArtistLink'
 import { Card } from './Card'
 import { Chomu } from './mascot/Chomu'
 import './Home.css'
@@ -55,7 +56,8 @@ export function Home({ albums, onOpenFeatured, onOpenAlbum }: Props) {
                 key={album.infoHash}
                 artwork={album.coverUrl}
                 title={album.title}
-                subtitle={`Album • ${album.artist ?? 'Torrent'}`}
+                subtitle={<>Album • {album.artist ? <ArtistLink name={album.artist} /> : 'Torrent'}</>}
+                subtitleText={`Album • ${album.artist ?? 'Torrent'}`}
                 onOpen={autoplay => onOpenAlbum(album.infoHash, autoplay)}
               />
             ))}
@@ -72,7 +74,12 @@ export function Home({ albums, onOpenFeatured, onOpenAlbum }: Props) {
               key={album.id}
               artwork={album.artwork}
               title={album.title}
-              subtitle={`Album • ${album.artist}`}
+              subtitle={
+                <>
+                  Album • <ArtistLink name={album.artist} />
+                </>
+              }
+              subtitleText={`Album • ${album.artist}`}
               badge={album.license}
               onOpen={autoplay => onOpenFeatured(album, autoplay)}
             />

@@ -7,7 +7,14 @@ import knaben from '../src/knaben.ts'
 import { decodeEntities, parseRelease, parseSize, siteOrigin } from '../src/lib/torrent-kit.ts'
 import limetorrents, { parseListing as parseLime } from '../src/limetorrents.ts'
 import nyaa from '../src/nyaa.ts'
+import type { Paged } from '../src/sdk.ts'
 import thePirateBay from '../src/the-pirate-bay.ts'
+
+/** The results of a search, whether or not the extension pages them. */
+const list = async <T>(paged: Promise<Paged<T>>): Promise<T[]> => {
+  const value = await paged
+  return Array.isArray(value) ? value : value.results
+}
 
 const HASH = 'a'.repeat(40)
 const HASH2 = 'b'.repeat(40)
@@ -102,7 +109,7 @@ describe('The Pirate Bay', () => {
 
   it('searches music categories, drops audiobooks and sorts by seeders', async () => {
     stub([[/apibay\.org\/q\.php/, json(items)]])
-    const results = await thePirateBay.search({ query: 'pink floyd', options: {} })
+    const results = await list(thePirateBay.search({ query: 'pink floyd', options: {} }))
     assert.match(requests[0].url, /q=pink\+floyd&cat=101%2C104/)
     assert.deepEqual(
       results.map(r => r.title),
@@ -133,12 +140,12 @@ describe('The Pirate Bay', () => {
         ])
       ]
     ])
-    assert.deepEqual(await thePirateBay.search({ query: 'zzzz', options: {} }), [])
+    assert.deepEqual(await list(thePirateBay.search({ query: 'zzzz', options: {} })), [])
   })
 
   it('browses the precompiled top lists', async () => {
     stub([[/precompiled\/data_top100_104\.json$/, json(items)]])
-    const results = await thePirateBay.browse!({ category: 'top-flac', options: {} })
+    const results = await list(thePirateBay.browse!({ category: 'top-flac', options: {} }))
     assert.deepEqual(
       results.map(r => r.title),
       ['The Dark Side of the Moon']
@@ -186,7 +193,7 @@ describe('1337x', () => {
       ],
       [/\/torrent\/5551235\//, html('<p>removed</p>')]
     ])
-    const results = await x1337x.search({ query: 'radiohead', options: {} })
+    const results = await list(x1337x.search({ query: 'radiohead', options: {} }))
     assert.equal(requests[0].url, 'https://1337x.to/sort-category-search/radiohead/Music/seeders/desc/1/')
     assert.equal(results.length, 1)
     assert.equal(results[0].title, 'OK Computer')
@@ -230,7 +237,7 @@ const NYAA_FEED = `<?xml version="1.0" encoding="utf-8"?>
 describe('Nyaa', () => {
   it('parses the RSS feed into torrent results', async () => {
     stub([[/nyaa\.si\/\?page=rss/, html(NYAA_FEED)]])
-    const results = await nyaa.search({ query: 'aimer', options: { trustedOnly: true } })
+    const results = await list(nyaa.search({ query: 'aimer', options: { trustedOnly: true } }))
     assert.equal(requests[0].url, 'https://nyaa.si/?page=rss&q=aimer&c=2_0&f=2&s=seeders&o=desc')
     assert.equal(results.length, 2)
     const [first, second] = results
@@ -273,7 +280,7 @@ describe('Knaben', () => {
 
   it('POSTs a JSON search and maps hits', async () => {
     stub([[/api\.knaben\.org\/v1$/, json(hits)]])
-    const results = await knaben.search({ query: 'metallica', options: {} })
+    const results = await list(knaben.search({ query: 'metallica', options: {} }))
     const body = JSON.parse(String(requests[0].init?.body))
     assert.equal(requests[0].init?.method, 'POST')
     assert.equal(body.query, 'metallica')
@@ -325,7 +332,7 @@ describe('LimeTorrents', () => {
         html(`<a class="csprite_dltorrent" href="magnet:?xt=urn:btih:${HASH2}&amp;dn=Adele">Magnet</a>`)
       ]
     ])
-    const results = await limetorrents.search({ query: 'adele', options: { mirror: 'www.limetorrents.lol' } })
+    const results = await list(limetorrents.search({ query: 'adele', options: { mirror: 'www.limetorrents.lol' } }))
     assert.deepEqual(
       requests.map(r => r.url),
       [

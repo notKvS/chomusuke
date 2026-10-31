@@ -124,6 +124,17 @@ function createWindow(): BrowserWindow {
   })
   win.once('ready-to-show', () => win.show())
 
+  // The hidden title bar leaves no menu bar on Windows, so the default menu's DevTools shortcuts never fire.
+  if (!app.isPackaged) {
+    win.webContents.on('before-input-event', (event, input) => {
+      if (input.type !== 'keyDown') return
+      if (input.key === 'F12' || (input.control && input.shift && input.key.toLowerCase() === 'i')) {
+        win.webContents.toggleDevTools()
+        event.preventDefault()
+      }
+    })
+  }
+
   const devUrl = process.env.ELECTRON_RENDERER_URL
   if (!app.isPackaged && devUrl) void win.loadURL(devUrl)
   else void win.loadFile(path.join(import.meta.dirname, '../renderer/index.html'))

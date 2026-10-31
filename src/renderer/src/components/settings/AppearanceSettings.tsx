@@ -14,7 +14,7 @@ import {
   SURFACES,
   sanitizeAppearance
 } from '../../theme/appearance'
-import { encodeBackgroundImage } from '../../theme/dom'
+import { encodeBackgroundImage, withImageFallback } from '../../theme/dom'
 import type { AppearanceControls } from '../../theme/useAppearance'
 import { Range } from '../controls/Range'
 import { Segmented } from '../controls/Segmented'
@@ -104,7 +104,7 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
     event.target.value = ''
     if (!file) return
     try {
-      const encoded = await encodeBackgroundImage(file)
+      const encoded = await encodeBackgroundImage(file, computeTheme(a).tokens['--bg'])
       const stored = setImage(encoded)
       update({ background: 'image' })
       setMessage(
@@ -122,7 +122,7 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
 
   const importCode = () => {
     try {
-      replace(sanitizeAppearance(JSON.parse(code)))
+      replace(withImageFallback(sanitizeAppearance(JSON.parse(code)), image))
       setMessage({ kind: 'ok', text: 'Theme applied.' })
     } catch {
       setMessage({ kind: 'error', text: 'That doesn’t look like a theme code.' })

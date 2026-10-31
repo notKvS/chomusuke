@@ -57,6 +57,22 @@ function configureSession(ses: Session, hosts: string[], pageUrl: string): void 
     callback({ cancel: !(ownPage || declared) })
   })
 
+  // Requests to declared hosts go out without our page's Origin/Referer: some APIs (charts.youtube.com) answer 403
+  // to a foreign origin such as the dev server's http://localhost. CORS for the worker is handled below.
+  ses.webRequest.onBeforeSendHeaders((details, callback) => {
+    let url: URL
+    try {
+      url = new URL(details.url)
+    } catch {
+      return callback({})
+    }
+    if (url.protocol !== 'https:' || !hostAllowed(url.hostname, hosts)) return callback({})
+    const requestHeaders = Object.fromEntries(
+      Object.entries(details.requestHeaders).filter(([name]) => !/^(origin|referer)$/i.test(name))
+    )
+    callback({ requestHeaders })
+  })
+
   ses.webRequest.onHeadersReceived((details, callback) => {
     let url: URL
     try {

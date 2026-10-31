@@ -29,10 +29,15 @@ const IMAGE_PREFIX = 'data:image/jpeg;base64,'
 export function loadAppearance(): Appearance {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? sanitizeAppearance(JSON.parse(raw)) : DEFAULT_APPEARANCE
+    return withImageFallback(raw ? sanitizeAppearance(JSON.parse(raw)) : DEFAULT_APPEARANCE, loadBackgroundImage())
   } catch {
     return DEFAULT_APPEARANCE
   }
+}
+
+/** The image background with no image (it didn't fit in storage, or came from a theme code) falls back to the default. */
+export function withImageFallback(a: Appearance, image: string | null): Appearance {
+  return a.background === 'image' && !image ? { ...a, background: DEFAULT_APPEARANCE.background } : a
 }
 
 export function saveAppearance(a: Appearance): void {
@@ -72,8 +77,11 @@ export function saveBackgroundImage(image: string | null): boolean {
   }
 }
 
-/** Downscales a picked image file to at most 1920×1200 and re-encodes it as JPEG. */
-export async function encodeBackgroundImage(file: File): Promise<string> {
+/**
+ * Downscales a picked image file to at most 1920×1200 and re-encodes it as JPEG. JPEG has no transparency, so
+ * see-through areas are filled with `fill` (the theme background) instead of turning black.
+ */
+export async function encodeBackgroundImage(file: File, fill: string): Promise<string> {
   if (!file.type.startsWith('image/')) throw new Error('That file isn’t an image.')
   if (file.size > 40 * 1024 * 1024) throw new Error('That image is too large (40 MB max).')
   const bitmap = await createImageBitmap(file).catch(() => {
@@ -83,7 +91,12 @@ export async function encodeBackgroundImage(file: File): Promise<string> {
   const canvas = document.createElement('canvas')
   canvas.width = Math.max(1, Math.round(bitmap.width * scale))
   canvas.height = Math.max(1, Math.round(bitmap.height * scale))
-  canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+  const context = canvas.getContext('2d')
+  if (context) {
+    context.fillStyle = fill
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+  }
   bitmap.close()
   return canvas.toDataURL('image/jpeg', 0.85)
 }

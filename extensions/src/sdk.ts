@@ -18,18 +18,25 @@ export interface TorrentResult {
   leechers?: number
   /** https image URL */
   artwork?: string
-  /** Up to 4 short labels, e.g. FLAC, CC BY */
+  /** Up to 4 short labels (12 characters each), e.g. FLAC, CC BY; shown as chips on cards and release rows */
   tags?: string[]
 }
 
 export type Options = Record<string, string | boolean>
 
+/**
+ * What search/browse return: a plain list (the app won't ask for more), or one page plus `hasMore: true` to get a
+ * "Load more" button. The next call then gets `page: 2`, and so on (up to page 20). At most 100 items per page.
+ */
+export type Paged<T> = T[] | { results: T[]; hasMore?: boolean }
+
 export interface Extension {
   /** Self-check for the Sources page; return true or throw an Error with a user-facing message. */
   test?(context: { options: Options }): Promise<true>
-  search(context: { query: string; options: Options }): Promise<TorrentResult[]>
+  /** `page` starts at 1 (and is 1 when omitted). */
+  search(context: { query: string; page?: number; options: Options }): Promise<Paged<TorrentResult>>
   /** Results for one of the manifest's Explore categories. */
-  browse?(context: { category: string; options: Options }): Promise<TorrentResult[]>
+  browse?(context: { category: string; page?: number; options: Options }): Promise<Paged<TorrentResult>>
 }
 
 /**
@@ -53,5 +60,5 @@ export interface ChartEntry {
 /** A chart extension (`"type": "chart"` in the manifest): Explore categories only, no search. */
 export interface ChartExtension {
   test?(context: { options: Options }): Promise<true>
-  browse(context: { category: string; options: Options }): Promise<ChartEntry[]>
+  browse(context: { category: string; page?: number; options: Options }): Promise<Paged<ChartEntry>>
 }
