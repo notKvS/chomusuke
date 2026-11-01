@@ -28,6 +28,7 @@ const api: ChomusukeApi = {
   clearStreamed: () => ipcRenderer.invoke('library:clear-streamed'),
   openLibraryAlbum: infoHash => ipcRenderer.invoke('library:open', infoHash),
   setSharing: settings => ipcRenderer.invoke('sharing:set', settings),
+  setNowPlaying: nowPlaying => ipcRenderer.invoke('presence:set', nowPlaying),
   getRatings: () => ipcRenderer.invoke('ratings:list'),
   rateTrack: (infoHash, key, rating) => ipcRenderer.invoke('ratings:set', infoHash, key, rating),
   exportBackup: appearance => ipcRenderer.invoke('backup:export', appearance),

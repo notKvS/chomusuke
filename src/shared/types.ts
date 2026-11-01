@@ -72,6 +72,22 @@ export interface SharingSettings {
   streamCacheGB: number
   /** KB/s, 0 = unlimited */
   uploadLimitKBps: number
+  /** Show what's playing as your Discord status. */
+  discordStatus: boolean
+}
+
+/** What's playing, for the Discord status. */
+export interface NowPlaying {
+  title: string
+  artist?: string
+  album?: string
+  /** Only remote https covers; Discord can't load ones from the local stream server. */
+  coverUrl?: string
+  playing: boolean
+  /** Seconds into the track */
+  position: number
+  /** Seconds, 0 while unknown */
+  duration: number
 }
 
 export interface LibraryItem {
@@ -306,6 +322,8 @@ export interface ChomusukeApi {
   clearStreamed(): Promise<LibraryResponse>
   openLibraryAlbum(infoHash: string): Promise<LoadResult>
   setSharing(settings: SharingSettings): Promise<LibraryResponse>
+  /** Tells the app what's playing (null: nothing), shown as the Discord status when that's turned on. */
+  setNowPlaying(nowPlaying: NowPlaying | null): Promise<void>
   getRatings(): Promise<RatedSong[]>
   /** Like (1), dislike (-1) or clear (0) a track of a loaded album. Returns the updated list. */
   rateTrack(infoHash: string, key: string, rating: 0 | 1 | -1): Promise<RatedSong[]>

@@ -1,6 +1,7 @@
 import { mkdir, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { app, BrowserWindow, safeStorage, session } from 'electron'
+import { DiscordPresence } from './discord.ts'
 import { TorrentEngine } from './engine.ts'
 import { BUNDLED_REPOSITORY, bundledExtensions } from './extension-host/defaults.ts'
 import { ExtensionHost, hostPage } from './extension-host/host.ts'
@@ -11,6 +12,7 @@ import { trustedSenderGuard } from './ipc/guard.ts'
 import * as libraryIpc from './ipc/library.ts'
 import { applySharing, seedLibrary } from './ipc/library.ts'
 import * as playlistsIpc from './ipc/playlists.ts'
+import * as presenceIpc from './ipc/presence.ts'
 import * as providers from './ipc/providers.ts'
 import * as ratingsIpc from './ipc/ratings.ts'
 import * as search from './ipc/search.ts'
@@ -19,6 +21,7 @@ import * as torrent from './ipc/torrent.ts'
 import * as windowIpc from './ipc/window.ts'
 import { overlayHeight } from './ipc/window.ts'
 import { PlaylistStore } from './playlists.ts'
+import { CoverFinder } from './providers/covers.ts'
 import { ProviderRegistry } from './providers/registry.ts'
 import { ProviderSettingsStore, type SecretBox } from './providers/settings.ts'
 import { RatingsStore } from './ratings.ts'
@@ -47,6 +50,10 @@ const library = new SeedLibrary(path.join(app.getPath('userData'), 'library'))
 // Liked and disliked songs.
 const ratings = new RatingsStore(path.join(app.getPath('userData'), 'ratings.json'))
 const playlists = new PlaylistStore(path.join(app.getPath('userData'), 'playlists.json'))
+// What's playing, as the Discord status.
+// Covers Discord can load, for songs whose own cover is only on this computer.
+const covers = new CoverFinder()
+const presence = new DiscordPresence(wanted => covers.find(wanted))
 
 let mainWindow: BrowserWindow | null = null
 let engine: TorrentEngine | null = null
@@ -151,17 +158,29 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
     library,
     ratings,
     playlists,
+    presence,
     extensionRuntime,
     disposeUnusedHosts
   }
   // Providers first: it builds the search sources the other handlers use.
-  for (const area of [providers, sources, search, torrent, libraryIpc, ratingsIpc, playlistsIpc, backup, windowIpc]) {
-    area.register(deps)
-  }
+  const areas = [
+    providers,
+    sources,
+    search,
+    torrent,
+    libraryIpc,
+    ratingsIpc,
+    playlistsIpc,
+    presenceIpc,
+    backup,
+    windowIpc
+  ]
+  for (const area of areas) area.register(deps)
 }
 
 async function shutdown(): Promise<void> {
   for (const { host } of extensionHosts.values()) host.dispose()
+  await presence.dispose()
   // Albums kept or streamed this session were downloaded into the cache: move them into the library before the
   // cache goes. Streamed ones only while the user wants them seeded later, and only if anything was downloaded.
   const kept = new Set(library.list().map(entry => entry.infoHash))
@@ -213,6 +232,7 @@ app.whenReady().then(async () => {
   }
 
   await library.load()
+  presence.setEnabled(library.sharing.discordStatus)
   await ratings.load()
   await playlists.load()
   await library.purge().catch(() => {})

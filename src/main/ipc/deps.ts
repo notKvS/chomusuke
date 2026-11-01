@@ -1,4 +1,5 @@
 import type { BrowserWindow, IpcMainInvokeEvent } from 'electron'
+import type { DiscordPresence } from '../discord.ts'
 import type { TorrentEngine } from '../engine.ts'
 import type { ExtensionHost } from '../extension-host/host.ts'
 import type { ExtensionManifest } from '../extension-host/manifest.ts'
@@ -22,6 +23,8 @@ export interface IpcDeps {
   library: SeedLibrary
   ratings: RatingsStore
   playlists: PlaylistStore
+  /** The Discord status; follows the `discordStatus` sharing setting. */
+  presence: DiscordPresence
   /** The sandbox for an installed extension, reused while its code is unchanged. */
   extensionRuntime: (manifest: ExtensionManifest, code: string, codeSha256: string) => ExtensionHost
   /** Tears down the sandboxes of extensions that are no longer enabled. */

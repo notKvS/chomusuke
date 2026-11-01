@@ -15,6 +15,7 @@ import { looksLikeSource } from './source'
 import { useAppearance } from './theme/useAppearance'
 import { useAlbumLoader, useLoadedAlbums } from './useAlbumLoader'
 import { useNavigation } from './useNavigation'
+import { useNowPlaying } from './useNowPlaying'
 import { usePlayer } from './usePlayer'
 import { usePlaylists } from './usePlaylists'
 import { useQueue } from './useQueue'
@@ -41,6 +42,7 @@ export function App() {
   const onEdge = useCallback((direction: 1 | -1) => edgeRef.current(direction), [])
   const player = usePlayer(setToast, isDisliked, onEdge)
   const { playAt, toggle } = player
+  useNowPlaying(player)
 
   const nav = useNavigation()
   const { view, goTo } = nav

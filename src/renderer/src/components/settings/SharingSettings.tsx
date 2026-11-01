@@ -167,6 +167,22 @@ export function SharingSettings({ onOpenAlbum }: { onOpenAlbum: (infoHash: strin
           </>
         )}
       </section>
+
+      <section className="shelf">
+        <h2 className="shelf__title">Discord</h2>
+        <div className="sharing">
+          <SettingRow
+            title="Show what I'm listening to"
+            hint="Your Discord status shows the song, artist and album while Discord is open, with a link for friends to get Chomusuke."
+          >
+            <Switch
+              checked={sharing.discordStatus}
+              label="Show what I'm listening to"
+              onChange={discordStatus => void setSharing({ discordStatus })}
+            />
+          </SettingRow>
+        </div>
+      </section>
     </>
   )
 }

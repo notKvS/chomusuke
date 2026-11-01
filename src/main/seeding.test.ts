@@ -24,7 +24,14 @@ test('sharing is on by default and only accepts known values', () => {
   assert.equal(DEFAULT_SHARING.seedStreamed, true)
   assert.deepEqual(
     sanitizeSharing({ enabled: false, seedLibrary: 'no', seedStreamed: false, streamCacheGB: 5, uploadLimitKBps: 512 }),
-    { enabled: false, seedLibrary: true, seedStreamed: false, streamCacheGB: 5, uploadLimitKBps: 512 }
+    {
+      enabled: false,
+      seedLibrary: true,
+      seedStreamed: false,
+      streamCacheGB: 5,
+      uploadLimitKBps: 512,
+      discordStatus: true
+    }
   )
   assert.equal(sanitizeSharing({ uploadLimitKBps: 3 }).uploadLimitKBps, 0)
   assert.equal(sanitizeSharing({ streamCacheGB: 999 }).streamCacheGB, DEFAULT_SHARING.streamCacheGB)

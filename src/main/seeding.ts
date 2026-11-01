@@ -32,7 +32,8 @@ export const DEFAULT_SHARING: SharingSettings = {
   seedLibrary: true,
   seedStreamed: true,
   streamCacheGB: 2,
-  uploadLimitKBps: 0
+  uploadLimitKBps: 0,
+  discordStatus: true
 }
 /** Upload limits offered in the UI, KB/s (0 = unlimited). */
 export const UPLOAD_LIMITS = [0, 64, 128, 256, 512, 1024, 2048, 5120]
@@ -82,7 +83,8 @@ export function sanitizeSharing(raw: unknown, fallback: SharingSettings = DEFAUL
     seedLibrary: pickBool(v.seedLibrary, fallback.seedLibrary),
     seedStreamed: pickBool(v.seedStreamed, fallback.seedStreamed),
     streamCacheGB: pickFrom(STREAM_CACHE_SIZES, v.streamCacheGB, fallback.streamCacheGB),
-    uploadLimitKBps: pickFrom(UPLOAD_LIMITS, v.uploadLimitKBps, fallback.uploadLimitKBps)
+    uploadLimitKBps: pickFrom(UPLOAD_LIMITS, v.uploadLimitKBps, fallback.uploadLimitKBps),
+    discordStatus: pickBool(v.discordStatus, fallback.discordStatus)
   }
 }
 
