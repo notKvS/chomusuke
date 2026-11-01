@@ -1,4 +1,5 @@
-import type { SharingSettings as Sharing } from '../../../../shared/types'
+import { useEffect, useState } from 'react'
+import type { DiscordStatus, SharingSettings as Sharing } from '../../../../shared/types'
 import { formatBytes, formatSpeed } from '../../format'
 import { useLibrary } from '../../useLibrary'
 import { SettingRow } from '../controls/SettingRow'
@@ -18,6 +19,70 @@ const UPLOAD_LIMITS: Array<[number, string]> = [
   [64, '64 KB/s']
 ]
 const STREAM_CACHE_SIZES = [1, 2, 5, 10, 20]
+
+const POLL_MS = 2000
+
+/** Whether the Discord status is getting through, checked while it's switched on. */
+function DiscordStatusLine({ enabled }: { enabled: boolean }) {
+  const [status, setStatus] = useState<DiscordStatus | null>(null)
+
+  useEffect(() => {
+    if (!enabled) return setStatus(null)
+    let live = true
+    const poll = () => void window.chomusuke.getDiscordStatus().then(next => live && setStatus(next))
+    poll()
+    const timer = setInterval(poll, POLL_MS)
+    return () => {
+      live = false
+      clearInterval(timer)
+    }
+  }, [enabled])
+
+  if (!enabled || !status || status.kind === 'off') return null
+  const problem = status.kind === 'not-running' || status.kind === 'refused'
+  const text = {
+    idle: 'Ready: play a song and it shows on Discord.',
+    connected: 'Connected to Discord.',
+    'not-running':
+      "Can't reach the Discord desktop app. Open it (Discord in a browser can't show this); Chomusuke connects on its own.",
+    refused: status.kind === 'refused' ? `Discord didn't accept the status: ${status.message}` : ''
+  }[status.kind]
+  return (
+    <p className="sharing__stats">
+      <Icon name={problem ? 'error' : status.kind === 'connected' ? 'check' : 'music'} size={18} />
+      {text}
+    </p>
+  )
+}
+
+/** What Home knows about what you play, and a way to forget it. */
+function HistorySettings() {
+  const [size, setSize] = useState<number | null>(null)
+  useEffect(() => {
+    void window.chomusuke.getHistorySize().then(setSize)
+  }, [])
+
+  const clear = async () => {
+    await window.chomusuke.clearHistory()
+    setSize(0)
+  }
+
+  return (
+    <section className="shelf">
+      <h2 className="shelf__title">Listening history</h2>
+      <div className="sharing">
+        <SettingRow
+          title="Songs Home remembers"
+          hint="Home suggests more from the artists and genres you play most. The list stays on this computer and holds your last 500 songs."
+        >
+          <button type="button" className="pill-button" disabled={!size} onClick={() => void clear()}>
+            {size === null ? 'Clear history' : `Clear ${size} ${size === 1 ? 'song' : 'songs'}`}
+          </button>
+        </SettingRow>
+      </div>
+    </section>
+  )
+}
 
 /** Seeding settings, and the space kept for music you've streamed. */
 export function SharingSettings({ onOpenAlbum }: { onOpenAlbum: (infoHash: string) => void }) {
@@ -181,8 +246,11 @@ export function SharingSettings({ onOpenAlbum }: { onOpenAlbum: (infoHash: strin
               onChange={discordStatus => void setSharing({ discordStatus })}
             />
           </SettingRow>
+          <DiscordStatusLine enabled={sharing.discordStatus} />
         </div>
       </section>
+
+      <HistorySettings />
     </>
   )
 }

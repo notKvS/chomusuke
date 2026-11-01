@@ -9,4 +9,8 @@ export function register(deps: IpcDeps): void {
     assertTrustedSender(event)
     presence.update(sanitizeNowPlaying(raw))
   })
+  ipcMain.handle('presence:status', event => {
+    assertTrustedSender(event)
+    return presence.current()
+  })
 }

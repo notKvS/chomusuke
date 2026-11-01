@@ -1,7 +1,8 @@
-import type { Album } from '../../../shared/types'
+import type { Album, SearchAlbum } from '../../../shared/types'
 import { FEATURED, type FeaturedAlbum } from '../featured'
 import { ArtistLink } from './ArtistLink'
 import { Card } from './Card'
+import { HomeShelves } from './HomeShelves'
 import { Chomu } from './mascot/Chomu'
 import './Home.css'
 
@@ -40,9 +41,10 @@ interface Props {
   albums: Album[]
   onOpenFeatured: (album: FeaturedAlbum, autoplay: boolean) => void
   onOpenAlbum: (infoHash: string, autoplay: boolean) => void
+  onOpenSearchAlbum: (album: SearchAlbum, autoplay: boolean) => void
 }
 
-export function Home({ albums, onOpenFeatured, onOpenAlbum }: Props) {
+export function Home({ albums, onOpenFeatured, onOpenAlbum, onOpenSearchAlbum }: Props) {
   return (
     <div className="page home">
       <Hero />
@@ -64,6 +66,8 @@ export function Home({ albums, onOpenFeatured, onOpenAlbum }: Props) {
           </div>
         </section>
       )}
+
+      <HomeShelves onOpenAlbum={onOpenSearchAlbum} />
 
       <section className="shelf">
         <p className="shelf__eyebrow">Picked for you</p>

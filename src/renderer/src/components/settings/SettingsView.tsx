@@ -5,14 +5,15 @@ import type { Ratings } from '../../useRatings'
 import { AppearanceSettings } from './AppearanceSettings'
 import { BackupSettings } from './BackupSettings'
 import { SharingSettings } from './SharingSettings'
-import { SourcesSettings } from './SourcesSettings'
+import { ChartsSettings, PluginsSettings } from './SourcesSettings'
 import './SettingsView.css'
 
 export type { SettingsSection }
 
 const SECTIONS: Array<[SettingsSection, string]> = [
   ['appearance', 'Appearance'],
-  ['sources', 'Sources'],
+  ['charts', 'Charts'],
+  ['plugins', 'Plugins'],
   ['sharing', 'Sharing & storage'],
   ['backup', 'Backup']
 ]
@@ -36,8 +37,11 @@ export function SettingsView({
     case 'appearance':
       body = <AppearanceSettings controls={looks} />
       break
-    case 'sources':
-      body = <SourcesSettings />
+    case 'charts':
+      body = <ChartsSettings />
+      break
+    case 'plugins':
+      body = <PluginsSettings />
       break
     case 'sharing':
       body = <SharingSettings onOpenAlbum={onOpenAlbum} />

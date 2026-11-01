@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
-import type { ProvidersResponse, TestResponse } from '../../shared/types.ts'
+import type { PluginKind, ProvidersResponse, TestResponse } from '../../shared/types.ts'
 import { FetchError, fetchJson, fetchText } from '../http.ts'
-import { PluginError, type PluginManifest, parseRepository } from '../plugin-host/manifest.ts'
+import { forKind, PluginError, type PluginManifest, parseRepository } from '../plugin-host/manifest.ts'
 import { testPlugin } from '../plugin-host/provider.ts'
 import { buildProviders } from '../providers/index.ts'
 import { type ProviderSettingsStore, SettingsError, validateRepositoryUrl } from '../providers/settings.ts'
@@ -12,9 +12,15 @@ const REPOSITORY_MAX_BYTES = 512 * 1024
 const PLUGIN_CODE_MAX_BYTES = 2 * 1024 * 1024
 const PLUGIN_FETCH_TIMEOUT_MS = 20_000
 
-/** Downloads a repository manifest and every plugin's code it lists. */
+const pluginKind = (value: unknown): PluginKind => {
+  if (value === 'provider' || value === 'chart') return value
+  throw new SettingsError('Unknown plugin type.')
+}
+
+/** Downloads a repository manifest and the code of every plugin of this kind that it lists. */
 async function downloadRepository(
-  rawUrl: unknown
+  rawUrl: unknown,
+  kind: PluginKind
 ): Promise<{ url: string; installs: Array<{ manifest: PluginManifest; code: string }> }> {
   const { url, privateHttp } = validateRepositoryUrl(rawUrl)
   const origin = new URL(url).origin
@@ -39,7 +45,7 @@ async function downloadRepository(
         })
       }))
     )
-    return { url, installs }
+    return { url, installs: forKind(installs, kind) }
   } catch (err) {
     if (err instanceof PluginError || err instanceof SettingsError) throw new SettingsError(err.message)
     if (err instanceof FetchError)
@@ -106,10 +112,11 @@ export function register(deps: IpcDeps): void {
     }, settings)
   })
 
-  ipcMain.handle('plugins:import', (event, repositoryUrl: unknown) => {
+  ipcMain.handle('plugins:import', (event, repositoryUrl: unknown, kind: unknown) => {
     assertTrustedSender(event)
     return settingsResult(async () => {
-      const { url, installs } = await downloadRepository(repositoryUrl)
+      const wanted = pluginKind(kind)
+      const { url, installs } = await downloadRepository(repositoryUrl, wanted)
       await settings.installPlugins(url, installs)
       rebuildProviders()
     }, settings)

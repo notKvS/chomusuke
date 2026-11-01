@@ -1,6 +1,8 @@
 import type { BrowserWindow, IpcMainInvokeEvent } from 'electron'
 import type { DiscordPresence } from '../discord.ts'
 import type { TorrentEngine } from '../engine.ts'
+import type { ArtistGenres } from '../genres.ts'
+import type { PlayHistory } from '../history.ts'
 import type { PlaylistStore } from '../playlists.ts'
 import type { PluginHost } from '../plugin-host/host.ts'
 import type { PluginManifest } from '../plugin-host/manifest.ts'
@@ -23,6 +25,10 @@ export interface IpcDeps {
   library: SeedLibrary
   ratings: RatingsStore
   playlists: PlaylistStore
+  /** What was played lately. */
+  history: PlayHistory
+  /** The kinds of music an artist makes. */
+  artistGenres: ArtistGenres
   /** The Discord status; follows the `discordStatus` sharing setting. */
   presence: DiscordPresence
   /** The sandbox for an installed plugin, reused while its code is unchanged. */

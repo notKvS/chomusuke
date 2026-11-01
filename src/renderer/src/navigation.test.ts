@@ -20,7 +20,7 @@ test('samePage compares each kind by what identifies it', () => {
   assert.ok(samePage({ kind: 'search', query: 'x' }, { kind: 'search', query: 'x' }))
   assert.ok(!samePage({ kind: 'search', query: 'x' }, { kind: 'search', query: 'y' }))
   assert.ok(!samePage({ kind: 'playlist', id: '1' }, { kind: 'playlist', id: '2' }))
-  assert.ok(!samePage({ kind: 'settings', section: 'sources' }, { kind: 'settings', section: 'backup' }))
+  assert.ok(!samePage({ kind: 'settings', section: 'plugins' }, { kind: 'settings', section: 'backup' }))
   assert.ok(!samePage({ kind: 'home' }, { kind: 'explore' }))
 })
 

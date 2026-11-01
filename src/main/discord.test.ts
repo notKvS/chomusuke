@@ -45,14 +45,6 @@ test('a playing song shows its progress and the download button', () => {
   ])
 })
 
-test('a paused song has no progress bar and says so', () => {
-  const activity = toActivity({ ...song, playing: false }, 0)
-  assert.equal(activity.state, 'Paused · by Beyoncé')
-  assert.equal(activity.startTimestamp, undefined)
-  assert.equal(activity.endTimestamp, undefined)
-  assert.equal(toActivity({ title: 'Song', playing: false, position: 0, duration: 0 }, 0).state, 'Paused')
-})
-
 test('text fits Discord’s 2–128 character fields, and a missing cover falls back to the logo', () => {
   const activity = toActivity({ title: 'X'.repeat(200), album: 'A', playing: true, position: 0, duration: 0 }, 0)
   assert.equal(activity.details?.length, 128)

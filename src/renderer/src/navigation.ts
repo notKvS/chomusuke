@@ -1,7 +1,7 @@
 // Where the app is: the pages back/forward move between, and what can cover the current page while an album loads.
 // Pure (no React, no DOM), so it runs in unit tests.
 
-export type SettingsSection = 'appearance' | 'sources' | 'sharing' | 'backup'
+export type SettingsSection = 'appearance' | 'charts' | 'plugins' | 'sharing' | 'backup'
 
 /** Pages are what back/forward move between. */
 export type Page =

@@ -17,6 +17,7 @@ import { useAlbumLoader, useLoadedAlbums } from './useAlbumLoader'
 import { useNavigation } from './useNavigation'
 import { useNowPlaying } from './useNowPlaying'
 import { usePlayer } from './usePlayer'
+import { usePlayHistory } from './usePlayHistory'
 import { usePlaylists } from './usePlaylists'
 import { useQueue } from './useQueue'
 import { useRatings } from './useRatings'
@@ -43,6 +44,7 @@ export function App() {
   const player = usePlayer(setToast, isDisliked, onEdge)
   const { playAt, toggle } = player
   useNowPlaying(player)
+  usePlayHistory(player)
 
   const nav = useNavigation()
   const { view, goTo } = nav
@@ -91,7 +93,8 @@ export function App() {
     (section: SettingsSection = 'appearance') => goTo({ kind: 'settings', section }),
     [goTo]
   )
-  const goSources = useCallback(() => goSettings('sources'), [goSettings])
+  const goPlugins = useCallback(() => goSettings('plugins'), [goSettings])
+  const goCharts = useCallback(() => goSettings('charts'), [goSettings])
   const goPlaylist = useCallback((id: string) => goTo({ kind: 'playlist', id }), [goTo])
   const createPlaylist = useCallback(
     async (name: string) => {
@@ -160,7 +163,8 @@ export function App() {
             onPlayAlbumAt={queue.playAlbumAt}
             onStartQueue={queue.startQueue}
             onSettings={goSettings}
-            onManageSources={goSources}
+            onManagePlugins={goPlugins}
+            onManageCharts={goCharts}
             onHome={goHome}
           />
         </main>

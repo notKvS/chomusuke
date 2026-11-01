@@ -3,9 +3,12 @@ import path from 'node:path'
 import { app, BrowserWindow, safeStorage, session } from 'electron'
 import { DiscordPresence } from './discord.ts'
 import { TorrentEngine } from './engine.ts'
+import { createArtistGenres } from './genres.ts'
+import { PlayHistory } from './history.ts'
 import * as backup from './ipc/backup.ts'
 import type { IpcDeps } from './ipc/deps.ts'
 import { trustedSenderGuard } from './ipc/guard.ts'
+import * as homeIpc from './ipc/home.ts'
 import * as libraryIpc from './ipc/library.ts'
 import { applySharing, seedLibrary } from './ipc/library.ts'
 import * as playlistsIpc from './ipc/playlists.ts'
@@ -50,6 +53,9 @@ const library = new SeedLibrary(path.join(app.getPath('userData'), 'library'))
 // Liked and disliked songs.
 const ratings = new RatingsStore(path.join(app.getPath('userData'), 'ratings.json'))
 const playlists = new PlaylistStore(path.join(app.getPath('userData'), 'playlists.json'))
+// What was played lately, for Home's suggestions.
+const history = new PlayHistory(path.join(app.getPath('userData'), 'history.json'))
+const artistGenres = createArtistGenres()
 // What's playing, as the Discord status.
 // Covers for chart entries and for the Discord status.
 const covers = new CoverFinder()
@@ -158,6 +164,8 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
     library,
     ratings,
     playlists,
+    history,
+    artistGenres,
     presence,
     pluginRuntime,
     disposeUnusedHosts
@@ -171,6 +179,7 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
     libraryIpc,
     ratingsIpc,
     playlistsIpc,
+    homeIpc,
     presenceIpc,
     backup,
     windowIpc
@@ -235,6 +244,7 @@ app.whenReady().then(async () => {
   presence.setEnabled(library.sharing.discordStatus)
   await ratings.load()
   await playlists.load()
+  await history.load()
   await library.purge().catch(() => {})
 
   let torrents: TorrentEngine | null = null

@@ -148,6 +148,61 @@ test('chart entries without a cover get one filled in', async () => {
   assert.equal(section.albums[0].artwork, 'https://is1-ssl.mzstatic.com/x/600x600bb.jpg')
 })
 
+test('a chart can be browsed for another country, and answers are kept for a while', async () => {
+  const asked: Array<[string, number | undefined, string | undefined]> = []
+  const regional = chartProvider({
+    region: { current: 'gb', worldwide: true },
+    browse: async (category, _signal, page, region) => {
+      asked.push([category, page, region])
+      return { albums: [{ ...album(`ref-${region}`, 'Song'), artist: 'Artist', chart: 'song' }], songs: [] }
+    }
+  })
+  const registry = new ProviderRegistry()
+  registry.setProviders([regional])
+  const signal = new AbortController().signal
+  assert.deepEqual(registry.explore().charts[0].region, { current: 'gb', worldwide: true })
+
+  await registry.browse('plugin-charts', 'top', signal)
+  await registry.browse('plugin-charts', 'top', signal, 1, 'in')
+  await registry.browse('plugin-charts', 'top', signal, 1, '')
+  // The same questions again come from memory.
+  await registry.browse('plugin-charts', 'top', signal)
+  await registry.browse('plugin-charts', 'top', signal, 1, 'in')
+  assert.deepEqual(asked, [
+    ['top', 1, undefined],
+    ['top', 1, 'in'],
+    ['top', 1, '']
+  ])
+
+  // Only real countries; worldwide only where the chart has it.
+  for (const bad of ['xx', 'IN', 'india', 7, {}]) {
+    await assert.rejects(registry.browse('plugin-charts', 'top', signal, 1, bad), SourceError)
+  }
+  const local = chartProvider({ region: { current: 'us', worldwide: false } })
+  registry.setProviders([local])
+  await assert.rejects(registry.browse('plugin-charts', 'top', signal, 1, ''), SourceError)
+  // A chart with no country at all can't be given one.
+  registry.setProviders([chartProvider()])
+  await assert.rejects(registry.browse('plugin-charts', 'top', signal, 1, 'in'), SourceError)
+
+  // Reconfiguring the plugins forgets what was kept; failures are never kept.
+  registry.setProviders([regional])
+  await registry.browse('plugin-charts', 'top', signal)
+  assert.equal(asked.length, 4)
+  let fails = 0
+  registry.setProviders([
+    chartProvider({
+      browse: async () => {
+        fails++
+        throw new Error('down')
+      }
+    })
+  ])
+  await registry.browse('plugin-charts', 'top', signal)
+  await registry.browse('plugin-charts', 'top', signal)
+  assert.equal(fails, 2)
+})
+
 test('findRelease searches the torrent providers and opens the best match', async () => {
   const registry = new ProviderRegistry()
   const queries: string[] = []

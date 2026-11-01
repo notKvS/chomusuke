@@ -25,6 +25,8 @@ export interface CappedFetchOptions {
   maxBytes: number
   timeoutMs: number
   accept?: string
+  /** Extra request headers, e.g. the User-Agent an API asks for. */
+  headers?: Record<string, string>
   /** Every hop (including redirects) must land on an allowed host. */
   allowHost?: (hostname: string) => boolean
   /** Plain http is refused unless this approves the URL (e.g. a self-hosted indexer on the LAN). */
@@ -42,7 +44,7 @@ const MAX_REDIRECTS = 5
  * (how indexers hand out magnet-only releases) is returned instead of followed.
  */
 export async function fetchBodyOrMagnet(url: string | URL, options: CappedFetchOptions): Promise<BodyOrMagnet> {
-  const { maxBytes, timeoutMs, accept, allowHost, allowHttp, signal } = options
+  const { maxBytes, timeoutMs, accept, headers, allowHost, allowHttp, signal } = options
   const abort = signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs)
   let current = new URL(url)
 
@@ -55,7 +57,11 @@ export async function fetchBodyOrMagnet(url: string | URL, options: CappedFetchO
 
     let res: Response
     try {
-      res = await fetch(current, { redirect: 'manual', signal: abort, headers: accept ? { Accept: accept } : {} })
+      res = await fetch(current, {
+        redirect: 'manual',
+        signal: abort,
+        headers: { ...(accept ? { Accept: accept } : {}), ...headers }
+      })
     } catch (err) {
       throw new FetchError('network', err instanceof Error ? err.message : 'Network error')
     }

@@ -1,4 +1,4 @@
-import type { SourceCategory } from '../../shared/types.ts'
+import type { PluginKind, SourceCategory } from '../../shared/types.ts'
 import type { ProviderAlbum } from '../providers/types.ts'
 
 /**
@@ -37,6 +37,15 @@ export interface PluginOption {
   default?: string | boolean
 }
 
+export interface PluginRegion {
+  /** The (non-secret, text) option that holds a two-letter country code */
+  option: string
+  /** Whether "" asks for the worldwide list */
+  worldwide: boolean
+  /** The categories that follow the country; all of them when left out */
+  categories?: string[]
+}
+
 export interface PluginManifest {
   id: string
   name: string
@@ -49,8 +58,21 @@ export interface PluginManifest {
   layout: 'cards' | 'list'
   categories: SourceCategory[]
   options: Record<string, PluginOption>
+  /** Charts: which option takes a country, so Explore can offer a country picker. */
+  region?: PluginRegion
   /** Whether a fresh install starts switched on. */
   enabledByDefault: boolean
+}
+
+/** The plugins of one kind; a repository with only the other kind says where it belongs. */
+export function forKind<T extends { manifest: PluginManifest }>(installs: T[], kind: PluginKind): T[] {
+  const matching = installs.filter(({ manifest }) => (manifest.type === 'chart') === (kind === 'chart'))
+  if (matching.length > 0) return matching
+  throw new PluginError(
+    kind === 'chart'
+      ? 'That repository has plugins, not charts. Add it under Settings → Plugins.'
+      : 'That repository has charts, not plugins. Add it under Settings → Charts.'
+  )
 }
 
 /** Plugin-provided errors that are safe to show to the user. */
@@ -130,6 +152,22 @@ function parseOne(raw: unknown, base: URL, sameOriginHttp: boolean): PluginManif
     }
   }
 
+  let region: PluginRegion | undefined
+  if (type === 'chart' && isRecord(raw.region) && typeof raw.region.option === 'string') {
+    const option = options[raw.region.option]
+    if (option?.type === 'string' && !option.secret) {
+      const known = new Set(categories.map(c => c.id))
+      const followed = Array.isArray(raw.region.categories)
+        ? raw.region.categories.filter((c): c is string => typeof c === 'string' && known.has(c))
+        : undefined
+      region = {
+        option: raw.region.option,
+        worldwide: raw.region.worldwide === true,
+        ...(followed?.length ? { categories: followed } : {})
+      }
+    }
+  }
+
   return {
     id,
     name: requireText(raw.name, 60, 'a name'),
@@ -141,6 +179,7 @@ function parseOne(raw: unknown, base: URL, sameOriginHttp: boolean): PluginManif
     layout: raw.layout === 'cards' || type === 'chart' ? 'cards' : 'list',
     categories,
     options,
+    ...(region ? { region } : {}),
     enabledByDefault: raw.enabledByDefault !== false
   }
 }

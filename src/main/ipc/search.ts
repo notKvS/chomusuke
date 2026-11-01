@@ -49,10 +49,19 @@ export function register(deps: IpcDeps): void {
 
   ipcMain.handle(
     'explore:browse',
-    async (event, sourceId: unknown, categoryId: unknown, page: unknown = 1): Promise<BrowseResponse> => {
+    async (
+      event,
+      sourceId: unknown,
+      categoryId: unknown,
+      page: unknown = 1,
+      region?: unknown
+    ): Promise<BrowseResponse> => {
       assertTrustedSender(event)
       try {
-        return { ok: true, section: await registry.browse(sourceId, categoryId, AbortSignal.timeout(30_000), page) }
+        return {
+          ok: true,
+          section: await registry.browse(sourceId, categoryId, AbortSignal.timeout(30_000), page, region)
+        }
       } catch (err) {
         if (err instanceof SourceError) return { ok: false, error: err.message }
         console.error('[explore] failed:', err instanceof Error ? err.message : err)

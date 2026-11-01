@@ -96,6 +96,7 @@ function toRawManifest(manifest: PluginManifest): Record<string, unknown> {
     layout: manifest.layout,
     categories: manifest.categories,
     options: manifest.options,
+    region: manifest.region,
     enabledByDefault: manifest.enabledByDefault
   }
 }

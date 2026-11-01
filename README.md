@@ -10,16 +10,17 @@ Desktop music player that streams audio straight from torrents 🎶
   controls.
 - 🔍 **Search** across all enabled providers at once, with **Load more** for providers that have more pages. Click an
   artist's name (album page, player, cards) to search for everything by them.
-- 🧭 **Explore** — Spotify, YouTube Music, Apple Music / iTunes and ListenBrainz top albums and songs, worldwide or by
-  country. Pick one and Chomusuke finds it on your providers and plays it (a chart song starts at that song). Entries
-  without a cover get one from Spotify or iTunes.
-- 🔌 **Providers, charts and plugins**
-  - Providers are where music is found: the Internet Archive (built in), Torznab indexers (API keys stored in your
-    system's credential store) and provider plugins.
-  - Charts fill Explore.
-  - Plugins add providers or charts. Install them from a repository URL; each runs in an isolated sandbox. Six Internet
-    Archive collections and four charts come switched on; five public-tracker templates (The Pirate Bay, 1337x, Nyaa,
-    Knaben, LimeTorrents) come switched off.
+- 🏠 **Home** — more from the artists you play most, and a chart in their genre. With nothing played yet, it shows a
+  popular chart. The list of songs it remembers stays on your computer and can be cleared in Settings → Sharing.
+- 🧭 **Explore** — Spotify, YouTube Music, Apple Music / iTunes and ListenBrainz top albums and songs. Pick a country,
+  or a language, on each chart. Choose one and Chomusuke finds it on your plugins and plays it (a chart song starts at
+  that song). Entries without a cover get one from Spotify or iTunes.
+- 🔌 **Charts and plugins**
+  - Charts are where Explore's lists come from (Settings → Charts).
+  - Plugins are where music is found and played from (Settings → Plugins): the Internet Archive, Torznab indexers (API
+    keys stored in your system's credential store) and installable plugins. Install either kind from a repository URL;
+    each runs in an isolated sandbox. Six Internet Archive collections and four charts come switched on; five
+    public-tracker templates (The Pirate Bay, 1337x, Nyaa, Knaben, LimeTorrents) come switched off.
 - 💬 **Discord status** — shows the song, artist, album and cover as *Listening to Chomusuke*, with a **Get Chomusuke**
   button that sends friends to the latest download. On by default; turn it off in Settings → Sharing.
 - 📄 **Torrent details** — files, trackers, pieces, peers and transfer stats; save the `.torrent` file or copy the
@@ -38,7 +39,7 @@ Desktop music player that streams audio straight from torrents 🎶
 - 🎨 **Appearance** — preset themes (dark and light) or custom colours, backgrounds, glass panels, buttons, fonts,
   interface size and effects, including drifting particles (sakura, snow, leaves, bubbles, embers,
   music notes, fireflies or sparkles).
-- ⚙️ **Settings** — appearance, sources, sharing and backup in one page, one tab each.
+- ⚙️ **Settings** — appearance, charts, plugins, sharing and backup in one page, one tab each.
 - ↔️ **Navigation** — collapsible sidebar, back/forward buttons, Alt+←/→ and mouse side buttons.
 
 ## ⬇️ Download

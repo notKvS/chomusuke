@@ -41,7 +41,8 @@ interface Props {
     options?: { shuffle?: boolean; playlistId?: string }
   ) => void
   onSettings: (section: SettingsSection) => void
-  onManageSources: () => void
+  onManagePlugins: () => void
+  onManageCharts: () => void
   onHome: () => void
 }
 
@@ -50,7 +51,14 @@ export function PageContent(props: Props) {
   const { view, player, ratings, playlists } = props
   switch (view.kind) {
     case 'home':
-      return <Home albums={props.albums} onOpenFeatured={props.onOpenFeatured} onOpenAlbum={props.onOpenAlbum} />
+      return (
+        <Home
+          albums={props.albums}
+          onOpenFeatured={props.onOpenFeatured}
+          onOpenAlbum={props.onOpenAlbum}
+          onOpenSearchAlbum={props.onOpenSearchAlbum}
+        />
+      )
     case 'search':
       return (
         <SearchView
@@ -59,11 +67,17 @@ export function PageContent(props: Props) {
           onPlaySong={props.onPlaySong}
           onOpenAlbum={props.onOpenSearchAlbum}
           onRetry={() => props.onRetrySearch(view.query)}
-          onManageSources={props.onManageSources}
+          onManagePlugins={props.onManagePlugins}
         />
       )
     case 'explore':
-      return <ExploreView onOpenAlbum={props.onOpenSearchAlbum} onManageSources={props.onManageSources} />
+      return (
+        <ExploreView
+          onOpenAlbum={props.onOpenSearchAlbum}
+          onManagePlugins={props.onManagePlugins}
+          onManageCharts={props.onManageCharts}
+        />
+      )
     case 'settings':
       return (
         <SettingsView

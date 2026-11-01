@@ -124,8 +124,18 @@ function createChartProvider(
     chart: true,
     search: async () => ({ albums: [], songs: [] }),
     categories: manifest.categories,
-    browse: async (category, signal, page = 1) => {
-      const { items, hasMore } = unpage(await runtime.call('browse', { category, page, options }, signal))
+    region: manifest.region && {
+      current:
+        typeof options[manifest.region.option] === 'string'
+          ? String(options[manifest.region.option]).toLowerCase()
+          : '',
+      worldwide: manifest.region.worldwide,
+      ...(manifest.region.categories ? { categories: manifest.region.categories } : {})
+    },
+    browse: async (category, signal, page = 1, region) => {
+      // A country picked in Explore replaces the saved one for this call only.
+      const asked = manifest.region && region !== undefined ? { ...options, [manifest.region.option]: region } : options
+      const { items, hasMore } = unpage(await runtime.call('browse', { category, page, options: asked }, signal))
       const albums = sanitizeChartEntries(items, manifest)
       return { albums, songs: [], hasMore: hasMore && albums.length > 0 }
     },

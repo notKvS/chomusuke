@@ -129,3 +129,75 @@ test('a chart plugin browses entries and opens them through findRelease', async 
   assert.deepEqual(wanted, [{ kind: 'song', title: 'Espresso', artist: 'Sabrina Carpenter', album: 'Short n’ Sweet' }])
   await assert.rejects(provider.open({ ref: 'not json', title: 'x' }), /no longer available/)
 })
+
+test('a chart takes a country from Explore for one call, and tells Explore which country is saved', async () => {
+  const [chart] = parseRepository(
+    [
+      {
+        manifestVersion: 1,
+        id: 'regional',
+        name: 'Regional',
+        version: '1.0.0',
+        type: 'chart',
+        code: 'c.js',
+        hosts: ['example.org'],
+        categories: [
+          { id: 'global', name: 'Global' },
+          { id: 'local', name: 'Local' }
+        ],
+        options: { country: { type: 'string', label: 'Country', default: '' } },
+        region: { option: 'country', worldwide: true, categories: ['local', 'nope'] }
+      }
+    ],
+    'https://example.org/index.json'
+  )
+  assert.deepEqual(chart.region, { option: 'country', worldwide: true, categories: ['local'] })
+  const calls: unknown[] = []
+  const runtime: PluginRuntime = {
+    async call(_method, args) {
+      calls.push(args)
+      return []
+    }
+  }
+  const provider = createPluginProvider(chart, runtime, { country: 'GB' }, undefined)
+  assert.deepEqual(provider.region, { current: 'gb', worldwide: true, categories: ['local'] })
+
+  const signal = new AbortController().signal
+  await provider.browse?.('local', signal)
+  await provider.browse?.('local', signal, 1, 'in')
+  await provider.browse?.('local', signal, 1, '')
+  assert.deepEqual(calls, [
+    { category: 'local', page: 1, options: { country: 'GB' } },
+    { category: 'local', page: 1, options: { country: 'in' } },
+    { category: 'local', page: 1, options: { country: '' } }
+  ])
+})
+
+test('a chart manifest only names a text option as its country', () => {
+  const chart = (region: unknown, options: unknown) =>
+    parseRepository(
+      [
+        {
+          manifestVersion: 1,
+          id: 'c',
+          name: 'C',
+          version: '1',
+          type: 'chart',
+          code: 'c.js',
+          hosts: ['example.org'],
+          categories: [{ id: 'top', name: 'Top' }],
+          options,
+          region
+        }
+      ],
+      'https://example.org/index.json'
+    )[0]
+  const text = { country: { type: 'string', label: 'Country' } }
+  assert.deepEqual(chart({ option: 'country' }, text).region, { option: 'country', worldwide: false })
+  assert.equal(chart({ option: 'missing' }, text).region, undefined)
+  assert.equal(chart({ option: 'country' }, { country: { type: 'boolean', label: 'C' } }).region, undefined)
+  assert.equal(
+    chart({ option: 'country' }, { country: { type: 'string', label: 'C', secret: true } }).region,
+    undefined
+  )
+})

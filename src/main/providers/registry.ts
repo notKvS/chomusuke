@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { parseRegion } from '../../shared/regions.ts'
 import type { ExploreOverview, ProviderSection, SearchAlbum, SearchResults, SearchSong } from '../../shared/types.ts'
 import { SourceError } from '../source.ts'
 import { type ChartWanted, chartQueries, rankReleases } from './chart-match.ts'
@@ -12,6 +13,9 @@ const MAX_REMEMBERED_RESULTS = 5000
 const RESULT_ID = /^[a-z0-9-]{1,40}:[a-f0-9]{24}$/
 /** Best-ranked releases tried, in order, when opening a chart entry (one may fail to download). */
 const CHART_ATTEMPTS = 3
+/** How long a chart page is kept, so reopening Explore or switching back to a category doesn't fetch it again. */
+const BROWSE_CACHE_MS = 10 * 60_000
+const MAX_BROWSE_CACHE = 200
 /** How far "Load more" can go for one search or category. */
 export const MAX_PAGE = 20
 
@@ -27,6 +31,7 @@ export type CoverFill = (albums: ProviderAlbum[], signal: AbortSignal) => Promis
 export class ProviderRegistry {
   private providers: MusicProvider[] = []
   private readonly results = new Map<string, { provider: MusicProvider; album: ProviderAlbum }>()
+  private readonly browsed = new Map<string, { at: number; section: ProviderSection }>()
 
   private readonly fillCovers?: CoverFill
 
@@ -36,6 +41,7 @@ export class ProviderRegistry {
 
   setProviders(providers: MusicProvider[]): void {
     this.providers = providers
+    this.browsed.clear()
     // Results from providers that were removed or reconfigured can no longer be opened.
     for (const [id, entry] of this.results) {
       if (!providers.includes(entry.provider)) this.results.delete(id)
@@ -91,7 +97,12 @@ export class ProviderRegistry {
     return {
       charts: this.chartProviders()
         .filter(p => p.browse && p.categories?.length)
-        .map(p => ({ id: p.id, name: p.name, categories: p.categories ?? [] })),
+        .map(p => ({
+          id: p.id,
+          name: p.name,
+          categories: p.categories ?? [],
+          ...(p.region ? { region: p.region } : {})
+        })),
       canPlay: this.torrentProviders().length > 0
     }
   }
@@ -100,7 +111,8 @@ export class ProviderRegistry {
     providerId: unknown,
     categoryId: unknown,
     signal: AbortSignal,
-    page: unknown = 1
+    page: unknown = 1,
+    region?: unknown
   ): Promise<ProviderSection> {
     const provider = this.chartProviders().find(p => p.id === providerId)
     const browse = provider?.browse
@@ -108,12 +120,23 @@ export class ProviderRegistry {
       throw new SourceError('That chart can no longer be browsed.')
     }
     const pageNumber = validPage(page)
-    return this.section(provider, async () => {
+    let country: string | undefined
+    if (region !== undefined && region !== null) {
+      country = provider.region ? parseRegion(region, provider.region.worldwide) : undefined
+      if (country === undefined) throw new SourceError('That country isn’t available for this chart.')
+    }
+
+    const key = `${provider.id}|${categoryId as string}|${pageNumber}|${country ?? 'default'}`
+    const cached = this.browsed.get(key)
+    if (cached && Date.now() - cached.at < BROWSE_CACHE_MS) return cached.section
+
+    const section = await this.section(provider, async () => {
       const results = await browse.call(
         provider,
         categoryId as string,
         AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)]),
-        pageNumber
+        pageNumber,
+        country
       )
       if (!this.fillCovers) return results
       const albums = await this.fillCovers(
@@ -122,6 +145,12 @@ export class ProviderRegistry {
       )
       return { ...results, albums }
     })
+    // Only good answers are kept: a failure should be tried again next time.
+    if (!section.error && section.albums.length > 0) {
+      this.browsed.set(key, { at: Date.now(), section })
+      if (this.browsed.size > MAX_BROWSE_CACHE) this.browsed.delete(this.browsed.keys().next().value as string)
+    }
+    return section
   }
 
   /** Another page of one provider's albums for a search; songs only come with the first page. */

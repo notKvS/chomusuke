@@ -1,4 +1,4 @@
-import type { SourceCategory, SourceHints } from '../../shared/types.ts'
+import type { ChartRegion, SourceCategory, SourceHints } from '../../shared/types.ts'
 import type { TrackAnnotation } from '../engine.ts'
 
 /**
@@ -21,7 +21,10 @@ export interface MusicProvider {
   open(album: ProviderAlbum, signal?: AbortSignal): Promise<Playable>
   /** Categories for the Explore page (trending, genres, formats…). Omit if the source can't be browsed. */
   readonly categories?: SourceCategory[]
-  browse?(categoryId: string, signal: AbortSignal, page?: number): Promise<ProviderResults>
+  /** `region`: a country code (or "" for worldwide) to use instead of the saved one, for charts that have a `region`. */
+  browse?(categoryId: string, signal: AbortSignal, page?: number, region?: string): Promise<ProviderResults>
+  /** Charts that can be asked for another country. */
+  readonly region?: ChartRegion
   /**
    * Chart sources (top albums/songs) list music without torrents: they're only browsed, never searched, and
    * opening an entry finds a matching release on the other providers (see ProviderRegistry.findRelease).

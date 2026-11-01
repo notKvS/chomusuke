@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { hostAllowed, PluginError, parseRepository, sanitizeChartEntries, sanitizeResults } from './manifest.ts'
+import {
+  forKind,
+  hostAllowed,
+  PluginError,
+  parseRepository,
+  sanitizeChartEntries,
+  sanitizeResults
+} from './manifest.ts'
 
 const REPO = 'https://example.github.io/chomusuke-ext/index.json'
 const valid = {
@@ -136,4 +143,21 @@ test('sanitizeResults keeps only well-formed, allowed results', () => {
     ]
   )
   assert.throws(() => sanitizeResults({ not: 'an array' }, manifest), PluginError)
+})
+
+test('a repository is split by kind, and one with only the other kind points to its tab', () => {
+  const entry = (id: string, type: 'torrent' | 'chart') => ({
+    manifest: parseRepository([{ ...valid, id, type, categories: [{ id: 'top', name: 'Top' }] }], REPO)[0]
+  })
+  const mixed = [entry('a', 'torrent'), entry('b', 'chart'), entry('c', 'torrent')]
+  assert.deepEqual(
+    forKind(mixed, 'provider').map(i => i.manifest.id),
+    ['a', 'c']
+  )
+  assert.deepEqual(
+    forKind(mixed, 'chart').map(i => i.manifest.id),
+    ['b']
+  )
+  assert.throws(() => forKind([entry('b', 'chart')], 'provider'), /Settings → Charts/)
+  assert.throws(() => forKind([entry('a', 'torrent')], 'chart'), /Settings → Plugins/)
 })

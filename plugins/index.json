@@ -4,7 +4,7 @@
     "id": "spotify-charts",
     "name": "Spotify charts",
     "description": "Spotify's weekly global top songs and albums, plus daily and weekly top songs for any country (via kworb.net). Plays each one through your providers.",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "type": "chart",
     "code": "spotify-charts.js",
     "hosts": ["charts-spotify-com-service.spotify.com", "kworb.net", "open.spotify.com"],
@@ -15,6 +15,7 @@
       { "id": "country-daily", "name": "Top songs today" },
       { "id": "country-weekly", "name": "Top songs this week" }
     ],
+    "region": { "option": "country", "worldwide": true, "categories": ["country-daily", "country-weekly"] },
     "options": {
       "country": {
         "type": "string",
@@ -29,7 +30,7 @@
     "id": "youtube-music-charts",
     "name": "YouTube Music charts",
     "description": "The weekly top songs and music videos on YouTube, worldwide or for one country (charts.youtube.com). Plays each one through your providers.",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "type": "chart",
     "code": "youtube-music-charts.js",
     "hosts": ["charts.youtube.com"],
@@ -38,6 +39,7 @@
       { "id": "top-songs", "name": "Top songs this week" },
       { "id": "top-videos", "name": "Top music videos this week" }
     ],
+    "region": { "option": "country", "worldwide": true },
     "options": {
       "country": {
         "type": "string",
@@ -52,7 +54,7 @@
     "id": "apple-music-charts",
     "name": "Apple Music charts",
     "description": "Most played on Apple Music, plus the iTunes Store's top albums and songs overall and by genre. Plays each one through your providers.",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "type": "chart",
     "code": "apple-music-charts.js",
     "hosts": ["rss.marketingtools.apple.com", "itunes.apple.com"],
@@ -75,6 +77,7 @@
       { "id": "classical", "name": "Classical" },
       { "id": "soundtrack", "name": "Soundtrack" }
     ],
+    "region": { "option": "country", "worldwide": false },
     "options": {
       "country": {
         "type": "string",

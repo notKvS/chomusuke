@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react'
-import type { ProviderSettingsView, ProvidersResponse, TorznabForm } from '../../../../shared/types'
+import type { PluginKind, ProviderSettingsView, ProvidersResponse, TorznabForm } from '../../../../shared/types'
 import { type Status, StatusLine } from '../controls/StatusLine'
 import { Switch } from '../controls/Switch'
 import { Icon } from '../Icon'
@@ -7,11 +7,10 @@ import './SourcesSettings.css'
 
 const EMPTY_FORM: TorznabForm = { name: '', url: '', apiKey: '' }
 
-/** Providers (the Internet Archive, Torznab indexers, provider plugins), charts, and installing plugins. */
-export function SourcesSettings() {
+/** The installed providers and charts, with what to do to them; shared by the Charts and Plugins tabs. */
+function useProviders() {
   const [providers, setProviders] = useState<ProviderSettingsView[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [editing, setEditing] = useState<TorznabForm | null>(null)
 
   const apply = (response: ProvidersResponse): boolean => {
     if (!response.ok) {
@@ -36,34 +35,69 @@ export function SourcesSettings() {
     apply(await window.chomusuke.removeProvider(provider.id))
   }
 
-  const builtIn = providers?.filter(p => p.builtIn) ?? []
-  const indexers = providers?.filter(p => p.type === 'torznab') ?? []
-  const plugins = providers?.filter(p => p.type === 'plugin') ?? []
   const rowActions = {
     apply,
     onToggle: (provider: ProviderSettingsView) => void toggle(provider),
     onRemove: (provider: ProviderSettingsView) => void remove(provider)
   }
+  return { providers: providers ?? [], error, apply, toggle, remove, rowActions }
+}
+
+function ErrorLine({ error }: { error: string | null }) {
+  return (
+    error && (
+      <p className="section-error">
+        <Icon name="error" size={18} />
+        {error}
+      </p>
+    )
+  )
+}
+
+/** Charts: the data sources behind Explore. They only list music; plugins find and play it. */
+export function ChartsSettings() {
+  const { providers, error, apply, rowActions } = useProviders()
+  const charts = providers.filter(p => p.type === 'plugin' && p.chart)
+  return (
+    <div className="sources">
+      <p className="sources__lead">
+        Charts are where Explore's lists come from: top songs and albums by country and genre. They only supply the
+        list. To play an entry, Chomusuke searches your plugins for it.
+      </p>
+      <ErrorLine error={error} />
+      <section className="shelf">
+        <h2 className="shelf__title">Charts</h2>
+        <PluginRows plugins={charts} {...rowActions} />
+      </section>
+      <InstallPlugins kind="chart" apply={apply} />
+    </div>
+  )
+}
+
+/** Plugins: where music is found and played from. */
+export function PluginsSettings() {
+  const { providers, error, apply, toggle, remove, rowActions } = useProviders()
+  const [editing, setEditing] = useState<TorznabForm | null>(null)
+
+  const builtIn = providers.filter(p => p.builtIn)
+  const indexers = providers.filter(p => p.type === 'torznab')
+  const plugins = providers.filter(p => p.type === 'plugin' && !p.chart)
 
   return (
     <div className="sources">
       <p className="sources__lead">
-        Providers are where Chomusuke finds music: every result plays over BitTorrent, and only the songs you play are
-        downloaded. Charts fill Explore with what's popular and play each entry by searching your providers.
+        Plugins are where Chomusuke finds music and plays it from. Search looks through all of them at once, and so does
+        playing an entry from a chart. Everything currently plays over BitTorrent, and only the songs you play are
+        downloaded.
       </p>
-      {error && (
-        <p className="section-error">
-          <Icon name="error" size={18} />
-          {error}
-        </p>
-      )}
+      <ErrorLine error={error} />
 
       <section className="shelf">
-        <h2 className="shelf__title">Providers</h2>
+        <h2 className="shelf__title">Plugins</h2>
         <p className="sources__help">
-          Searched when you look for music, and when you play something from a chart. The Internet Archive collections
-          come switched on; the tracker templates (The Pirate Bay, 1337x, Nyaa, Knaben, LimeTorrents) come switched off
-          — turn one on and press Test to use it. Charts need at least one provider that carries popular music.
+          The Internet Archive collections come switched on; the tracker templates (The Pirate Bay, 1337x, Nyaa, Knaben,
+          LimeTorrents) come switched off — turn one on and press Test to use it. Charts need at least one plugin that
+          carries popular music.
         </p>
         {builtIn.map(provider => (
           <SourceRow
@@ -73,15 +107,15 @@ export function SourcesSettings() {
             onToggle={() => void toggle(provider)}
           />
         ))}
-        <PluginRows plugins={plugins.filter(p => !p.chart)} {...rowActions} />
+        <PluginRows plugins={plugins} {...rowActions} />
       </section>
 
       <section className="shelf">
-        <h2 className="shelf__title">Torrent indexers</h2>
+        <h2 className="shelf__title">Torznab indexers</h2>
         <p className="sources__help">
-          Connect any indexer that speaks <strong>Torznab</strong>, the standard torrent search API, as a provider.
-          Chomusuke searches the audio categories of whatever trackers you've set up there. Copy the Torznab feed URL
-          and API key from the indexer's settings, for example <code>http://localhost:9117/api/torznab</code>.
+          Connect any indexer that speaks <strong>Torznab</strong>, the standard torrent search API. Chomusuke searches
+          the audio categories of whatever trackers you've set up there. Copy the Torznab feed URL and API key from the
+          indexer's settings, for example <code>http://localhost:9117/api/torznab</code>.
         </p>
 
         {indexers.map(provider => (
@@ -111,15 +145,7 @@ export function SourcesSettings() {
         )}
       </section>
 
-      <section className="shelf">
-        <h2 className="shelf__title">Charts</h2>
-        <p className="sources__help">
-          Top albums and songs for Explore. Each entry plays by searching your providers for it.
-        </p>
-        <PluginRows plugins={plugins.filter(p => p.chart)} {...rowActions} />
-      </section>
-
-      <InstallPlugins apply={apply} />
+      <InstallPlugins kind="provider" apply={apply} />
     </div>
   )
 }
@@ -172,14 +198,14 @@ function PluginRows({ plugins, apply, onToggle, onRemove }: PluginRowsProps) {
 }
 
 /** Installs plugins from a repository manifest; each runs in a sandbox. */
-function InstallPlugins({ apply }: { apply: (response: ProvidersResponse) => boolean }) {
+function InstallPlugins({ kind, apply }: { kind: PluginKind; apply: (response: ProvidersResponse) => boolean }) {
   const [url, setUrl] = useState('')
   const [status, setStatus] = useState<Status | null>(null)
 
   const importRepository = async (event: FormEvent) => {
     event.preventDefault()
     setStatus({ kind: 'busy', text: 'Installing…' })
-    const response = await window.chomusuke.importPlugins(url)
+    const response = await window.chomusuke.importPlugins(url, kind)
     if (apply(response)) {
       setStatus({ kind: 'ok', text: 'Installed.' })
       setUrl('')
@@ -188,10 +214,10 @@ function InstallPlugins({ apply }: { apply: (response: ProvidersResponse) => boo
 
   return (
     <section className="shelf">
-      <h2 className="shelf__title">Install plugins</h2>
+      <h2 className="shelf__title">{kind === 'chart' ? 'Add charts' : 'Add plugins'}</h2>
       <p className="sources__help">
-        Plugins add providers or charts. Paste the URL of a plugin repository (a JSON manifest). Each plugin runs in an
-        isolated sandbox and can only reach the websites it declares. Only install repositories you trust.
+        Paste the URL of a repository (a JSON manifest) to add {kind === 'chart' ? 'charts' : 'plugins'}. Each one runs
+        in an isolated sandbox and can only reach the websites it declares. Only install repositories you trust.
       </p>
       <form className="import-form" onSubmit={importRepository}>
         <input
@@ -200,7 +226,7 @@ function InstallPlugins({ apply }: { apply: (response: ProvidersResponse) => boo
           placeholder="https://example.github.io/my-plugins/index.json"
           spellCheck={false}
           maxLength={2048}
-          aria-label="Plugin repository URL"
+          aria-label={kind === 'chart' ? 'Chart repository URL' : 'Plugin repository URL'}
           required
         />
         <button type="submit" className="solid-button" disabled={status?.kind === 'busy'}>

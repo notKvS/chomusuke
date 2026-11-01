@@ -76,6 +76,32 @@ export interface SharingSettings {
   discordStatus: boolean
 }
 
+/** A song that was played, as remembered for Home's suggestions. */
+export interface PlayedSong {
+  title: string
+  artist?: string
+  album?: string
+}
+
+/** A row on Home, and where its albums come from. */
+export interface HomeShelf {
+  id: string
+  title: string
+  subtitle?: string
+  source: { kind: 'search'; query: string } | { kind: 'chart'; sourceId: string; categoryId: string }
+}
+
+/** Whether the Discord status is getting through, for the Settings page. */
+export type DiscordStatus =
+  | { kind: 'off' }
+  /** Turned on, nothing sent yet (nothing has played, or Discord hasn't been needed). */
+  | { kind: 'idle' }
+  /** The Discord desktop app can't be reached: it isn't running, or only its web version is. */
+  | { kind: 'not-running' }
+  | { kind: 'connected' }
+  /** Discord answered with an error. */
+  | { kind: 'refused'; message: string }
+
 /** What's playing, for the Discord status. */
 export interface NowPlaying {
   title: string
@@ -239,6 +265,18 @@ export interface ExploreSource {
   id: string
   name: string
   categories: SourceCategory[]
+  /** Set when the chart can be asked for another country. */
+  region?: ChartRegion
+}
+
+/** How a chart takes a country. */
+export interface ChartRegion {
+  /** The country the user saved for this chart in Settings ("" = worldwide). */
+  current: string
+  /** Whether the chart has a worldwide list (asked for with ""). */
+  worldwide: boolean
+  /** The categories that follow the country; all of them when left out. */
+  categories?: string[]
 }
 
 /** The Explore page: the enabled charts, and whether any provider is on to play their entries. */
@@ -289,6 +327,9 @@ export interface TorznabForm {
   apiKey: string
 }
 
+/** What a plugin does: finds and plays music (a provider), or lists what's popular (a chart). */
+export type PluginKind = 'provider' | 'chart'
+
 export type ProvidersResponse = { ok: true; providers: ProviderSettingsView[] } | { ok: false; error: string }
 export type TestResponse = { ok: true; message: string } | { ok: false; error: string }
 
@@ -304,12 +345,14 @@ export interface ChomusukeApi {
   testTorznab(form: TorznabForm): Promise<TestResponse>
   setProviderEnabled(id: string, enabled: boolean): Promise<ProvidersResponse>
   removeProvider(id: string): Promise<ProvidersResponse>
-  importPlugins(repositoryUrl: string): Promise<ProvidersResponse>
+  /** Installs the plugins of one kind from a repository; the other kind is left for its own tab. */
+  importPlugins(repositoryUrl: string, kind: PluginKind): Promise<ProvidersResponse>
   setPluginOptions(id: string, values: Record<string, string | boolean>): Promise<ProvidersResponse>
   testPlugin(id: string): Promise<TestResponse>
   exploreSources(): Promise<ExploreOverview>
   /** One page (default 1) of a source's category. */
-  browse(sourceId: string, categoryId: string, page?: number): Promise<BrowseResponse>
+  /** One page of a chart category. `region` is a country code (or "" for worldwide) instead of the saved default. */
+  browse(sourceId: string, categoryId: string, page?: number, region?: string): Promise<BrowseResponse>
   onStats(listener: (stats: TorrentStats[]) => void): () => void
   /** Window chrome that follows the theme: zoom factor and the native title-bar overlay colours. */
   setWindowAppearance(appearance: WindowAppearance): Promise<void>
@@ -328,6 +371,14 @@ export interface ChomusukeApi {
   setSharing(settings: SharingSettings): Promise<LibraryResponse>
   /** Tells the app what's playing (null: nothing), shown as the Discord status when that's turned on. */
   setNowPlaying(nowPlaying: NowPlaying | null): Promise<void>
+  getDiscordStatus(): Promise<DiscordStatus>
+  /** Remembers that a song was played (once it has been listened to for a while). */
+  recordPlay(song: PlayedSong): Promise<void>
+  /** How many plays are remembered. */
+  getHistorySize(): Promise<number>
+  clearHistory(): Promise<void>
+  /** The rows Home shows for what you listen to; with nothing played yet, a popular chart. */
+  getHomeShelves(): Promise<HomeShelf[]>
   getRatings(): Promise<RatedSong[]>
   /** Like (1), dislike (-1) or clear (0) a track of a loaded album. Returns the updated list. */
   rateTrack(infoHash: string, key: string, rating: 0 | 1 | -1): Promise<RatedSong[]>

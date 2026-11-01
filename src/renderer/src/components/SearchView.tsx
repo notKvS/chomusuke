@@ -20,7 +20,7 @@ interface Props {
   onPlaySong: (song: SearchSong) => void
   onOpenAlbum: (album: SearchAlbum, autoplay: boolean) => void
   onRetry: () => void
-  onManageSources: () => void
+  onManagePlugins: () => void
 }
 
 const albumSubtitle = (album: SearchAlbum): string =>
@@ -33,7 +33,7 @@ const isEmpty = (results: SearchResults): boolean =>
  * Search results: matching songs first, then one section of albums per source (cards or a release list, as the
  * source prefers). Shows a sticker for errors, no sources and no results.
  */
-export function SearchView({ search, isPlaying, onPlaySong, onOpenAlbum, onRetry, onManageSources }: Props) {
+export function SearchView({ search, isPlaying, onPlaySong, onOpenAlbum, onRetry, onManagePlugins }: Props) {
   const results = search.status === 'done' ? search.results : null
   const noSources = results !== null && results.sections.length === 0
 
@@ -63,8 +63,8 @@ export function SearchView({ search, isPlaying, onPlaySong, onOpenAlbum, onRetry
       {noSources && (
         <div className="search__message">
           <Sticker scene="no-sources">
-            <button type="button" className="solid-button" onClick={onManageSources}>
-              Manage sources
+            <button type="button" className="solid-button" onClick={onManagePlugins}>
+              Manage plugins
             </button>
           </Sticker>
         </div>
