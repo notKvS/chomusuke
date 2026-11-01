@@ -44,7 +44,7 @@ function publicUrl(raw: string): boolean {
 }
 
 /**
- * Rebuilds a magnet from a third party (indexer, extension) keeping only the info hash, name, public trackers
+ * Rebuilds a magnet from a third party (indexer, plugin) keeping only the info hash, name, public trackers
  * and public https web seeds. Drops peer addresses (x.pe) and everything else, so a result can't point the
  * torrent client at the user's own network.
  */

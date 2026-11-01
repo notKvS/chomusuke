@@ -12,8 +12,8 @@ dist/
 credentials*
 secrets*
 
-# Built extension bundles (npm run build:extensions)
-extensions/dist/
+# Built plugin bundles (npm run build:plugins)
+plugins/dist/
 
 # Packaged installers (npm run dist)
 release/

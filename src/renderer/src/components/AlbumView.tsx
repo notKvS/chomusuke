@@ -158,7 +158,7 @@ function SwarmStatus({ stats }: { stats?: TorrentStats }) {
   )
 }
 
-/** `finding`: a chart entry, so the torrent sources are being searched for it first. */
+/** `finding`: a chart entry, so the providers are being searched for it first. */
 export function AlbumLoading({
   title,
   artist,

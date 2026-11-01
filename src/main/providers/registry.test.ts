@@ -79,27 +79,8 @@ test('results from removed providers can no longer be opened', async () => {
   await assert.rejects(registry.open(sections[0].albums[0].id), /expired/)
 })
 
-test('explore lists browsable providers and browse remembers results', async () => {
-  const registry = new ProviderRegistry()
-  const browsable = fakeProvider('archive', {
-    categories: [{ id: 'trending', name: 'Trending' }],
-    browse: async () => ({ albums: [album('hot-locator', 'Hot')], songs: [] })
-  })
-  registry.setProviders([browsable, fakeProvider('torznab-1')])
-  assert.deepEqual(registry.explore(), [
-    { id: 'archive', name: 'ARCHIVE', layout: 'cards', categories: [{ id: 'trending', name: 'Trending' }] }
-  ])
-
-  const section = await registry.browse('archive', 'trending', new AbortController().signal)
-  assert.equal(section.albums[0].title, 'Hot')
-  await registry.open(section.albums[0].id)
-  assert.deepEqual(browsable.opened, ['hot-locator'])
-  await assert.rejects(registry.browse('archive', 'nope', new AbortController().signal), SourceError)
-  await assert.rejects(registry.browse('torznab-1', 'trending', new AbortController().signal), SourceError)
-})
-
 const chartProvider = (behaviour: Partial<MusicProvider> = {}) =>
-  fakeProvider('ext-charts', {
+  fakeProvider('plugin-charts', {
     chart: true,
     categories: [{ id: 'top', name: 'Top' }],
     browse: async () => ({
@@ -109,14 +90,37 @@ const chartProvider = (behaviour: Partial<MusicProvider> = {}) =>
     ...behaviour
   })
 
-test('charts are listed first on Explore and never searched', async () => {
+test('Explore lists only charts, says whether a provider can play them, and browse remembers results', async () => {
+  const registry = new ProviderRegistry()
+  const archive = fakeProvider('archive', {
+    categories: [{ id: 'trending', name: 'Trending' }],
+    browse: async () => ({ albums: [album('hot-locator', 'Hot')], songs: [] })
+  })
+  const charts = chartProvider()
+  registry.setProviders([archive, charts])
+  assert.deepEqual(registry.explore(), {
+    charts: [{ id: 'plugin-charts', name: 'PLUGIN-CHARTS', categories: [{ id: 'top', name: 'Top' }] }],
+    canPlay: true
+  })
+
+  const section = await registry.browse('plugin-charts', 'top', new AbortController().signal)
+  assert.equal(section.albums[0].title, 'Mayhem')
+  assert.equal(section.albums[0].chart, 'album')
+  await registry.open(section.albums[0].id)
+  assert.deepEqual(charts.opened, ['chart-ref'])
+  await assert.rejects(registry.browse('plugin-charts', 'nope', new AbortController().signal), SourceError)
+  // Providers' own categories no longer show on Explore.
+  await assert.rejects(registry.browse('archive', 'trending', new AbortController().signal), SourceError)
+
+  registry.setProviders([charts])
+  assert.equal(registry.explore().canPlay, false)
+})
+
+test('charts are never searched', async () => {
   const registry = new ProviderRegistry()
   let searched = false
   registry.setProviders([
-    fakeProvider('archive', {
-      categories: [{ id: 'trending', name: 'Trending' }],
-      browse: async () => ({ albums: [], songs: [] })
-    }),
+    fakeProvider('archive'),
     chartProvider({
       search: async () => {
         searched = true
@@ -124,21 +128,24 @@ test('charts are listed first on Explore and never searched', async () => {
       }
     })
   ])
-  assert.deepEqual(
-    registry.explore().map(s => [s.id, s.chart]),
-    [
-      ['ext-charts', true],
-      ['archive', undefined]
-    ]
-  )
   const { sections } = await registry.search('q', new AbortController().signal)
   assert.deepEqual(
     sections.map(s => s.id),
     ['archive']
   )
   assert.equal(searched, false)
-  const section = await registry.browse('ext-charts', 'top', new AbortController().signal)
-  assert.equal(section.albums[0].chart, 'album')
+})
+
+test('chart entries without a cover get one filled in', async () => {
+  const asked: string[][] = []
+  const registry = new ProviderRegistry(async albums => {
+    asked.push(albums.map(a => a.title))
+    return albums.map(a => (a.artwork ? a : { ...a, artwork: 'https://is1-ssl.mzstatic.com/x/600x600bb.jpg' }))
+  })
+  registry.setProviders([chartProvider()])
+  const section = await registry.browse('plugin-charts', 'top', new AbortController().signal)
+  assert.deepEqual(asked, [['Mayhem']])
+  assert.equal(section.albums[0].artwork, 'https://is1-ssl.mzstatic.com/x/600x600bb.jpg')
 })
 
 test('findRelease searches the torrent providers and opens the best match', async () => {
@@ -204,7 +211,7 @@ test('findRelease tries the next match when one fails, and explains when nothing
   registry.setProviders([chartProvider()])
   await assert.rejects(
     registry.findRelease({ kind: 'album', title: 'Mayhem', artist: 'Lady Gaga' }),
-    /Turn on a torrent source/
+    /Turn on a provider/
   )
 })
 
@@ -212,7 +219,7 @@ test('opening a chart entry goes through its provider', async () => {
   const registry = new ProviderRegistry()
   const charts = chartProvider()
   registry.setProviders([charts])
-  const section = await registry.browse('ext-charts', 'top', new AbortController().signal)
+  const section = await registry.browse('plugin-charts', 'top', new AbortController().signal)
   await registry.open(section.albums[0].id)
   assert.deepEqual(charts.opened, ['chart-ref'])
 })
@@ -243,6 +250,9 @@ test('search sections say when a provider has more, and searchMore pages one pro
   for (const bad of [0, 1.5, 21, '2', null]) {
     await assert.rejects(registry.searchMore('torznab-1', 'q', bad, new AbortController().signal), /page/)
   }
-  await assert.rejects(registry.searchMore('ext-charts', 'q', 2, new AbortController().signal), /no longer available/)
-  await assert.rejects(registry.browse('ext-charts', 'top', new AbortController().signal, 99), /page/)
+  await assert.rejects(
+    registry.searchMore('plugin-charts', 'q', 2, new AbortController().signal),
+    /no longer available/
+  )
+  await assert.rejects(registry.browse('plugin-charts', 'top', new AbortController().signal, 99), /page/)
 })

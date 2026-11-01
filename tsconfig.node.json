@@ -19,8 +19,8 @@
     "src/main/**/*",
     "src/preload/**/*",
     "src/shared/**/*",
-    "extensions/build.ts",
-    "extensions/test/**/*",
+    "plugins/build.ts",
+    "plugins/test/**/*",
     "src/renderer/src/*.test.ts",
     "src/renderer/src/theme/*.test.ts"
   ]

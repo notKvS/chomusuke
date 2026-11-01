@@ -1,11 +1,13 @@
 import { createHash } from 'node:crypto'
-import type { ExploreSource, ProviderSection, SearchAlbum, SearchResults, SearchSong } from '../../shared/types.ts'
+import type { ExploreOverview, ProviderSection, SearchAlbum, SearchResults, SearchSong } from '../../shared/types.ts'
 import { SourceError } from '../source.ts'
 import { type ChartWanted, chartQueries, rankReleases } from './chart-match.ts'
 import { TorznabError } from './torznab.ts'
 import type { MusicProvider, Playable, ProviderAlbum, ProviderResults } from './types.ts'
 
 const PROVIDER_TIMEOUT_MS = 25_000
+/** How long a chart shelf waits for missing covers before showing what it has. */
+const COVERS_TIMEOUT_MS = 8000
 const MAX_REMEMBERED_RESULTS = 5000
 const RESULT_ID = /^[a-z0-9-]{1,40}:[a-f0-9]{24}$/
 /** Best-ranked releases tried, in order, when opening a chart entry (one may fail to download). */
@@ -15,6 +17,9 @@ export const MAX_PAGE = 20
 
 type Candidate = { provider: MusicProvider; album: ProviderAlbum }
 
+/** Adds covers to chart entries that came without one (see covers.ts). */
+export type CoverFill = (albums: ProviderAlbum[], signal: AbortSignal) => Promise<ProviderAlbum[]>
+
 /**
  * Fans a query out to every enabled provider and remembers which provider/locator each result came from,
  * so the renderer can open a result by opaque id without ever handling URLs, magnets or API keys.
@@ -22,6 +27,12 @@ type Candidate = { provider: MusicProvider; album: ProviderAlbum }
 export class ProviderRegistry {
   private providers: MusicProvider[] = []
   private readonly results = new Map<string, { provider: MusicProvider; album: ProviderAlbum }>()
+
+  private readonly fillCovers?: CoverFill
+
+  constructor(fillCovers?: CoverFill) {
+    this.fillCovers = fillCovers
+  }
 
   setProviders(providers: MusicProvider[]): void {
     this.providers = providers
@@ -75,18 +86,14 @@ export class ProviderRegistry {
     return { query, songs, sections }
   }
 
-  /** Providers that can be browsed, with their categories, for the Explore page; charts first. */
-  explore(): ExploreSource[] {
-    return this.providers
-      .filter(p => p.browse && p.categories?.length)
-      .sort((a, b) => Number(Boolean(b.chart)) - Number(Boolean(a.chart)))
-      .map(p => ({
-        id: p.id,
-        name: p.name,
-        layout: p.layout,
-        categories: p.categories ?? [],
-        ...(p.chart ? { chart: true } : {})
-      }))
+  /** The Explore page: the enabled charts with their categories, and whether a provider is on to play them. */
+  explore(): ExploreOverview {
+    return {
+      charts: this.chartProviders()
+        .filter(p => p.browse && p.categories?.length)
+        .map(p => ({ id: p.id, name: p.name, categories: p.categories ?? [] })),
+      canPlay: this.torrentProviders().length > 0
+    }
   }
 
   async browse(
@@ -95,20 +102,26 @@ export class ProviderRegistry {
     signal: AbortSignal,
     page: unknown = 1
   ): Promise<ProviderSection> {
-    const provider = this.providers.find(p => p.id === providerId)
+    const provider = this.chartProviders().find(p => p.id === providerId)
     const browse = provider?.browse
     if (!provider || !browse || !provider.categories?.some(c => c.id === categoryId)) {
-      throw new SourceError('That source can no longer be browsed.')
+      throw new SourceError('That chart can no longer be browsed.')
     }
     const pageNumber = validPage(page)
-    return this.section(provider, () =>
-      browse.call(
+    return this.section(provider, async () => {
+      const results = await browse.call(
         provider,
         categoryId as string,
         AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)]),
         pageNumber
       )
-    )
+      if (!this.fillCovers) return results
+      const albums = await this.fillCovers(
+        results.albums,
+        AbortSignal.any([signal, AbortSignal.timeout(COVERS_TIMEOUT_MS)])
+      )
+      return { ...results, albums }
+    })
   }
 
   /** Another page of one provider's albums for a search; songs only come with the first page. */
@@ -156,7 +169,7 @@ export class ProviderRegistry {
     const providers = this.torrentProviders()
     const what = `“${wanted.title}” by ${wanted.artist}`
     if (providers.length === 0) {
-      throw new SourceError(`Turn on a torrent source (Settings → Sources) to play ${what}.`)
+      throw new SourceError(`Turn on a provider (Settings → Sources) to play ${what}.`)
     }
     let ranked: Candidate[] = []
     for (const query of chartQueries(wanted)) {
@@ -183,7 +196,7 @@ export class ProviderRegistry {
     throw new SourceError(
       ranked.length > 0
         ? `Found ${what}, but couldn’t open it. Try again later.`
-        : `Couldn’t find ${what} on your torrent sources. Turn on more sources in Settings → Sources, or search for it.`
+        : `Couldn’t find ${what} on your providers. Turn on more in Settings → Sources, or search for it.`
     )
   }
 
@@ -210,6 +223,10 @@ export class ProviderRegistry {
 
   private torrentProviders(): MusicProvider[] {
     return this.providers.filter(p => !p.chart)
+  }
+
+  private chartProviders(): MusicProvider[] {
+    return this.providers.filter(p => p.chart)
   }
 
   private remember(provider: MusicProvider, album: ProviderAlbum): SearchAlbum {

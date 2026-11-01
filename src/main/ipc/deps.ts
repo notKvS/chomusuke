@@ -1,9 +1,9 @@
 import type { BrowserWindow, IpcMainInvokeEvent } from 'electron'
 import type { DiscordPresence } from '../discord.ts'
 import type { TorrentEngine } from '../engine.ts'
-import type { ExtensionHost } from '../extension-host/host.ts'
-import type { ExtensionManifest } from '../extension-host/manifest.ts'
 import type { PlaylistStore } from '../playlists.ts'
+import type { PluginHost } from '../plugin-host/host.ts'
+import type { PluginManifest } from '../plugin-host/manifest.ts'
 import type { ProviderRegistry } from '../providers/registry.ts'
 import type { ProviderSettingsStore } from '../providers/settings.ts'
 import type { RatingsStore } from '../ratings.ts'
@@ -25,8 +25,8 @@ export interface IpcDeps {
   playlists: PlaylistStore
   /** The Discord status; follows the `discordStatus` sharing setting. */
   presence: DiscordPresence
-  /** The sandbox for an installed extension, reused while its code is unchanged. */
-  extensionRuntime: (manifest: ExtensionManifest, code: string, codeSha256: string) => ExtensionHost
-  /** Tears down the sandboxes of extensions that are no longer enabled. */
+  /** The sandbox for an installed plugin, reused while its code is unchanged. */
+  pluginRuntime: (manifest: PluginManifest, code: string, codeSha256: string) => PluginHost
+  /** Tears down the sandboxes of plugins that are no longer enabled. */
   disposeUnusedHosts: (activeIds: Set<string>) => void
 }

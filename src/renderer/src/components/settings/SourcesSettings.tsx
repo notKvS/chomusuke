@@ -7,7 +7,7 @@ import './SourcesSettings.css'
 
 const EMPTY_FORM: TorznabForm = { name: '', url: '', apiKey: '' }
 
-/** Where search looks: the built-in Internet Archive, Torznab indexers and extensions. */
+/** Providers (the Internet Archive, Torznab indexers, provider plugins), charts, and installing plugins. */
 export function SourcesSettings() {
   const [providers, setProviders] = useState<ProviderSettingsView[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -38,13 +38,18 @@ export function SourcesSettings() {
 
   const builtIn = providers?.filter(p => p.builtIn) ?? []
   const indexers = providers?.filter(p => p.type === 'torznab') ?? []
-  const extensions = providers?.filter(p => p.type === 'extension') ?? []
+  const plugins = providers?.filter(p => p.type === 'plugin') ?? []
+  const rowActions = {
+    apply,
+    onToggle: (provider: ProviderSettingsView) => void toggle(provider),
+    onRemove: (provider: ProviderSettingsView) => void remove(provider)
+  }
 
   return (
     <div className="sources">
       <p className="sources__lead">
-        Where Chomusuke looks when you search. Every result plays over BitTorrent, and only the songs you play are
-        downloaded.
+        Providers are where Chomusuke finds music: every result plays over BitTorrent, and only the songs you play are
+        downloaded. Charts fill Explore with what's popular and play each entry by searching your providers.
       </p>
       {error && (
         <p className="section-error">
@@ -54,7 +59,12 @@ export function SourcesSettings() {
       )}
 
       <section className="shelf">
-        <h2 className="shelf__title">Built in</h2>
+        <h2 className="shelf__title">Providers</h2>
+        <p className="sources__help">
+          Searched when you look for music, and when you play something from a chart. The Internet Archive collections
+          come switched on; the tracker templates (The Pirate Bay, 1337x, Nyaa, Knaben, LimeTorrents) come switched off
+          — turn one on and press Test to use it. Charts need at least one provider that carries popular music.
+        </p>
         {builtIn.map(provider => (
           <SourceRow
             key={provider.id}
@@ -63,14 +73,15 @@ export function SourcesSettings() {
             onToggle={() => void toggle(provider)}
           />
         ))}
+        <PluginRows plugins={plugins.filter(p => !p.chart)} {...rowActions} />
       </section>
 
       <section className="shelf">
         <h2 className="shelf__title">Torrent indexers</h2>
         <p className="sources__help">
-          Connect any indexer that speaks <strong>Torznab</strong>, the standard torrent search API. Chomusuke searches
-          the audio categories of whatever trackers you've set up there. Copy the Torznab feed URL and API key from the
-          indexer's settings, for example <code>http://localhost:9117/api/torznab</code>.
+          Connect any indexer that speaks <strong>Torznab</strong>, the standard torrent search API, as a provider.
+          Chomusuke searches the audio categories of whatever trackers you've set up there. Copy the Torznab feed URL
+          and API key from the indexer's settings, for example <code>http://localhost:9117/api/torznab</code>.
         </p>
 
         {indexers.map(provider => (
@@ -100,98 +111,96 @@ export function SourcesSettings() {
         )}
       </section>
 
-      <ExtensionsSection
-        extensions={extensions}
-        apply={apply}
-        onToggle={provider => void toggle(provider)}
-        onRemove={provider => void remove(provider)}
-      />
+      <section className="shelf">
+        <h2 className="shelf__title">Charts</h2>
+        <p className="sources__help">
+          Top albums and songs for Explore. Each entry plays by searching your providers for it.
+        </p>
+        <PluginRows plugins={plugins.filter(p => p.chart)} {...rowActions} />
+      </section>
+
+      <InstallPlugins apply={apply} />
     </div>
   )
 }
 
-interface ExtensionsProps {
-  extensions: ProviderSettingsView[]
+interface PluginRowsProps {
+  plugins: ProviderSettingsView[]
   apply: (response: ProvidersResponse) => boolean
   onToggle: (provider: ProviderSettingsView) => void
   onRemove: (provider: ProviderSettingsView) => void
 }
 
-/** Extensions: sources installed from a repository manifest, each run in a sandbox. */
-function ExtensionsSection({ extensions, apply, onToggle, onRemove }: ExtensionsProps) {
-  const [url, setUrl] = useState('')
-  const [status, setStatus] = useState<Status | null>(null)
+/** Installed plugins (providers or charts), each with Test, options and Remove. */
+function PluginRows({ plugins, apply, onToggle, onRemove }: PluginRowsProps) {
   const [configuring, setConfiguring] = useState<string | null>(null)
   const [tests, setTests] = useState<Record<string, Status | undefined>>({})
 
-  const importRepository = async (event: FormEvent) => {
-    event.preventDefault()
-    setStatus({ kind: 'busy', text: 'Installing…' })
-    const response = await window.chomusuke.importExtensions(url)
-    if (apply(response)) {
-      setStatus({ kind: 'ok', text: 'Installed.' })
-      setUrl('')
-    } else if (!response.ok) setStatus({ kind: 'error', text: response.error })
-  }
-
   const test = async (provider: ProviderSettingsView) => {
     setTests(prev => ({ ...prev, [provider.id]: { kind: 'busy', text: 'Testing…' } }))
-    const result = await window.chomusuke.testExtension(provider.id)
+    const result = await window.chomusuke.testPlugin(provider.id)
     setTests(prev => ({
       ...prev,
       [provider.id]: result.ok ? { kind: 'ok', text: result.message } : { kind: 'error', text: result.error }
     }))
   }
 
+  return plugins.map(provider => (
+    <div key={provider.id}>
+      <SourceRow
+        provider={provider}
+        description={[`v${provider.version}`, provider.hosts?.join(', ')].filter(Boolean).join(' • ')}
+        note={provider.description}
+        onToggle={() => onToggle(provider)}
+        onTest={() => void test(provider)}
+        onEdit={
+          provider.options?.length ? () => setConfiguring(configuring === provider.id ? null : provider.id) : undefined
+        }
+        onRemove={() => onRemove(provider)}
+      />
+      {tests[provider.id] && <StatusLine status={tests[provider.id] as Status} />}
+      {configuring === provider.id && (
+        <PluginOptionsForm
+          provider={provider}
+          onDone={response => {
+            if (apply(response)) setConfiguring(null)
+          }}
+        />
+      )}
+    </div>
+  ))
+}
+
+/** Installs plugins from a repository manifest; each runs in a sandbox. */
+function InstallPlugins({ apply }: { apply: (response: ProvidersResponse) => boolean }) {
+  const [url, setUrl] = useState('')
+  const [status, setStatus] = useState<Status | null>(null)
+
+  const importRepository = async (event: FormEvent) => {
+    event.preventDefault()
+    setStatus({ kind: 'busy', text: 'Installing…' })
+    const response = await window.chomusuke.importPlugins(url)
+    if (apply(response)) {
+      setStatus({ kind: 'ok', text: 'Installed.' })
+      setUrl('')
+    } else if (!response.ok) setStatus({ kind: 'error', text: response.error })
+  }
+
   return (
     <section className="shelf">
-      <h2 className="shelf__title">Extensions</h2>
+      <h2 className="shelf__title">Install plugins</h2>
       <p className="sources__help">
-        Extensions add sources. The Internet Archive collections and the charts (Spotify, YouTube Music, Apple Music,
-        ListenBrainz) come switched on; the tracker templates (The Pirate Bay, 1337x, Nyaa, Knaben, LimeTorrents) come
-        switched off — turn one on and press Test to use it. Charts list top albums and songs in Explore and play them
-        by searching your other sources, so they need at least one tracker or indexer that carries popular music. To add
-        more, paste the URL of an extension repository (a JSON manifest). Each extension runs in an isolated sandbox and
-        can only reach the websites it declares. Only install repositories you trust.
+        Plugins add providers or charts. Paste the URL of a plugin repository (a JSON manifest). Each plugin runs in an
+        isolated sandbox and can only reach the websites it declares. Only install repositories you trust.
       </p>
-
-      {extensions.map(provider => (
-        <div key={provider.id}>
-          <SourceRow
-            provider={provider}
-            description={[provider.chart && 'Chart', `v${provider.version}`, provider.hosts?.join(', ')]
-              .filter(Boolean)
-              .join(' • ')}
-            note={provider.description}
-            onToggle={() => onToggle(provider)}
-            onTest={() => void test(provider)}
-            onEdit={
-              provider.options?.length
-                ? () => setConfiguring(configuring === provider.id ? null : provider.id)
-                : undefined
-            }
-            onRemove={() => onRemove(provider)}
-          />
-          {tests[provider.id] && <StatusLine status={tests[provider.id] as Status} />}
-          {configuring === provider.id && (
-            <ExtensionOptionsForm
-              provider={provider}
-              onDone={response => {
-                if (apply(response)) setConfiguring(null)
-              }}
-            />
-          )}
-        </div>
-      ))}
-
       <form className="import-form" onSubmit={importRepository}>
         <input
           value={url}
           onChange={e => setUrl(e.target.value)}
-          placeholder="https://example.github.io/my-extensions/index.json"
+          placeholder="https://example.github.io/my-plugins/index.json"
           spellCheck={false}
           maxLength={2048}
-          aria-label="Extension repository URL"
+          aria-label="Plugin repository URL"
           required
         />
         <button type="submit" className="solid-button" disabled={status?.kind === 'busy'}>
@@ -203,7 +212,7 @@ function ExtensionsSection({ extensions, apply, onToggle, onRemove }: Extensions
   )
 }
 
-function ExtensionOptionsForm({
+function PluginOptionsForm({
   provider,
   onDone
 }: {
@@ -218,7 +227,7 @@ function ExtensionOptionsForm({
 
   const save = async (event: FormEvent) => {
     event.preventDefault()
-    const response = await window.chomusuke.setExtensionOptions(provider.id, values)
+    const response = await window.chomusuke.setPluginOptions(provider.id, values)
     if (!response.ok) setError(response.error)
     onDone(response)
   }
@@ -275,7 +284,7 @@ function SourceRow({ provider, description, note, onToggle, onTest, onEdit, onRe
   return (
     <div className={`source-row ${provider.enabled ? '' : 'is-off'}`}>
       <span className="source-row__icon">
-        <Icon name={provider.builtIn ? 'music' : provider.type === 'extension' ? 'extension' : 'download'} />
+        <Icon name={provider.builtIn ? 'music' : provider.type === 'plugin' ? 'plugin' : 'download'} />
       </span>
       <span className="source-row__text">
         <span className="source-row__name">{provider.name}</span>

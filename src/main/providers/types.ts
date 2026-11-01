@@ -47,7 +47,7 @@ export interface ProviderAlbum {
   size?: number
   /** Short labels such as FLAC, MP3 320 */
   tags?: string[]
-  /** Set for chart entries: an album or a song that opens by searching the torrent sources for it. */
+  /** Set for chart entries: an album or a song that opens by searching the providers for it. */
   chart?: 'album' | 'song'
 }
 

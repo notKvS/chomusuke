@@ -9,7 +9,7 @@ export interface Track {
   trackNo?: number
   /** Seconds, when known from metadata before playback */
   duration?: number
-  /** Upper-case container/codec hint taken from the extension, e.g. MP3, FLAC */
+  /** Upper-case container/codec hint taken from the file extension, e.g. MP3, FLAC */
   format: string
   size: number
   /** Loopback streaming URL for an <audio> element */
@@ -192,7 +192,7 @@ export interface SearchAlbum {
   size?: number
   tags?: string[]
   /**
-   * Chart entries (top albums/songs) have no torrent of their own: opening one searches the torrent sources for
+   * Chart entries (top albums/songs) have no torrent of their own: opening one searches the providers for
    * it, and for a song the load result says which track it is (`startKey`).
    */
   chart?: 'album' | 'song'
@@ -234,19 +234,23 @@ export interface SourceCategory {
   name: string
 }
 
+/** A chart on the Explore page (top albums/songs), browsed by category. */
 export interface ExploreSource {
   id: string
   name: string
-  layout: 'cards' | 'list'
   categories: SourceCategory[]
-  /** A chart (top albums/songs) rather than a torrent source */
-  chart?: boolean
+}
+
+/** The Explore page: the enabled charts, and whether any provider is on to play their entries. */
+export interface ExploreOverview {
+  charts: ExploreSource[]
+  canPlay: boolean
 }
 
 export type BrowseResponse = { ok: true; section: ProviderSection } | { ok: false; error: string }
 
-/** A user-configurable extension option. Secret values never leave the main process. */
-export interface ExtensionOptionView {
+/** A user-configurable plugin option. Secret values never leave the main process. */
+export interface PluginOptionView {
   key: string
   type: 'string' | 'boolean'
   label: string
@@ -261,18 +265,18 @@ export interface ExtensionOptionView {
 /** A configured source as the UI sees it. Secrets (API keys) never leave the main process. */
 export interface ProviderSettingsView {
   id: string
-  type: 'archive' | 'torznab' | 'extension'
+  type: 'archive' | 'torznab' | 'plugin'
   name: string
   enabled: boolean
   builtIn: boolean
   url?: string
   hasApiKey?: boolean
-  /** Extensions only */
+  /** Plugins only */
   version?: string
   description?: string
   hosts?: string[]
-  options?: ExtensionOptionView[]
-  /** Chart extensions list top albums/songs and play them through the torrent sources */
+  options?: PluginOptionView[]
+  /** Chart plugins list top albums/songs and play them through the providers */
   chart?: boolean
 }
 
@@ -300,10 +304,10 @@ export interface ChomusukeApi {
   testTorznab(form: TorznabForm): Promise<TestResponse>
   setProviderEnabled(id: string, enabled: boolean): Promise<ProvidersResponse>
   removeProvider(id: string): Promise<ProvidersResponse>
-  importExtensions(repositoryUrl: string): Promise<ProvidersResponse>
-  setExtensionOptions(id: string, values: Record<string, string | boolean>): Promise<ProvidersResponse>
-  testExtension(id: string): Promise<TestResponse>
-  exploreSources(): Promise<ExploreSource[]>
+  importPlugins(repositoryUrl: string): Promise<ProvidersResponse>
+  setPluginOptions(id: string, values: Record<string, string | boolean>): Promise<ProvidersResponse>
+  testPlugin(id: string): Promise<TestResponse>
+  exploreSources(): Promise<ExploreOverview>
   /** One page (default 1) of a source's category. */
   browse(sourceId: string, categoryId: string, page?: number): Promise<BrowseResponse>
   onStats(listener: (stats: TorrentStats[]) => void): () => void

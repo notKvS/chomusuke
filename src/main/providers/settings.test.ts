@@ -153,9 +153,9 @@ test('a saved key is only reused for the same server', () =>
     )
   }))
 
-test('installs extensions, verifies their code on load, and keeps secrets encrypted', () =>
+test('installs plugins, verifies their code on load, and keeps secrets encrypted', () =>
   withStore(async (store, file) => {
-    const { parseRepository } = await import('../extension-host/manifest.ts')
+    const { parseRepository } = await import('../plugin-host/manifest.ts')
     const [manifest] = parseRepository(
       [
         {
@@ -175,33 +175,33 @@ test('installs extensions, verifies their code on load, and keeps secrets encryp
       'https://example.org/index.json'
     )
     const code = 'export default { search: () => [] }'
-    await store.installExtensions('https://example.org/index.json', [{ manifest, code }])
-    await store.setExtensionOptions('ext-demo', { token: 'tok-123', lossless: false })
-    await assert.rejects(store.setExtensionOptions('ext-demo', { lossless: 'yes' }), /wrong type/)
+    await store.installPlugins('https://example.org/index.json', [{ manifest, code }])
+    await store.setPluginOptions('plugin-demo', { token: 'tok-123', lossless: false })
+    await assert.rejects(store.setPluginOptions('plugin-demo', { lossless: 'yes' }), /wrong type/)
 
     assert.doesNotMatch(await readFile(file, 'utf8'), /tok-123/)
-    const view = store.list().find(p => p.id === 'ext-demo')
+    const view = store.list().find(p => p.id === 'plugin-demo')
     assert.deepEqual(view?.options, [
       { key: 'token', type: 'string', label: 'Token', description: undefined, secret: true, hasValue: true },
       { key: 'lossless', type: 'boolean', label: 'Lossless', description: undefined, secret: false, value: false }
     ])
-    assert.deepEqual(store.extensionConfig('ext-demo').options, { token: 'tok-123', lossless: false })
+    assert.deepEqual(store.pluginConfig('plugin-demo').options, { token: 'tok-123', lossless: false })
 
     // Reload: same code passes, tampered code is dropped.
     const reloaded = new ProviderSettingsStore(file, box)
     await reloaded.load()
-    assert.equal(reloaded.extensionConfig('ext-demo').code, code)
-    await writeFile(path.join(path.dirname(file), 'extensions', 'demo.js'), 'export default { search: () => steal() }')
+    assert.equal(reloaded.pluginConfig('plugin-demo').code, code)
+    await writeFile(path.join(path.dirname(file), 'plugins', 'demo.js'), 'export default { search: () => steal() }')
     const tampered = new ProviderSettingsStore(file, box)
     await tampered.load()
     assert.equal(
-      tampered.list().some(p => p.id === 'ext-demo'),
+      tampered.list().some(p => p.id === 'plugin-demo'),
       false
     )
 
-    await store.remove('ext-demo')
+    await store.remove('plugin-demo')
     assert.equal(
-      store.list().some(p => p.id === 'ext-demo'),
+      store.list().some(p => p.id === 'plugin-demo'),
       false
     )
   }))
@@ -217,9 +217,9 @@ test('validateRepositoryUrl', async () => {
   assert.throws(() => validateRepositoryUrl('file:///C:/x.json'), /https/)
 })
 
-test('a same-id extension from another repository or with other hosts does not inherit secrets', () =>
+test('a same-id plugin from another repository or with other hosts does not inherit secrets', () =>
   withStore(async store => {
-    const { parseRepository } = await import('../extension-host/manifest.ts')
+    const { parseRepository } = await import('../plugin-host/manifest.ts')
     const make = (repo: string, hosts: string[]) =>
       parseRepository(
         [
@@ -237,26 +237,26 @@ test('a same-id extension from another repository or with other hosts does not i
         repo
       )[0]
     const code = 'export default { search: () => [] }'
-    await store.installExtensions('https://good.example/index.json', [
+    await store.installPlugins('https://good.example/index.json', [
       { manifest: make('https://good.example/index.json', ['good.example']), code }
     ])
-    await store.setExtensionOptions('ext-demo', { token: 'secret' })
+    await store.setPluginOptions('plugin-demo', { token: 'secret' })
     // Update from the same repository with the same hosts keeps it…
-    await store.installExtensions('https://good.example/index.json', [
+    await store.installPlugins('https://good.example/index.json', [
       { manifest: make('https://good.example/index.json', ['good.example']), code }
     ])
-    assert.equal(store.extensionConfig('ext-demo').options.token, 'secret')
+    assert.equal(store.pluginConfig('plugin-demo').options.token, 'secret')
     // …a hostile repository reusing the id does not.
-    await store.installExtensions('https://evil.example/index.json', [
+    await store.installPlugins('https://evil.example/index.json', [
       { manifest: make('https://evil.example/index.json', ['evil.example']), code }
     ])
-    assert.equal(store.extensionConfig('ext-demo').options.token, '')
+    assert.equal(store.pluginConfig('plugin-demo').options.token, '')
   }))
 
-test('bundled extensions install once, update when changed, and stay removed', () =>
+test('bundled plugins install once, update when changed, and stay removed', () =>
   withStore(async (store, file) => {
-    const { parseRepository } = await import('../extension-host/manifest.ts')
-    const repo = 'https://bundled.chomusuke.invalid/extensions/index.json'
+    const { parseRepository } = await import('../plugin-host/manifest.ts')
+    const repo = 'https://bundled.chomusuke.invalid/plugins/index.json'
     const manifest = parseRepository(
       [
         {
@@ -272,27 +272,32 @@ test('bundled extensions install once, update when changed, and stay removed', (
       repo
     )[0]
     await store.syncBundled(repo, [{ manifest, code: 'export default { search: () => [] } // v1' }])
-    assert.equal(store.extensionConfig('ext-bundled').code.endsWith('v1'), true)
-    await store.setEnabled('ext-bundled', false)
+    assert.equal(store.pluginConfig('plugin-bundled').code.endsWith('v1'), true)
+    await store.setEnabled('plugin-bundled', false)
 
     await store.syncBundled(repo, [{ manifest, code: 'export default { search: () => [] } // v2' }])
-    assert.equal(store.extensionConfig('ext-bundled').code.endsWith('v2'), true)
-    assert.equal(store.list().find(p => p.id === 'ext-bundled')?.enabled, false) // user's choice kept
+    assert.equal(store.pluginConfig('plugin-bundled').code.endsWith('v2'), true)
+    assert.equal(store.list().find(p => p.id === 'plugin-bundled')?.enabled, false) // user's choice kept
 
-    await store.remove('ext-bundled')
+    // A new version with the same code (e.g. new hosts or description) is picked up too.
+    const updated = { ...manifest, version: '2', hosts: ['archive.org', 'example.org'] }
+    await store.syncBundled(repo, [{ manifest: updated, code: 'export default { search: () => [] } // v2' }])
+    assert.deepEqual(store.list().find(p => p.id === 'plugin-bundled')?.hosts, ['archive.org', 'example.org'])
+
+    await store.remove('plugin-bundled')
     const reloaded = new ProviderSettingsStore(file, box)
     await reloaded.load()
     await reloaded.syncBundled(repo, [{ manifest, code: 'export default { search: () => [] } // v3' }])
     assert.equal(
-      reloaded.list().some(p => p.id === 'ext-bundled'),
+      reloaded.list().some(p => p.id === 'plugin-bundled'),
       false
     )
   }))
 
-test('extensions marked enabledByDefault: false install switched off and keep the user’s choice', () =>
+test('plugins marked enabledByDefault: false install switched off and keep the user’s choice', () =>
   withStore(async (store, file) => {
-    const { parseRepository } = await import('../extension-host/manifest.ts')
-    const repo = 'https://bundled.chomusuke.invalid/extensions/index.json'
+    const { parseRepository } = await import('../plugin-host/manifest.ts')
+    const repo = 'https://bundled.chomusuke.invalid/plugins/index.json'
     const raw = {
       manifestVersion: 1,
       id: 'template',
@@ -305,12 +310,12 @@ test('extensions marked enabledByDefault: false install switched off and keep th
     }
     const manifest = parseRepository([raw], repo)[0]
     await store.syncBundled(repo, [{ manifest, code: 'export default { search: () => [] } // v1' }])
-    assert.equal(store.list().find(p => p.id === 'ext-template')?.enabled, false)
+    assert.equal(store.list().find(p => p.id === 'plugin-template')?.enabled, false)
     assert.equal(store.enabled().length, 1) // only the Internet Archive
 
-    await store.setEnabled('ext-template', true)
+    await store.setEnabled('plugin-template', true)
     await store.syncBundled(repo, [{ manifest, code: 'export default { search: () => [] } // v2' }])
     const reloaded = new ProviderSettingsStore(file, box)
     await reloaded.load()
-    assert.equal(reloaded.list().find(p => p.id === 'ext-template')?.enabled, true)
+    assert.equal(reloaded.list().find(p => p.id === 'plugin-template')?.enabled, true)
   }))

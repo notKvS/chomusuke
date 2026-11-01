@@ -6,7 +6,7 @@
 import { normalizeText, songFingerprint, stripReleaseInfo } from '../../shared/fingerprint.ts'
 import type { ProviderAlbum } from './types.ts'
 
-/** A chart entry to find on the torrent sources. */
+/** A chart entry to find on the providers. */
 export interface ChartWanted {
   kind: 'album' | 'song'
   /** Album title, or the song title for songs */

@@ -9,7 +9,7 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve('src/preload/index.ts'),
-          'ext-host': resolve('src/preload/ext-host.ts')
+          'plugin-host': resolve('src/preload/plugin-host.ts')
         },
         // Sandboxed preloads must be CommonJS.
         output: { format: 'cjs', entryFileNames: '[name].cjs' }
@@ -24,7 +24,7 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve('src/renderer/index.html'),
-          'ext-host': resolve('src/renderer/ext-host.html')
+          'plugin-host': resolve('src/renderer/plugin-host.html')
         }
       }
     }

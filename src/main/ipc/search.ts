@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import type { BrowseResponse, ExploreSource, LoadResult, SearchResponse } from '../../shared/types.ts'
+import type { BrowseResponse, ExploreOverview, LoadResult, SearchResponse } from '../../shared/types.ts'
 import { findTrack } from '../providers/chart-match.ts'
 import { SourceError } from '../source.ts'
 import type { IpcDeps } from './deps.ts'
@@ -42,7 +42,7 @@ export function register(deps: IpcDeps): void {
     return result.ok && startKey ? { ...result, startKey } : result
   })
 
-  ipcMain.handle('explore:sources', (event): ExploreSource[] => {
+  ipcMain.handle('explore:sources', (event): ExploreOverview => {
     assertTrustedSender(event)
     return registry.explore()
   })

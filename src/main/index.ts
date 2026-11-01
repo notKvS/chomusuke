@@ -3,9 +3,6 @@ import path from 'node:path'
 import { app, BrowserWindow, safeStorage, session } from 'electron'
 import { DiscordPresence } from './discord.ts'
 import { TorrentEngine } from './engine.ts'
-import { BUNDLED_REPOSITORY, bundledExtensions } from './extension-host/defaults.ts'
-import { ExtensionHost, hostPage } from './extension-host/host.ts'
-import type { ExtensionManifest } from './extension-host/manifest.ts'
 import * as backup from './ipc/backup.ts'
 import type { IpcDeps } from './ipc/deps.ts'
 import { trustedSenderGuard } from './ipc/guard.ts'
@@ -21,6 +18,9 @@ import * as torrent from './ipc/torrent.ts'
 import * as windowIpc from './ipc/window.ts'
 import { overlayHeight } from './ipc/window.ts'
 import { PlaylistStore } from './playlists.ts'
+import { BUNDLED_REPOSITORY, bundledPlugins } from './plugin-host/defaults.ts'
+import { hostPage, PluginHost } from './plugin-host/host.ts'
+import type { PluginManifest } from './plugin-host/manifest.ts'
 import { CoverFinder } from './providers/covers.ts'
 import { ProviderRegistry } from './providers/registry.ts'
 import { ProviderSettingsStore, type SecretBox } from './providers/settings.ts'
@@ -51,7 +51,7 @@ const library = new SeedLibrary(path.join(app.getPath('userData'), 'library'))
 const ratings = new RatingsStore(path.join(app.getPath('userData'), 'ratings.json'))
 const playlists = new PlaylistStore(path.join(app.getPath('userData'), 'playlists.json'))
 // What's playing, as the Discord status.
-// Covers Discord can load, for songs whose own cover is only on this computer.
+// Covers for chart entries and for the Discord status.
 const covers = new CoverFinder()
 const presence = new DiscordPresence(wanted => covers.find(wanted))
 
@@ -59,28 +59,28 @@ let mainWindow: BrowserWindow | null = null
 let engine: TorrentEngine | null = null
 let streamServer: StreamServer | null = null
 
-/** One sandbox per installed extension, kept while its code is unchanged and torn down otherwise. */
-const extensionHosts = new Map<string, { sha: string; host: ExtensionHost }>()
+/** One sandbox per installed plugin, kept while its code is unchanged and torn down otherwise. */
+const pluginHosts = new Map<string, { sha: string; host: PluginHost }>()
 
-function extensionRuntime(manifest: ExtensionManifest, code: string, codeSha256: string): ExtensionHost {
-  const existing = extensionHosts.get(manifest.id)
+function pluginRuntime(manifest: PluginManifest, code: string, codeSha256: string): PluginHost {
+  const existing = pluginHosts.get(manifest.id)
   if (existing?.sha === codeSha256) return existing.host
   existing?.host.dispose()
-  const host = new ExtensionHost(
+  const host = new PluginHost(
     manifest,
     code,
     codeSha256,
     hostPage(process.env.ELECTRON_RENDERER_URL, app.isPackaged, import.meta.dirname)
   )
-  extensionHosts.set(manifest.id, { sha: codeSha256, host })
+  pluginHosts.set(manifest.id, { sha: codeSha256, host })
   return host
 }
 
 function disposeUnusedHosts(activeIds: Set<string>): void {
-  for (const [id, entry] of extensionHosts) {
+  for (const [id, entry] of pluginHosts) {
     if (activeIds.has(id)) continue
     entry.host.dispose()
-    extensionHosts.delete(id)
+    pluginHosts.delete(id)
   }
 }
 
@@ -159,7 +159,7 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
     ratings,
     playlists,
     presence,
-    extensionRuntime,
+    pluginRuntime,
     disposeUnusedHosts
   }
   // Providers first: it builds the search sources the other handlers use.
@@ -179,7 +179,7 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
 }
 
 async function shutdown(): Promise<void> {
-  for (const { host } of extensionHosts.values()) host.dispose()
+  for (const { host } of pluginHosts.values()) host.dispose()
   await presence.dispose()
   // Albums kept or streamed this session were downloaded into the cache: move them into the library before the
   // cache goes. Streamed ones only while the user wants them seeded later, and only if anything was downloaded.
@@ -226,9 +226,9 @@ app.whenReady().then(async () => {
   const settings = new ProviderSettingsStore(path.join(app.getPath('userData'), 'providers.json'), secretBox)
   await settings.load()
   try {
-    await settings.syncBundled(BUNDLED_REPOSITORY, bundledExtensions())
+    await settings.syncBundled(BUNDLED_REPOSITORY, bundledPlugins())
   } catch (err) {
-    console.error('[settings] could not install the bundled extensions:', err instanceof Error ? err.message : err)
+    console.error('[settings] could not install the bundled plugins:', err instanceof Error ? err.message : err)
   }
 
   await library.load()
@@ -241,12 +241,12 @@ app.whenReady().then(async () => {
   streamServer = await startStreamServer((infoHash, fileIndex) => torrents?.resolveFile(infoHash, fileIndex))
   torrents = engine = new TorrentEngine(cacheDir, streamServer.baseUrl, library.dataDir)
   applySharing(library, torrents)
-  registerIpc(torrents, new ProviderRegistry(), settings)
+  registerIpc(torrents, new ProviderRegistry((albums, signal) => covers.fill(albums, signal)), settings)
 
   mainWindow = createWindow()
   mainWindow.on('closed', () => {
     mainWindow = null
-    // Hidden extension sandboxes are windows too; closing the player window means quitting.
+    // Hidden plugin sandboxes are windows too; closing the player window means quitting.
     app.quit()
   })
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
