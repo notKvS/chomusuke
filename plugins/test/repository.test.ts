@@ -6,11 +6,13 @@ import { test } from 'node:test'
 import { parseRepository } from '../../src/main/plugin-host/manifest.ts'
 import { MIRRORS as X1337X_MIRRORS } from '../src/1337x.ts'
 import { MIRRORS as LIME_MIRRORS } from '../src/limetorrents.ts'
+import { MIRRORS as RUTOR_MIRRORS } from '../src/rutor.ts'
+import { MIRRORS as RUTRACKER_MIRRORS } from '../src/rutracker.ts'
 
 const root = path.join(import.meta.dirname, '..')
 const raw = JSON.parse(readFileSync(path.join(root, 'index.json'), 'utf8'))
 const manifests = parseRepository(raw, 'https://bundled.chomusuke.invalid/plugins/index.json')
-const TEMPLATES = ['the-pirate-bay', '1337x', 'nyaa', 'knaben', 'limetorrents']
+const TEMPLATES = ['the-pirate-bay', '1337x', 'nyaa', 'knaben', 'limetorrents', 'rutracker', 'rutor']
 
 test('bundled manifests are valid and have sources', () => {
   for (const manifest of manifests) {
@@ -28,4 +30,6 @@ test('mirror lists in code match the hosts the sandbox allows', () => {
   const hosts = (id: string) => manifests.find(m => m.id === id)!.hosts
   assert.deepEqual(hosts('1337x'), X1337X_MIRRORS)
   assert.deepEqual(hosts('limetorrents'), LIME_MIRRORS)
+  assert.deepEqual(hosts('rutracker'), RUTRACKER_MIRRORS)
+  assert.deepEqual(hosts('rutor'), RUTOR_MIRRORS)
 })

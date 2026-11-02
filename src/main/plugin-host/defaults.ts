@@ -17,6 +17,8 @@ import liveMusicArchive from '../../../plugins/dist/live-music-archive.js?raw'
 import netlabels from '../../../plugins/dist/netlabels.js?raw'
 import nyaa from '../../../plugins/dist/nyaa.js?raw'
 import publicDomainClassical from '../../../plugins/dist/public-domain-classical.js?raw'
+import rutor from '../../../plugins/dist/rutor.js?raw'
+import rutracker from '../../../plugins/dist/rutracker.js?raw'
 import spotifyCharts from '../../../plugins/dist/spotify-charts.js?raw'
 import thePirateBay from '../../../plugins/dist/the-pirate-bay.js?raw'
 import youtubeMusicCharts from '../../../plugins/dist/youtube-music-charts.js?raw'
@@ -39,6 +41,8 @@ const CODE: Record<string, string> = {
   'netlabels.js': netlabels,
   'nyaa.js': nyaa,
   'public-domain-classical.js': publicDomainClassical,
+  'rutor.js': rutor,
+  'rutracker.js': rutracker,
   'spotify-charts.js': spotifyCharts,
   'the-pirate-bay.js': thePirateBay,
   'youtube-music-charts.js': youtubeMusicCharts

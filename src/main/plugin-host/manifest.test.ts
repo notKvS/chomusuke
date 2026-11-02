@@ -3,6 +3,7 @@ import { test } from 'node:test'
 import {
   forKind,
   hostAllowed,
+  missingRequired,
   PluginError,
   parseRepository,
   sanitizeChartEntries,
@@ -160,4 +161,54 @@ test('a repository is split by kind, and one with only the other kind points to 
   )
   assert.throws(() => forKind([entry('b', 'chart')], 'provider'), /Settings → Charts/)
   assert.throws(() => forKind([entry('a', 'torrent')], 'chart'), /Settings → Plugins/)
+})
+
+test('a plugin can ask for details in a setup window: required options, hints, a note, a kept login', () => {
+  const [plain] = parseRepository([valid], REPO)
+  assert.equal(plain.setup, undefined)
+  assert.equal(plain.session, false)
+  assert.equal(plain.options.lossless.required, false)
+
+  const [asking] = parseRepository(
+    [
+      {
+        ...valid,
+        id: 'asking',
+        setup: '  Sign in with\nyour account.  ',
+        session: true,
+        options: {
+          username: { type: 'string', label: 'Username', required: true, placeholder: 'Your name' },
+          password: { type: 'string', label: 'Password', secret: true, required: true },
+          // Only text can be required: a switch is always either on or off.
+          flag: { type: 'boolean', label: 'Flag', required: true }
+        }
+      }
+    ],
+    REPO
+  )
+  assert.equal(asking.setup, 'Sign in with your account.')
+  assert.equal(asking.session, true)
+  assert.deepEqual([asking.options.username.required, asking.options.username.placeholder], [true, 'Your name'])
+  assert.equal(asking.options.password.required, true)
+  assert.equal(asking.options.flag.required, false)
+})
+
+test('the required options still without a value are named', () => {
+  const [asking] = parseRepository(
+    [
+      {
+        ...valid,
+        options: {
+          username: { type: 'string', label: 'Username', required: true },
+          password: { type: 'string', label: 'Password', secret: true, required: true },
+          mirror: { type: 'string', label: 'Mirror' }
+        }
+      }
+    ],
+    REPO
+  )
+  assert.deepEqual(missingRequired(asking, { username: '', password: '', mirror: '' }), ['Username', 'Password'])
+  assert.deepEqual(missingRequired(asking, { username: '  ', password: 'x', mirror: '' }), ['Username'])
+  assert.deepEqual(missingRequired(asking, { username: 'me', password: 'x' }), [])
+  assert.deepEqual(missingRequired(asking, {}), ['Username', 'Password'])
 })

@@ -3,7 +3,14 @@ import { sanitizeThirdPartyMagnet, stripPrivateEndpoints } from '../net.ts'
 import type { ChartWanted } from '../providers/chart-match.ts'
 import type { MusicProvider, Playable, ProviderResults } from '../providers/types.ts'
 import { parseSource, SourceError } from '../source.ts'
-import { hostAllowed, PluginError, type PluginManifest, sanitizeChartEntries, sanitizeResults } from './manifest.ts'
+import {
+  hostAllowed,
+  missingRequired,
+  PluginError,
+  type PluginManifest,
+  sanitizeChartEntries,
+  sanitizeResults
+} from './manifest.ts'
 
 export type PluginMethod = 'test' | 'search' | 'browse'
 
@@ -56,6 +63,12 @@ export function createPluginProvider(
     signal: AbortSignal,
     page = 1
   ): Promise<ProviderResults> => {
+    const missing = missingRequired(manifest, options)
+    if (missing.length > 0) {
+      throw new SourceError(
+        `${manifest.name} needs your ${missing.join(' and ')}: open Settings → Plugins and press its edit button.`
+      )
+    }
     const { items, hasMore } = unpage(await runtime.call(method, { ...args, page, options }, signal))
     const albums = sanitizeResults(items, manifest)
     return { albums, songs: [], hasMore: hasMore && albums.length > 0 }
@@ -166,6 +179,8 @@ export async function testPlugin(
   runtime: PluginRuntime,
   options: Record<string, string | boolean>
 ): Promise<string> {
+  const missing = missingRequired(manifest, options)
+  if (missing.length > 0) throw new PluginError(`Enter your ${missing.join(' and ')} first (the edit button).`)
   const result = await runtime.call('test', { options })
   if (result !== true) throw new PluginError(`${manifest.name} reported a problem.`)
   return `${manifest.name} is working.`

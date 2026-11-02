@@ -3,7 +3,7 @@ import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { PluginOptionView, ProviderSettingsView } from '../../shared/types.ts'
 import { isPrivateHost } from '../net.ts'
-import { type PluginManifest, parseRepository } from '../plugin-host/manifest.ts'
+import { missingRequired, type PluginManifest, parseRepository } from '../plugin-host/manifest.ts'
 
 /** Encrypts secrets at rest; Electron's safeStorage (DPAPI / Keychain / libsecret) in the app, a fake in tests. */
 export interface SecretBox {
@@ -96,6 +96,8 @@ function toRawManifest(manifest: PluginManifest): Record<string, unknown> {
     layout: manifest.layout,
     categories: manifest.categories,
     options: manifest.options,
+    setup: manifest.setup,
+    session: manifest.session,
     region: manifest.region,
     enabledByDefault: manifest.enabledByDefault
   }
@@ -346,6 +348,8 @@ export class ProviderSettingsStore {
           label: option.label,
           description: option.description,
           secret: option.secret,
+          required: option.required,
+          placeholder: option.placeholder,
           ...(option.secret
             ? { hasValue: Boolean(entry.secrets[key]) }
             : { value: entry.options[key] ?? option.default })
@@ -362,6 +366,8 @@ export class ProviderSettingsStore {
         description: entry.manifest.description,
         hosts: entry.manifest.hosts,
         options,
+        setup: entry.manifest.setup,
+        needsSetup: missingRequired(entry.manifest, this.pluginRuntimeConfig(entry).options).length > 0,
         ...(entry.manifest.type === 'chart' ? { chart: true } : {})
       }
     })

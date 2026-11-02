@@ -3,6 +3,7 @@ import type { PluginKind, ProviderSettingsView, ProvidersResponse, TorznabForm }
 import { type Status, StatusLine } from '../controls/StatusLine'
 import { Switch } from '../controls/Switch'
 import { Icon } from '../Icon'
+import { PluginSetupDialog } from './PluginSetupDialog'
 import './SourcesSettings.css'
 
 const EMPTY_FORM: TorznabForm = { name: '', url: '', apiKey: '' }
@@ -157,9 +158,9 @@ interface PluginRowsProps {
   onRemove: (provider: ProviderSettingsView) => void
 }
 
-/** Installed plugins (providers or charts), each with Test, options and Remove. */
+/** Installed plugins (providers or charts), each with Test, a setup window for its options, and Remove. */
 function PluginRows({ plugins, apply, onToggle, onRemove }: PluginRowsProps) {
-  const [configuring, setConfiguring] = useState<string | null>(null)
+  const [setup, setSetup] = useState<{ id: string; enableAfter: boolean } | null>(null)
   const [tests, setTests] = useState<Record<string, Status | undefined>>({})
 
   const test = async (provider: ProviderSettingsView) => {
@@ -171,30 +172,48 @@ function PluginRows({ plugins, apply, onToggle, onRemove }: PluginRowsProps) {
     }))
   }
 
-  return plugins.map(provider => (
-    <div key={provider.id}>
-      <SourceRow
-        provider={provider}
-        description={[`v${provider.version}`, provider.hosts?.join(', ')].filter(Boolean).join(' • ')}
-        note={provider.description}
-        onToggle={() => onToggle(provider)}
-        onTest={() => void test(provider)}
-        onEdit={
-          provider.options?.length ? () => setConfiguring(configuring === provider.id ? null : provider.id) : undefined
-        }
-        onRemove={() => onRemove(provider)}
-      />
-      {tests[provider.id] && <StatusLine status={tests[provider.id] as Status} />}
-      {configuring === provider.id && (
-        <PluginOptionsForm
-          provider={provider}
-          onDone={response => {
-            if (apply(response)) setConfiguring(null)
+  // Switching a plugin on that is still missing details asks for them first.
+  const toggle = (provider: ProviderSettingsView) => {
+    if (!provider.enabled && provider.needsSetup) setSetup({ id: provider.id, enableAfter: true })
+    else onToggle(provider)
+  }
+
+  const setting = plugins.find(p => p.id === setup?.id)
+  return (
+    <>
+      {plugins.map(provider => (
+        <div key={provider.id}>
+          <SourceRow
+            provider={provider}
+            description={[
+              `v${provider.version}`,
+              provider.needsSetup && 'Needs your details (edit button)',
+              provider.hosts?.join(', ')
+            ]
+              .filter(Boolean)
+              .join(' • ')}
+            note={provider.description}
+            onToggle={() => toggle(provider)}
+            onTest={() => void test(provider)}
+            onEdit={provider.options?.length ? () => setSetup({ id: provider.id, enableAfter: false }) : undefined}
+            onRemove={() => onRemove(provider)}
+          />
+          {tests[provider.id] && <StatusLine status={tests[provider.id] as Status} />}
+        </div>
+      ))}
+      {setting && setup && (
+        <PluginSetupDialog
+          key={setting.id}
+          provider={setting}
+          enableAfter={setup.enableAfter}
+          onClose={() => setSetup(null)}
+          onSaved={response => {
+            if (apply(response)) setSetup(null)
           }}
         />
       )}
-    </div>
-  ))
+    </>
+  )
 }
 
 /** Installs plugins from a repository manifest; each runs in a sandbox. */
@@ -235,63 +254,6 @@ function InstallPlugins({ kind, apply }: { kind: PluginKind; apply: (response: P
       </form>
       {status && <StatusLine status={status} />}
     </section>
-  )
-}
-
-function PluginOptionsForm({
-  provider,
-  onDone
-}: {
-  provider: ProviderSettingsView
-  onDone: (r: ProvidersResponse) => void
-}) {
-  const options = provider.options ?? []
-  const [values, setValues] = useState<Record<string, string | boolean>>(() =>
-    Object.fromEntries(options.map(o => [o.key, o.secret ? '' : (o.value ?? (o.type === 'boolean' ? false : ''))]))
-  )
-  const [error, setError] = useState<string | null>(null)
-
-  const save = async (event: FormEvent) => {
-    event.preventDefault()
-    const response = await window.chomusuke.setPluginOptions(provider.id, values)
-    if (!response.ok) setError(response.error)
-    onDone(response)
-  }
-
-  return (
-    <form className="torznab-form" onSubmit={save}>
-      {options.map(option =>
-        option.type === 'boolean' ? (
-          <label key={option.key} className="checkbox">
-            <input
-              type="checkbox"
-              checked={values[option.key] === true}
-              onChange={e => setValues(prev => ({ ...prev, [option.key]: e.target.checked }))}
-            />
-            <span>{option.label}</span>
-          </label>
-        ) : (
-          <label key={option.key}>
-            <span>{option.label}</span>
-            <input
-              type={option.secret ? 'password' : 'text'}
-              value={values[option.key] as string}
-              onChange={e => setValues(prev => ({ ...prev, [option.key]: e.target.value }))}
-              placeholder={option.secret && option.hasValue ? 'Saved — leave blank to keep' : option.description}
-              autoComplete="off"
-              spellCheck={false}
-              maxLength={500}
-            />
-          </label>
-        )
-      )}
-      <div className="torznab-form__actions">
-        <button type="submit" className="solid-button">
-          Save
-        </button>
-        {error && <StatusLine status={{ kind: 'error', text: error }} />}
-      </div>
-    </form>
   )
 }
 

@@ -19,8 +19,9 @@ Desktop music player that streams audio straight from torrents 🎶
   - Charts are where Explore's lists come from (Settings → Charts).
   - Plugins are where music is found and played from (Settings → Plugins): the Internet Archive, Torznab indexers (API
     keys stored in your system's credential store) and installable plugins. Install either kind from a repository URL;
-    each runs in an isolated sandbox. Six Internet Archive collections and four charts come switched on; five
-    public-tracker templates (The Pirate Bay, 1337x, Nyaa, Knaben, LimeTorrents) come switched off.
+    each runs in an isolated sandbox. Six Internet Archive collections and four charts come switched on; seven
+    public-tracker templates (The Pirate Bay, 1337x, Nyaa, Knaben, LimeTorrents, RuTracker, Rutor) come switched off.
+    A plugin that needs details, like a RuTracker login, asks for them in a setup window when you switch it on.
 - 💬 **Discord status** — shows the song, artist, album and cover as *Listening to Chomusuke*, with a **Get Chomusuke**
   button that sends friends to the latest download. On by default; turn it off in Settings → Sharing.
 - 📄 **Torrent details** — files, trackers, pieces, peers and transfer stats; save the `.torrent` file or copy the

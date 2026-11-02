@@ -15,8 +15,11 @@ import type { ProviderAlbum } from '../providers/types.ts'
  *   "hosts": ["example.org", "*.example.org"],          // the only hosts the code may reach (https)
  *   "layout": "list" | "cards",                         // charts are always cards
  *   "categories": [{ "id": "top", "name": "Top this week" }],
- *   "options": { "apiKey": { "type": "string", "label": "API key", "secret": true } },
- *   "enabledByDefault": false                           // optional: install switched off (default true)
+ *   "options": { "apiKey": { "type": "string", "label": "API key", "secret": true, "required": true,
+ *                "placeholder": "Paste it here" } },   // required: Settings asks for it when the plugin is switched on
+ *   "enabledByDefault": false,                          // optional: install switched off (default true)
+ *   "setup": "Sign in with your account.",              // optional: shown in the window that asks for the options
+ *   "session": true                                     // optional: stay signed in (cookies kept in memory while running)
  * }
  *
  * Plugin module: export default {
@@ -35,6 +38,10 @@ export interface PluginOption {
   description?: string
   secret: boolean
   default?: string | boolean
+  /** Text options only: the plugin does nothing until the user fills this in (Settings asks when it is switched on). */
+  required: boolean
+  /** Grey hint inside the empty field */
+  placeholder?: string
 }
 
 export interface PluginRegion {
@@ -58,10 +65,21 @@ export interface PluginManifest {
   layout: 'cards' | 'list'
   categories: SourceCategory[]
   options: Record<string, PluginOption>
+  /** Shown at the top of the setup window, e.g. what the plugin needs the details for. */
+  setup?: string
+  /** Keeps the cookies the sites set (in memory, per plugin) so the plugin can stay signed in while the app runs. */
+  session: boolean
   /** Charts: which option takes a country, so Explore can offer a country picker. */
   region?: PluginRegion
   /** Whether a fresh install starts switched on. */
   enabledByDefault: boolean
+}
+
+/** The labels of the required options that have no value yet. */
+export function missingRequired(manifest: PluginManifest, values: Record<string, string | boolean>): string[] {
+  return Object.entries(manifest.options)
+    .filter(([key, option]) => option.required && !(typeof values[key] === 'string' && values[key].trim() !== ''))
+    .map(([, option]) => option.label)
 }
 
 /** The plugins of one kind; a repository with only the other kind says where it belongs. */
@@ -148,7 +166,9 @@ function parseOne(raw: unknown, base: URL, sameOriginHttp: boolean): PluginManif
       label: text(option.label, 60) ?? key,
       description: text(option.description, 200),
       secret: option.secret === true && option.type === 'string',
-      default: option.secret === true ? undefined : fallback
+      default: option.secret === true ? undefined : fallback,
+      required: option.required === true && option.type === 'string',
+      placeholder: text(option.placeholder, 100)
     }
   }
 
@@ -179,6 +199,8 @@ function parseOne(raw: unknown, base: URL, sameOriginHttp: boolean): PluginManif
     layout: raw.layout === 'cards' || type === 'chart' ? 'cards' : 'list',
     categories,
     options,
+    setup: text(raw.setup, 400),
+    session: raw.session === true,
     ...(region ? { region } : {}),
     enabledByDefault: raw.enabledByDefault !== false
   }

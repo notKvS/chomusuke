@@ -294,6 +294,10 @@ export interface PluginOptionView {
   label: string
   description?: string
   secret: boolean
+  /** The plugin does nothing until this is filled in. */
+  required?: boolean
+  /** Grey hint inside the empty field */
+  placeholder?: string
   /** Current value (omitted for secrets) */
   value?: string | boolean
   /** For secrets: whether a value is saved */
@@ -314,6 +318,10 @@ export interface ProviderSettingsView {
   description?: string
   hosts?: string[]
   options?: PluginOptionView[]
+  /** What the plugin needs the options for, for the setup window. */
+  setup?: string
+  /** A required option has no value yet. */
+  needsSetup?: boolean
   /** Chart plugins list top albums/songs and play them through the providers */
   chart?: boolean
 }

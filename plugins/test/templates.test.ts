@@ -4,9 +4,24 @@ import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
 import x1337x, { parseListing as parse1337x, parseMagnet } from '../src/1337x.ts'
 import knaben from '../src/knaben.ts'
-import { decodeEntities, parseRelease, parseSize, siteOrigin } from '../src/lib/torrent-kit.ts'
+import {
+  decodeEntities,
+  getText,
+  parseRelease,
+  parseSize,
+  percentEncodeCp1251,
+  siteOrigin
+} from '../src/lib/torrent-kit.ts'
 import limetorrents, { parseListing as parseLime } from '../src/limetorrents.ts'
 import nyaa from '../src/nyaa.ts'
+import rutor, { parseListing as parseRutor, searchPath } from '../src/rutor.ts'
+import rutracker, {
+  isLoginPage,
+  isMusicForum,
+  loginBody,
+  parseListing as parseRuTracker,
+  parseMagnet as parseRuTrackerMagnet
+} from '../src/rutracker.ts'
 import type { Paged } from '../src/sdk.ts'
 import thePirateBay from '../src/the-pirate-bay.ts'
 
@@ -343,5 +358,223 @@ describe('LimeTorrents', () => {
     assert.equal(results.length, 2)
     assert.match(results[0].link ?? '', /^magnet:\?xt=urn:btih:a{40}&dn=/)
     assert.equal(results[1].link, `magnet:?xt=urn:btih:${HASH2}&dn=Adele`)
+  })
+})
+
+// RuTracker's markup below is written from memory of the site, not copied from it.
+const RT_LOGIN = `<html><body><form id="login-form-full" action="login.php" method="post">
+<input type="text" name="login_username" /><input type="password" name="login_password" /></form></body></html>`
+const RT_LISTING = `<table id="tor-tbl">
+<tr class="tCenter hl-tr"><td class="row1 f-name-col"><div class="wbr"><a class="gen f" href="tracker.php?f=409">Зарубежный Rock (Lossless)</a></div></td>
+<td class="row4 med tLeft t-title-col"><div class="wbr t-title"><a data-topic_id="111" class="med tLink bold" href="viewtopic.php?t=111">Coldplay - Parachutes - 2000, FLAC (tracks+.cue), lossless</a></div></td>
+<td class="row4 small nowrap tor-size" data-ts_text="327155712"><a class="small f-dl dl-stub" href="dl.php?t=111">312&nbsp;MB &#8595;</a></td>
+<td class="row4 nowrap" data-ts_text="154"><b class="seedmed">154</b></td><td class="row4 leechmed bold">7</td></tr>
+<tr class="tCenter hl-tr"><td class="row1 f-name-col"><div class="wbr"><a class="gen f" href="tracker.php?f=1008">Игры для PC</a></div></td>
+<td class="row4 med tLeft t-title-col"><div class="wbr t-title"><a data-topic_id="222" class="med tLink bold" href="viewtopic.php?t=222">Coldplay Fan Game</a></div></td>
+<td class="row4 small nowrap tor-size"><a class="small f-dl dl-stub" href="dl.php?t=222">1.5&nbsp;GB &#8595;</a></td>
+<td class="row4 nowrap"><b class="seedmed">3</b></td><td class="row4 leechmed bold">1</td></tr>
+</table>`
+const RT_TOPIC = (hash: string) =>
+  `<a class="med magnet-link-16" href="magnet:?xt=urn:btih:${hash}&amp;tr=http%3A%2F%2Fbt.t-ru.org%2Fann%3Fmagnet">Magnet</a>`
+/** The site sends windows-1251: the characters these fixtures use, as the bytes it would send. */
+function toCp1251(text: string): Uint8Array {
+  return Uint8Array.from(text, char => {
+    const code = char.charCodeAt(0)
+    if (code < 0x80) return code
+    if (code >= 0x410 && code <= 0x44f) return code - 0x410 + 0xc0
+    return code === 0x401 ? 0xa8 : code === 0x451 ? 0xb8 : 0x3f
+  })
+}
+const rt = (body: string) => () => new Response(toCp1251(body))
+const cp1251 =
+  (...bytes: number[]) =>
+  () =>
+    new Response(new Uint8Array(bytes))
+
+describe('RuTracker', () => {
+  const signedIn = { username: 'me', password: 'p@ss', mirror: '' }
+
+  it('reads the listing: music forums, sizes, seeders', () => {
+    const rows = parseRuTracker(RT_LISTING)
+    assert.equal(rows.length, 2)
+    assert.deepEqual(rows[0], {
+      id: '111',
+      title: 'Coldplay - Parachutes - 2000, FLAC (tracks+.cue), lossless',
+      forum: 'Зарубежный Rock (Lossless)',
+      size: 327155712,
+      seeders: 154,
+      leechers: 7
+    })
+    // No exact byte count on the second row: the size comes from the text.
+    assert.equal(rows[1].size, Math.round(1.5 * 1024 ** 3))
+    assert.equal(isMusicForum(rows[0].forum), true)
+    assert.equal(isMusicForum(rows[1].forum), false)
+    assert.equal(isMusicForum('Jazz and Blues (MP3)'), true)
+    assert.equal(isMusicForum('Классическая и современная академическая музыка (Lossless)'), true)
+    assert.equal(isMusicForum('Фильмы и сериалы'), false)
+    assert.equal(
+      parseRuTrackerMagnet(RT_TOPIC(HASH)),
+      `magnet:?xt=urn:btih:${HASH}&tr=http%3A%2F%2Fbt.t-ru.org%2Fann%3Fmagnet`
+    )
+    assert.equal(isLoginPage(RT_LOGIN), true)
+    assert.equal(isLoginPage(RT_LISTING), false)
+  })
+
+  it('writes text the way the site reads it: windows-1251, percent-encoded', () => {
+    assert.equal(percentEncodeCp1251('Привет Ёж'), '%CF%F0%E8%E2%E5%F2+%A8%E6')
+    assert.equal(percentEncodeCp1251('Beyoncé & Jay-Z'), 'Beyonce+%26+Jay-Z')
+    assert.equal(percentEncodeCp1251('日本'), '%3F%3F')
+    assert.equal(loginBody('me', 'p@ss word'), 'login_username=me&login_password=p%40ss+word&login=%C2%F5%EE%E4')
+  })
+
+  it('decodes windows-1251 pages', async () => {
+    // "Музыка" as windows-1251 bytes.
+    stub([[/page$/, cp1251(0xcc, 0xf3, 0xe7, 0xfb, 0xea, 0xe0)]])
+    assert.equal(await getText('https://rutracker.org/page', 'RuTracker', undefined, 'windows-1251'), 'Музыка')
+  })
+
+  it('signs in when the site asks, then searches and takes magnets from the music topics', async () => {
+    let tracker = 0
+    stub([
+      [/login\.php$/, html('<html>Welcome back</html>')],
+      [
+        /tracker\.php/,
+        () => {
+          tracker++
+          return new Response(toCp1251(tracker === 1 ? RT_LOGIN : RT_LISTING))
+        }
+      ],
+      [/viewtopic\.php\?t=111$/, rt(RT_TOPIC(HASH))]
+    ])
+    const results = await list(rutracker.search({ query: 'Coldplay Parachutes', options: signedIn }))
+    assert.deepEqual(
+      requests.map(r => `${r.init?.method ?? 'GET'} ${r.url}`),
+      [
+        'GET https://rutracker.org/forum/tracker.php?nm=Coldplay+Parachutes&o=10&s=2',
+        'POST https://rutracker.org/forum/login.php',
+        'GET https://rutracker.org/forum/tracker.php?nm=Coldplay+Parachutes&o=10&s=2',
+        'GET https://rutracker.org/forum/viewtopic.php?t=111'
+      ]
+    )
+    assert.equal(requests[1].init?.body, 'login_username=me&login_password=p%40ss&login=%C2%F5%EE%E4')
+    // The games topic was left out and never fetched.
+    assert.equal(results.length, 1)
+    assert.equal(results[0].artist, 'Coldplay')
+    assert.equal(results[0].seeders, 154)
+    assert.deepEqual(results[0].tags?.slice(0, 2), ['FLAC', 'Lossless'])
+    assert.match(results[0].link ?? '', new RegExp(`^magnet:\\?xt=urn:btih:${HASH}`))
+  })
+
+  it('keeps every forum when music-only is off, and skips signing in when already signed in', async () => {
+    stub([
+      [/tracker\.php/, rt(RT_LISTING)],
+      [/viewtopic\.php\?t=111$/, rt(RT_TOPIC(HASH))],
+      [/viewtopic\.php\?t=222$/, rt(RT_TOPIC(HASH2))]
+    ])
+    const results = await list(rutracker.search({ query: 'coldplay', options: { ...signedIn, musicOnly: false } }))
+    assert.equal(results.length, 2)
+    assert.ok(requests.every(r => !r.url.includes('login.php')))
+  })
+
+  it('says what went wrong: no details, a wrong password, a captcha, a changed layout', async () => {
+    await assert.rejects(
+      list(rutracker.search({ query: 'x', options: { username: '', password: '' } })),
+      /Enter your RuTracker username and password/
+    )
+    assert.equal(requests.length, 0)
+
+    stub([[/./, rt(RT_LOGIN)]])
+    await assert.rejects(list(rutracker.search({ query: 'x', options: signedIn })), /didn’t accept that username/)
+    stub([[/./, rt(`${RT_LOGIN}<input name="cap_sid" value="1">`)]])
+    await assert.rejects(list(rutracker.search({ query: 'x', options: signedIn })), /captcha/)
+
+    stub([[/./, html('<html><body>nothing here</body></html>')]])
+    await assert.rejects(rutracker.test?.({ options: signedIn }) ?? Promise.resolve(), /layout may have changed/)
+    await assert.rejects(
+      rutracker.test?.({ options: { ...signedIn, mirror: 'evil.example' } }) ?? Promise.resolve(),
+      /isn’t one of this plugin’s mirrors/
+    )
+  })
+})
+
+// Rutor's markup below is written from memory of the site, not copied from it.
+const RUTOR_LISTING = `<table width="100%">
+<tr><td class="header">Добавлен</td><td class="header">Название</td><td class="header">Размер</td><td class="header">Пиры</td></tr>
+<tr class="gai"><td>01&nbsp;Ноя&nbsp;25</td>
+<td ><a class="downgif" href="/download/1234567"><img src="/s/d.gif" alt="D" /></a><a href="magnet:?xt=urn:btih:${HASH}&amp;dn=rutor.info&amp;tr=udp://opentor.net:6969"><img src="/s/m.gif" alt="M" /></a><a href="/torrent/1234567/coldplay-parachutes-2000-flac">(Rock) Coldplay - Parachutes (2000) FLAC</a></td>
+<td align="right">312.12&nbsp;MB</td>
+<td align="center"><span class="green"><img src="/s/s.gif" alt="S" />&nbsp;154</span>&nbsp;<span class="red">7</span></td></tr>
+<tr class="tum"><td>28&nbsp;Окт&nbsp;25</td>
+<td ><a class="downgif" href="/download/7654321"><img src="/s/d.gif" alt="D" /></a><a href="magnet:?xt=urn:btih:${HASH2}&amp;dn=rutor.info"><img src="/s/m.gif" alt="M" /></a><a href="/torrent/7654321/adele-30">Adele - 30 (2021) MP3 320 &amp; extras</a></td>
+<td align="right">12<img src="/s/c.gif" alt="C" /></td><td align="right">1.5&nbsp;GB</td>
+<td align="center"><span class="green"><img src="/s/s.gif" alt="S" />&nbsp;9</span>&nbsp;<span class="red">0</span></td></tr>
+<tr class="tum"><td>20&nbsp;Окт&nbsp;25</td><td><a href="/torrent/555/no-magnet-here">Row without a magnet</a></td><td align="right">1 GB</td><td></td></tr>
+<tr class="tum"><td>20&nbsp;Окт&nbsp;25</td>
+<td ><a href="magnet:?xt=urn:btih:${HASH}&amp;dn=again"><img src="/s/m.gif" alt="M" /></a><a href="/torrent/1234567/coldplay-parachutes-2000-flac">Same torrent listed again</a></td>
+<td align="right">1 MB</td><td></td></tr>
+</table>`
+
+describe('Rutor', () => {
+  it('reads rows: magnet, title, size (even after a comments cell), seeders, leechers', () => {
+    const rows = parseRutor(RUTOR_LISTING)
+    assert.deepEqual(rows, [
+      {
+        id: '1234567',
+        title: '(Rock) Coldplay - Parachutes (2000) FLAC',
+        magnet: `magnet:?xt=urn:btih:${HASH}&dn=rutor.info&tr=udp://opentor.net:6969`,
+        size: Math.round(312.12 * 1024 ** 2),
+        seeders: 154,
+        leechers: 7
+      },
+      {
+        id: '7654321',
+        title: 'Adele - 30 (2021) MP3 320 & extras',
+        magnet: `magnet:?xt=urn:btih:${HASH2}&dn=rutor.info`,
+        size: Math.round(1.5 * 1024 ** 3),
+        seeders: 9,
+        leechers: 0
+      }
+    ])
+    assert.deepEqual(parseRutor('<html>nothing</html>'), [])
+  })
+
+  it('searches the music category, most seeded first, in one request', async () => {
+    stub([[/rutor\.is\/search\//, html(RUTOR_LISTING)]])
+    const results = await list(rutor.search({ query: 'Coldplay Parachutes', options: { mirror: 'rutor.is' } }))
+    assert.deepEqual(
+      requests.map(r => r.url),
+      ['https://rutor.is/search/0/2/000/2/Coldplay%20Parachutes']
+    )
+    assert.equal(results.length, 2)
+    assert.equal(results[0].artist, 'Coldplay')
+    assert.equal(results[0].title, 'Parachutes')
+    assert.equal(results[0].year, '2000')
+    assert.deepEqual(results[0].tags, ['FLAC'])
+    assert.equal(results[0].seeders, 154)
+    assert.match(results[0].link ?? '', new RegExp(`^magnet:\\?xt=urn:btih:${HASH}&dn=rutor\\.info`))
+    assert.equal(results[1].year, '2021')
+    assert.deepEqual(results[1].tags, ['MP3', '320'])
+    assert.equal(searchPath('a b/c'), '/search/0/2/000/2/a%20b%2Fc')
+  })
+
+  it('uses the first mirror by default, ignores empty searches, and only accepts declared mirrors', async () => {
+    stub([[/./, html(RUTOR_LISTING)]])
+    await list(rutor.search({ query: 'adele', options: {} }))
+    assert.match(requests[0].url, /^https:\/\/rutor\.info\/search\//)
+    assert.deepEqual(await list(rutor.search({ query: '  ', options: {} })), [])
+    assert.equal(requests.length, 1)
+    await assert.rejects(
+      rutor.search({ query: 'x', options: { mirror: 'evil.example' } }),
+      /isn’t one of this plugin’s mirrors/
+    )
+  })
+
+  it('says what went wrong: a bot check, a changed layout', async () => {
+    stub([[/./, html('<html>Checking your browser… ddos-guard</html>', 403)]])
+    await assert.rejects(rutor.search({ query: 'adele', options: {} }), /bot check/)
+    stub([[/./, html('<html><body>nothing here</body></html>')]])
+    await assert.rejects(rutor.test?.({ options: {} }) ?? Promise.resolve(), /layout may have changed/)
+    stub([[/./, html(RUTOR_LISTING)]])
+    assert.equal(await rutor.test?.({ options: {} }), true)
   })
 })

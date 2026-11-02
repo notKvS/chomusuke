@@ -51,9 +51,15 @@ async function request(url: string | URL, site: string, init?: RequestInit): Pro
   }
 }
 
-export async function getText(url: string | URL, site: string, init?: RequestInit): Promise<string> {
+/** `encoding` is the page's character set when it isn't UTF-8 (e.g. "windows-1251"). */
+export async function getText(
+  url: string | URL,
+  site: string,
+  init?: RequestInit,
+  encoding = 'utf-8'
+): Promise<string> {
   const res = await request(url, site, init)
-  const body = await res.text()
+  const body = encoding === 'utf-8' ? await res.text() : new TextDecoder(encoding).decode(await res.arrayBuffer())
   if (challenged(res, body)) {
     throw new Error(
       `${site} is showing a bot check (Cloudflare). Try another mirror, or reach it through a Torznab indexer that can pass the check.`
@@ -184,6 +190,61 @@ export function parseRelease(name: string): Pick<TorrentResult, 'title' | 'artis
     ? [core.slice(0, dash.index).trim(), core.slice(dash.index + dash[0].length).trim()]
     : [undefined, core]
   return { title: title || core, artist: artist || undefined, year: year?.[1], tags }
+}
+
+/** windows-1251 bytes for the characters outside ASCII and the basic Cyrillic letters (А–я). */
+const CP1251_EXTRA = new Map<number, number>([
+  [0x401, 0xa8], // Ё
+  [0x451, 0xb8], // ё
+  [0x404, 0xaa], // Є
+  [0x454, 0xba], // є
+  [0x406, 0xb2], // І
+  [0x456, 0xb3], // і
+  [0x407, 0xaf], // Ї
+  [0x457, 0xbf], // ї
+  [0x490, 0xa5], // Ґ
+  [0x491, 0xb4], // ґ
+  [0x2116, 0xb9], // №
+  [0xa0, 0xa0],
+  [0xab, 0xab], // «
+  [0xbb, 0xbb], // »
+  [0xa9, 0xa9], // ©
+  [0xb0, 0xb0], // °
+  [0xb1, 0xb1], // ±
+  [0xb7, 0xb7], // ·
+  [0x2013, 0x96], // –
+  [0x2014, 0x97], // —
+  [0x2018, 0x91], // ‘
+  [0x2019, 0x92], // ’
+  [0x201c, 0x93], // “
+  [0x201d, 0x94], // ”
+  [0x2026, 0x85] // …
+])
+
+function cp1251Byte(char: string): number {
+  const code = char.codePointAt(0) ?? 0x3f
+  if (code < 0x80) return code
+  if (code >= 0x410 && code <= 0x44f) return code - 0x410 + 0xc0
+  const extra = CP1251_EXTRA.get(code)
+  if (extra !== undefined) return extra
+  // "é" → "e"; anything else the encoding doesn't have becomes "?".
+  const base = char.normalize('NFD').replace(/\p{M}+/gu, '')
+  return base !== char && base.length === 1 && base.charCodeAt(0) < 0x80 ? base.charCodeAt(0) : 0x3f
+}
+
+/**
+ * Text as a form or query-string value for a site that reads windows-1251 (RuTracker): each character as its
+ * windows-1251 byte, percent-encoded, with spaces as "+".
+ */
+export function percentEncodeCp1251(text: string): string {
+  let out = ''
+  for (const char of text.normalize('NFC')) {
+    const byte = cp1251Byte(char)
+    if (byte === 0x20) out += '+'
+    else if (byte < 0x80 && /[A-Za-z0-9\-_.~]/.test(String.fromCharCode(byte))) out += String.fromCharCode(byte)
+    else out += `%${byte.toString(16).toUpperCase().padStart(2, '0')}`
+  }
+  return out
 }
 
 /** Search terms safe to put in a URL path segment. */

@@ -1,0 +1,88 @@
+@layer components {
+  .plugin-dialog {
+    width: min(520px, calc(100vw - 32px));
+    padding: 0;
+    border: 1px solid rgb(var(--tint-rgb) / 0.2);
+    border-radius: 18px;
+    color: var(--text);
+    background: var(--bg);
+    box-shadow: 0 24px 64px rgb(0 0 0 / 0.45);
+  }
+
+  .plugin-dialog::backdrop {
+    background: rgb(0 0 0 / 0.55);
+  }
+
+  .plugin-dialog__form {
+    display: grid;
+    gap: 14px;
+    padding: 24px;
+  }
+
+  .plugin-dialog__title {
+    margin: 0;
+    font-size: 20px;
+  }
+
+  .plugin-dialog__note {
+    margin: 0;
+    color: var(--text-3);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .plugin-dialog__field {
+    display: grid;
+    gap: 6px;
+    color: var(--text-2);
+  }
+
+  .plugin-dialog__field em {
+    color: var(--text-3);
+    font-style: normal;
+    font-size: 12px;
+  }
+
+  .plugin-dialog small {
+    display: block;
+    color: var(--text-3);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .plugin-dialog__field input {
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid rgb(var(--ink-rgb) / 0.15);
+    border-radius: 8px;
+    outline: none;
+    font: inherit;
+    color: var(--text);
+    background: var(--surface);
+    user-select: text;
+  }
+
+  .plugin-dialog__field input:focus {
+    border-color: rgb(var(--ink-rgb) / 0.4);
+  }
+
+  .plugin-dialog__check {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: var(--text);
+  }
+
+  .plugin-dialog__check input {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+  }
+
+  .plugin-dialog__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+}

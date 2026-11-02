@@ -182,8 +182,26 @@ test('installs plugins, verifies their code on load, and keeps secrets encrypted
     assert.doesNotMatch(await readFile(file, 'utf8'), /tok-123/)
     const view = store.list().find(p => p.id === 'plugin-demo')
     assert.deepEqual(view?.options, [
-      { key: 'token', type: 'string', label: 'Token', description: undefined, secret: true, hasValue: true },
-      { key: 'lossless', type: 'boolean', label: 'Lossless', description: undefined, secret: false, value: false }
+      {
+        key: 'token',
+        type: 'string',
+        label: 'Token',
+        description: undefined,
+        secret: true,
+        required: false,
+        placeholder: undefined,
+        hasValue: true
+      },
+      {
+        key: 'lossless',
+        type: 'boolean',
+        label: 'Lossless',
+        description: undefined,
+        secret: false,
+        required: false,
+        placeholder: undefined,
+        value: false
+      }
     ])
     assert.deepEqual(store.pluginConfig('plugin-demo').options, { token: 'tok-123', lossless: false })
 
@@ -318,4 +336,48 @@ test('plugins marked enabledByDefault: false install switched off and keep the u
     const reloaded = new ProviderSettingsStore(file, box)
     await reloaded.load()
     assert.equal(reloaded.list().find(p => p.id === 'plugin-template')?.enabled, true)
+  }))
+
+test('a plugin missing its required details is flagged for the setup window until they are saved', () =>
+  withStore(async store => {
+    const { parseRepository } = await import('../plugin-host/manifest.ts')
+    const repo = 'https://example.org/index.json'
+    const [manifest] = parseRepository(
+      [
+        {
+          manifestVersion: 1,
+          id: 'asking',
+          name: 'Asking',
+          version: '1.0.0',
+          type: 'torrent',
+          code: 'a.js',
+          hosts: ['example.org'],
+          setup: 'Sign in with your account.',
+          options: {
+            username: { type: 'string', label: 'Username', required: true, placeholder: 'Your name' },
+            password: { type: 'string', label: 'Password', secret: true, required: true }
+          }
+        }
+      ],
+      repo
+    )
+    await store.installPlugins(repo, [{ manifest, code: 'export default { search: () => [] }' }])
+    const view = () => store.list().find(p => p.id === 'plugin-asking')
+    assert.equal(view()?.needsSetup, true)
+    assert.equal(view()?.setup, 'Sign in with your account.')
+    assert.deepEqual(
+      view()?.options?.map(o => [o.key, o.required, o.placeholder]),
+      [
+        ['username', true, 'Your name'],
+        ['password', true, undefined]
+      ]
+    )
+
+    await store.setPluginOptions('plugin-asking', { username: 'me' })
+    assert.equal(view()?.needsSetup, true)
+    await store.setPluginOptions('plugin-asking', { password: 'secret' })
+    assert.equal(view()?.needsSetup, false)
+    // The password reaches the plugin decrypted, and only there.
+    assert.deepEqual(store.pluginConfig('plugin-asking').options, { username: 'me', password: 'secret' })
+    assert.equal(view()?.options?.[1].hasValue, true)
   }))

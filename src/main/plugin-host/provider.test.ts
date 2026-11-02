@@ -201,3 +201,39 @@ test('a chart manifest only names a text option as its country', () => {
     undefined
   )
 })
+
+test('a plugin that needs details says so instead of running without them', async () => {
+  const [asking] = parseRepository(
+    [
+      {
+        manifestVersion: 1,
+        id: 'asking',
+        name: 'Asking',
+        version: '1.0.0',
+        type: 'torrent',
+        code: 'a.js',
+        hosts: ['example.org'],
+        options: {
+          username: { type: 'string', label: 'Username', required: true },
+          password: { type: 'string', label: 'Password', secret: true, required: true }
+        }
+      }
+    ],
+    'https://example.org/index.json'
+  )
+  const runtime = fakeRuntime()
+  const signal = new AbortController().signal
+
+  const without = createPluginProvider(asking, runtime, { username: 'me', password: '' })
+  await assert.rejects(without.search('adele', signal), /Asking needs your Password: open Settings → Plugins/)
+  await assert.rejects(
+    testPlugin(asking, runtime, { username: '', password: '' }),
+    /Enter your Username and Password first/
+  )
+  assert.equal(runtime.calls.length, 0)
+
+  const complete = { username: 'me', password: 'secret' }
+  const provider = createPluginProvider(asking, runtime, complete)
+  await provider.search('adele', signal)
+  assert.deepEqual(runtime.calls[0], ['search', { query: 'adele', page: 1, options: complete }])
+})

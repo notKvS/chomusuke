@@ -375,6 +375,69 @@
   },
   {
     "manifestVersion": 1,
+    "id": "rutor",
+    "name": "Rutor",
+    "description": "Template, off by default: enable it in Plugins and press Test. Music from Rutor, a public Russian tracker (no account needed; mostly Russian listings). Not tested against the live site.",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "rutor.js",
+    "enabledByDefault": false,
+    "hosts": ["rutor.info", "rutor.is", "6tor.net"],
+    "layout": "list",
+    "categories": [],
+    "options": {
+      "mirror": {
+        "type": "string",
+        "label": "Mirror",
+        "description": "One of: rutor.info, rutor.is, 6tor.net (blank = first). Use another if the site is blocked on your network or shows a bot check.",
+        "default": ""
+      }
+    }
+  },
+  {
+    "manifestVersion": 1,
+    "id": "rutracker",
+    "name": "RuTracker",
+    "description": "Template, off by default: needs a free RuTracker account. Lossless and MP3 music from RuTracker's music forums. Not tested against the live site.",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "rutracker.js",
+    "enabledByDefault": false,
+    "session": true,
+    "setup": "RuTracker only shows torrents to signed-in members. Enter your RuTracker username and password: they stay encrypted on this computer and are only ever sent to RuTracker.",
+    "hosts": ["rutracker.org", "rutracker.net", "rutracker.nl"],
+    "layout": "list",
+    "categories": [],
+    "options": {
+      "username": {
+        "type": "string",
+        "label": "Username",
+        "required": true,
+        "placeholder": "Your RuTracker username"
+      },
+      "password": {
+        "type": "string",
+        "label": "Password",
+        "secret": true,
+        "required": true,
+        "placeholder": "Your RuTracker password"
+      },
+      "mirror": {
+        "type": "string",
+        "label": "Mirror",
+        "description": "One of: rutracker.org, rutracker.net, rutracker.nl (blank = first). Use another if the site is blocked on your network.",
+        "default": ""
+      },
+      "musicOnly": {
+        "type": "boolean",
+        "label": "Music forums only",
+        "description": "Hide results from forums about films, games and software.",
+        "default": true
+      }
+    }
+  },
+  {
+    "manifestVersion": 1,
     "id": "nyaa",
     "name": "Nyaa (audio)",
     "description": "Template, off by default: enable it in Sources and press Test. Anime OSTs, J-pop and doujin music from Nyaa's Audio section, via its RSS feed.",

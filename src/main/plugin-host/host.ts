@@ -1,6 +1,7 @@
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { BrowserWindow, ipcMain, type Session, session } from 'electron'
+import { CookieJar } from './cookie-jar.ts'
 import { hostAllowed, PluginError, type PluginManifest } from './manifest.ts'
 import type { PluginMethod, PluginRuntime } from './provider.ts'
 
@@ -35,7 +36,7 @@ function wireIpc(): void {
 }
 
 /** (Re)applies the network policy; Electron replaces any listeners set by a previous start. */
-function configureSession(ses: Session, hosts: string[], pageUrl: string): void {
+function configureSession(ses: Session, hosts: string[], pageUrl: string, jar: CookieJar | null): void {
   const page = new URL(pageUrl)
   const pageDir = page.protocol === 'file:' ? new URL('.', page).toString() : null
 
@@ -70,6 +71,9 @@ function configureSession(ses: Session, hosts: string[], pageUrl: string): void 
     const requestHeaders = Object.fromEntries(
       Object.entries(details.requestHeaders).filter(([name]) => !/^(origin|referer)$/i.test(name))
     )
+    // A plugin that signs in gets the cookies its site set (the sandbox can't send a Cookie header itself).
+    const cookie = jar?.header(url.hostname)
+    if (cookie) requestHeaders.Cookie = cookie
     callback({ requestHeaders })
   })
 
@@ -83,7 +87,10 @@ function configureSession(ses: Session, hosts: string[], pageUrl: string): void 
     if (url.protocol !== 'https:' || !hostAllowed(url.hostname, hosts)) return callback({})
     const headers: Record<string, string[]> = {}
     for (const [name, value] of Object.entries(details.responseHeaders ?? {})) {
-      if (!/^access-control-/i.test(name) && name.toLowerCase() !== 'set-cookie') headers[name] = value
+      if (name.toLowerCase() === 'set-cookie') {
+        // Never reaches the browser's own cookie store: only the jar (for plugins that sign in) keeps them.
+        if (jar) for (const cookie of value) jar.store(url.hostname, cookie)
+      } else if (!/^access-control-/i.test(name)) headers[name] = value
     }
     headers['Access-Control-Allow-Origin'] = ['*']
     headers['Access-Control-Allow-Headers'] = ['*']
@@ -117,12 +124,15 @@ export class PluginHost implements PluginRuntime {
   private onLoaded: { resolve: () => void; reject: (error: Error) => void } | null = null
   private nextId = 1
   private readonly pending = new Map<number, Pending>()
+  /** Cookies for plugins that sign in; null for the rest, which never keep any. */
+  private readonly jar: CookieJar | null
 
   constructor(manifest: PluginManifest, code: string, codeSha256: string, page: HostPage) {
     this.manifest = manifest
     this.code = code
     this.codeSha256 = codeSha256
     this.page = page
+    this.jar = manifest.session ? new CookieJar() : null
   }
 
   /** One in-memory partition per plugin *version*: a new code/hosts set never inherits old storage or policy. */
@@ -209,7 +219,7 @@ export class PluginHost implements PluginRuntime {
     if (this.started) return this.started
     wireIpc()
     const partition = this.partition // no "persist:" prefix → in-memory: no cookies or storage on disk
-    configureSession(session.fromPartition(partition), this.manifest.hosts, this.page.url)
+    configureSession(session.fromPartition(partition), this.manifest.hosts, this.page.url, this.jar)
 
     const window = new BrowserWindow({
       show: false,
