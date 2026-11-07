@@ -6,6 +6,7 @@ import { AppearanceSettings } from './AppearanceSettings'
 import { BackupSettings } from './BackupSettings'
 import { SharingSettings } from './SharingSettings'
 import { ChartsSettings, PluginsSettings } from './SourcesSettings'
+import { UpdateSettings } from './UpdateSettings'
 import './SettingsView.css'
 
 export type { SettingsSection }
@@ -15,7 +16,8 @@ const SECTIONS: Array<[SettingsSection, string]> = [
   ['charts', 'Charts'],
   ['plugins', 'Plugins'],
   ['sharing', 'Sharing & storage'],
-  ['backup', 'Backup']
+  ['backup', 'Backup'],
+  ['updates', 'Updates']
 ]
 
 /** Every setting in one place, one section at a time. */
@@ -48,6 +50,9 @@ export function SettingsView({
       break
     case 'backup':
       body = <BackupSettings ratings={ratings} looks={looks} />
+      break
+    case 'updates':
+      body = <UpdateSettings />
       break
   }
 

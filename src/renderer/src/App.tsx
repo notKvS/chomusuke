@@ -8,6 +8,7 @@ import { Splash } from './components/mascot/Splash'
 import { PlayerBar } from './components/PlayerBar'
 import { Sidebar } from './components/Sidebar'
 import { TopBar } from './components/TopBar'
+import { UpdatePrompt } from './components/UpdatePrompt'
 import { type SettingsSection, sidebarKey } from './navigation'
 import { PageContent } from './PageContent'
 import { queueEdges } from './queue'
@@ -185,6 +186,7 @@ export function App() {
             </button>
           </div>
         )}
+        <UpdatePrompt />
         {showSplash && <Splash />}
       </div>
     </ArtistSearchContext.Provider>

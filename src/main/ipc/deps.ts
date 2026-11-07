@@ -10,6 +10,7 @@ import type { ProviderRegistry } from '../providers/registry.ts'
 import type { ProviderSettingsStore } from '../providers/settings.ts'
 import type { RatingsStore } from '../ratings.ts'
 import type { SeedLibrary } from '../seeding.ts'
+import type { Updater } from '../updater.ts'
 
 /**
  * What the IPC handlers work with, passed to each area's `register`. Every handler must call
@@ -35,4 +36,6 @@ export interface IpcDeps {
   pluginRuntime: (manifest: PluginManifest, code: string, codeSha256: string) => PluginHost
   /** Tears down the sandboxes of plugins that are no longer enabled. */
   disposeUnusedHosts: (activeIds: Set<string>) => void
+  /** Updates from GitHub releases. */
+  updater: Updater
 }

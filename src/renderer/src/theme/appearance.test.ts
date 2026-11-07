@@ -40,6 +40,15 @@ test('light mode flips the canvas and overlays', () => {
   assert.equal(titleBar.color, tokens['--bg'])
 })
 
+test('AMOLED mode puts readable text on pure black', () => {
+  const { tokens, attributes, titleBar } = computeTheme({ ...DEFAULT_APPEARANCE, mode: 'amoled' })
+  assert.equal(tokens['--bg'], '#000000')
+  assert.equal(titleBar.color, '#000000')
+  assert.equal(tokens['--ink-rgb'], '255 255 255')
+  assert.ok(contrast(hexToRgb(tokens['--text']), hexToRgb(tokens['--bg'])) > 15, 'readable text')
+  assert.equal(attributes['data-mode'], 'amoled')
+})
+
 test('glow 0 turns glows off; frosted is stronger than glass', () => {
   assert.equal(computeTheme({ ...DEFAULT_APPEARANCE, glow: 0 }).tokens['--glow'], 'none')
   assert.equal(computeTheme({ ...DEFAULT_APPEARANCE, glow: 0 }).tokens['--glow-strong'], 'none')

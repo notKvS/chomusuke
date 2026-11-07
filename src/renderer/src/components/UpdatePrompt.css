@@ -1,0 +1,25 @@
+@layer components {
+  /* Bottom-right above the player, so it never covers an error toast. */
+  .update-prompt {
+    position: fixed;
+    right: 24px;
+    bottom: calc(var(--player-height) + 24px);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: min(480px, calc(100vw - 32px));
+    z-index: 10;
+    padding: 6px 10px 6px 6px;
+    border: 1px solid rgb(var(--accent-soft-rgb) / 0.35);
+    border-radius: 18px;
+    background: rgb(var(--surface-rgb) / 0.95);
+    box-shadow:
+      0 12px 30px rgba(0, 0, 0, 0.5),
+      var(--glow);
+    animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .update-prompt .solid-button {
+    flex: none;
+  }
+}

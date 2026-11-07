@@ -1,5 +1,5 @@
 import { contextBridge, type IpcRendererEvent, ipcRenderer } from 'electron'
-import type { ChomusukeApi, TorrentStats } from '../shared/types'
+import type { ChomusukeApi, TorrentStats, UpdateState } from '../shared/types'
 
 // The renderer only gets these narrow functions — never ipcRenderer itself.
 const api: ChomusukeApi = {
@@ -47,10 +47,19 @@ const api: ChomusukeApi = {
   addSongsToPlaylist: (id, songs) => ipcRenderer.invoke('playlists:add-songs', id, songs),
   removeFromPlaylist: (id, songId) => ipcRenderer.invoke('playlists:remove', id, songId),
   moveInPlaylist: (id, from, to) => ipcRenderer.invoke('playlists:move', id, from, to),
+  getUpdateState: () => ipcRenderer.invoke('update:state'),
+  checkForUpdates: () => ipcRenderer.invoke('update:check'),
+  installUpdate: () => ipcRenderer.invoke('update:install'),
+  openUpdatePage: () => ipcRenderer.invoke('update:open-page'),
   onStats: listener => {
     const handler = (_event: IpcRendererEvent, stats: TorrentStats[]) => listener(stats)
     ipcRenderer.on('torrent:stats', handler)
     return () => ipcRenderer.removeListener('torrent:stats', handler)
+  },
+  onUpdateState: listener => {
+    const handler = (_event: IpcRendererEvent, state: UpdateState) => listener(state)
+    ipcRenderer.on('update:state', handler)
+    return () => ipcRenderer.removeListener('update:state', handler)
   }
 }
 

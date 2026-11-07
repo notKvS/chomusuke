@@ -124,12 +124,15 @@ jobs:
         with:
           name: chomusuke-${{ runner.os }}
           if-no-files-found: error
+          # latest*.yml and *.blockmap are what the in-app updater reads (version, checksums, differential downloads).
           path: |
             release/*.exe
             release/*.zip
             release/*.dmg
             release/*.AppImage
             release/*.deb
+            release/*.blockmap
+            release/latest*.yml
 
   release:
     name: Publish GitHub release

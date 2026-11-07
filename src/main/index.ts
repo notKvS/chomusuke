@@ -18,6 +18,7 @@ import * as ratingsIpc from './ipc/ratings.ts'
 import * as search from './ipc/search.ts'
 import * as sources from './ipc/sources.ts'
 import * as torrent from './ipc/torrent.ts'
+import * as updateIpc from './ipc/update.ts'
 import * as windowIpc from './ipc/window.ts'
 import { overlayHeight } from './ipc/window.ts'
 import { PlaylistStore } from './playlists.ts'
@@ -30,6 +31,7 @@ import { ProviderSettingsStore, type SecretBox } from './providers/settings.ts'
 import { RatingsStore } from './ratings.ts'
 import { SeedLibrary } from './seeding.ts'
 import { type StreamServer, startStreamServer } from './stream-server.ts'
+import { Updater } from './updater.ts'
 
 const STATS_INTERVAL_MS = 1000
 
@@ -64,6 +66,7 @@ const presence = new DiscordPresence(wanted => covers.find(wanted))
 let mainWindow: BrowserWindow | null = null
 let engine: TorrentEngine | null = null
 let streamServer: StreamServer | null = null
+let updater: Updater | null = null
 
 /** One sandbox per installed plugin, kept while its code is unchanged and torn down otherwise. */
 const pluginHosts = new Map<string, { sha: string; host: PluginHost }>()
@@ -154,7 +157,12 @@ function createWindow(): BrowserWindow {
   return win
 }
 
-function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settings: ProviderSettingsStore): void {
+function registerIpc(
+  torrents: TorrentEngine,
+  registry: ProviderRegistry,
+  settings: ProviderSettingsStore,
+  updater: Updater
+): void {
   const deps: IpcDeps = {
     assertTrustedSender: trustedSenderGuard(() => mainWindow),
     mainWindow: () => mainWindow,
@@ -168,7 +176,8 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
     artistGenres,
     presence,
     pluginRuntime,
-    disposeUnusedHosts
+    disposeUnusedHosts,
+    updater
   }
   // Providers first: it builds the search sources the other handlers use.
   const areas = [
@@ -182,6 +191,7 @@ function registerIpc(torrents: TorrentEngine, registry: ProviderRegistry, settin
     homeIpc,
     presenceIpc,
     backup,
+    updateIpc,
     windowIpc
   ]
   for (const area of areas) area.register(deps)
@@ -219,7 +229,8 @@ app.on('will-quit', event => {
   if (shuttingDown) return
   shuttingDown = true
   event.preventDefault()
-  void shutdown().finally(() => app.quit())
+  // A downloaded update is installed only now, once albums are kept and the cache is gone.
+  void shutdown().finally(() => (updater ? updater.finishQuit() : app.quit()))
 })
 
 app.on('window-all-closed', () => app.quit())
@@ -251,7 +262,11 @@ app.whenReady().then(async () => {
   streamServer = await startStreamServer((infoHash, fileIndex) => torrents?.resolveFile(infoHash, fileIndex))
   torrents = engine = new TorrentEngine(cacheDir, streamServer.baseUrl, library.dataDir)
   applySharing(library, torrents)
-  registerIpc(torrents, new ProviderRegistry((albums, signal) => covers.fill(albums, signal)), settings)
+  updater = new Updater(state => {
+    const contents = mainWindow?.webContents
+    if (contents && !contents.isDestroyed()) contents.send('update:state', state)
+  })
+  registerIpc(torrents, new ProviderRegistry((albums, signal) => covers.fill(albums, signal)), settings, updater)
 
   mainWindow = createWindow()
   mainWindow.on('closed', () => {
@@ -265,6 +280,7 @@ app.whenReady().then(async () => {
   })
 
   void seedLibrary(library, torrents)
+  updater.start()
 
   setInterval(() => {
     const contents = mainWindow?.webContents

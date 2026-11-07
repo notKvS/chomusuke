@@ -6,6 +6,7 @@ import {
   BUTTON_STYLES,
   computeTheme,
   FONTS,
+  MODES,
   matchingPreset,
   PARTICLES,
   PRESETS,
@@ -55,6 +56,7 @@ const ACCENTS_2 = [
 const LABELS: Record<string, string> = {
   dark: 'Dark',
   light: 'Light',
+  amoled: 'AMOLED',
   aurora: 'Aurora',
   mesh: 'Mesh',
   starfield: 'Starfield',
@@ -163,7 +165,7 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
         <h2 className="shelf__title">Colours</h2>
         <div className="setting-grid">
           <SettingField label="Mode">
-            <Segmented labels={LABELS} options={['dark', 'light']} value={a.mode} onChange={mode => update({ mode })} />
+            <Segmented labels={LABELS} options={MODES} value={a.mode} onChange={mode => update({ mode })} />
           </SettingField>
           <SettingField
             label="Background tint"
@@ -244,7 +246,7 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
                   onChange={backgroundBlur => update({ backgroundBlur })}
                 />
               </SettingField>
-              <SettingField label={a.mode === 'dark' ? 'Darken' : 'Lighten'} value={`${a.backgroundDim}%`}>
+              <SettingField label={a.mode === 'light' ? 'Lighten' : 'Darken'} value={`${a.backgroundDim}%`}>
                 <Range min={0} max={90} value={a.backgroundDim} onChange={backgroundDim => update({ backgroundDim })} />
               </SettingField>
             </>

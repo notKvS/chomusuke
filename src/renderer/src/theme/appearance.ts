@@ -3,7 +3,8 @@
 // used by theme.css). No DOM access here, so it runs in unit tests.
 import { channels, hexToRgb, hslToRgb, isHex, mix, onColor, type Rgb, rgbToHex, rgbToHsl } from './color.ts'
 
-export const MODES = ['dark', 'light'] as const
+/** `amoled` is dark mode on pure black (pixels off on OLED screens). */
+export const MODES = ['dark', 'light', 'amoled'] as const
 export const BACKGROUNDS = ['aurora', 'mesh', 'starfield', 'gradient', 'solid', 'image'] as const
 export const SURFACES = ['classic', 'glass', 'frosted', 'solid', 'outline'] as const
 export const BUTTON_SHAPES = ['pill', 'rounded', 'square'] as const
@@ -196,6 +197,19 @@ export const PRESETS: Preset[] = [
       glow: 0,
       particles: 'off'
     }
+  },
+  {
+    id: 'amoled-black',
+    name: 'AMOLED Black',
+    blurb: 'Pure black for OLED screens, with a pink spark',
+    values: {
+      mode: 'amoled',
+      tint: 0,
+      background: 'solid',
+      surface: 'solid',
+      glow: 40,
+      particles: 'off'
+    }
   }
 ]
 
@@ -316,13 +330,15 @@ export function computeTheme(a: Appearance): ThemeOutput {
   const accent2 = hexToRgb(a.accent2)
   const [hue2, sat2, light2] = rgbToHsl(accent2)
   const tint = a.tint
-  const dark = a.mode === 'dark'
+  const dark = a.mode !== 'light'
+  const amoled = a.mode === 'amoled'
 
   const hsl = (s: number, l: number, hue = hue2) => hslToRgb([hue, s, l])
-  const bg = dark ? hsl(tint, 7) : hsl(tint * 0.9, 96)
-  const bg2 = dark ? hsl(tint + 3, 10) : hsl(tint, 93)
-  const surface = dark ? hsl(tint - 3, 14) : hsl(tint, 99)
-  const surfaceRaised = dark ? hsl(tint - 3, 20) : hsl(tint * 0.9, 91)
+  // AMOLED: the canvas is pure black and panels only just lift off it, so most of the screen stays unlit.
+  const bg = amoled ? BLACK : dark ? hsl(tint, 7) : hsl(tint * 0.9, 96)
+  const bg2 = amoled ? hsl(tint, 3) : dark ? hsl(tint + 3, 10) : hsl(tint, 93)
+  const surface = amoled ? hsl(tint, 6) : dark ? hsl(tint - 3, 14) : hsl(tint, 99)
+  const surfaceRaised = amoled ? hsl(tint, 11) : dark ? hsl(tint - 3, 20) : hsl(tint * 0.9, 91)
   const text = dark ? hsl(Math.min(100, tint * 2.2), 97) : hsl(tint * 0.8, 12)
   const textBase = dark ? hsl(Math.min(100, tint * 2.2), 95) : hsl(tint * 0.7, 18)
   const tintColor = dark ? hsl(Math.max(tint, 20) * 2.2, 86) : hsl(Math.max(tint, 20), 40)

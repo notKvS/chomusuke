@@ -341,6 +341,26 @@ export type PluginKind = 'provider' | 'chart'
 export type ProvidersResponse = { ok: true; providers: ProviderSettingsView[] } | { ok: false; error: string }
 export type TestResponse = { ok: true; message: string } | { ok: false; error: string }
 
+/** Where the app is with updating itself. */
+export type UpdateStatus =
+  /** Running from source: never checks. */
+  | { state: 'off' }
+  /** Not checked yet. */
+  | { state: 'idle' }
+  | { state: 'checking' }
+  | { state: 'up-to-date' }
+  | { state: 'downloading'; version: string; percent: number }
+  /** Downloaded: restarting installs it (so does quitting). */
+  | { state: 'ready'; version: string }
+  /** This copy can't install it itself (macOS, Windows zip, .deb): download it from its release page. */
+  | { state: 'available'; version: string }
+  | { state: 'error'; message: string }
+
+export interface UpdateState {
+  currentVersion: string
+  status: UpdateStatus
+}
+
 export interface ChomusukeApi {
   loadSource(source: string, hints?: SourceHints): Promise<LoadResult>
   openTorrentFile(): Promise<LoadResult | null>
@@ -404,6 +424,14 @@ export interface ChomusukeApi {
   addSongsToPlaylist(id: string, songs: SongRef[]): Promise<Playlist[]>
   removeFromPlaylist(id: string, songId: string): Promise<Playlist[]>
   moveInPlaylist(id: string, from: number, to: number): Promise<Playlist[]>
+  getUpdateState(): Promise<UpdateState>
+  /** Checks GitHub for a newer release now. */
+  checkForUpdates(): Promise<UpdateState>
+  /** Quits (finishing up as usual) and installs the downloaded update, then reopens. */
+  installUpdate(): Promise<void>
+  /** Opens the new version's release page in the browser. */
+  openUpdatePage(): Promise<void>
+  onUpdateState(listener: (state: UpdateState) => void): () => void
 }
 
 export interface WindowAppearance {

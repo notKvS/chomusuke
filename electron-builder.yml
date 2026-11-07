@@ -58,5 +58,10 @@ linux:
     - target: deb
       arch: [x64]
 
-# Releases are created by the workflow (gh release), not by electron-builder.
-publish: null
+# Releases are created by the workflow (semantic-release / gh release); electron-builder never uploads (--publish
+# never). This only tells the in-app updater where to look: it writes app-update.yml into the app and latest*.yml
+# next to the installers, which the workflow uploads with them.
+publish:
+  provider: github
+  owner: notKvS
+  repo: chomusuke
