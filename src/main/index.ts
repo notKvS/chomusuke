@@ -23,7 +23,7 @@ import * as windowIpc from './ipc/window.ts'
 import { overlayHeight } from './ipc/window.ts'
 import { PlaylistStore } from './playlists.ts'
 import { BUNDLED_REPOSITORY, bundledPlugins } from './plugin-host/defaults.ts'
-import { hostPage, PluginHost } from './plugin-host/host.ts'
+import { hostPage, PluginHost, togglePluginDevTools } from './plugin-host/host.ts'
 import type { PluginManifest } from './plugin-host/manifest.ts'
 import { CoverFinder } from './providers/covers.ts'
 import { ProviderRegistry } from './providers/registry.ts'
@@ -141,15 +141,18 @@ function createWindow(): BrowserWindow {
   win.once('ready-to-show', () => win.show())
 
   // The hidden title bar leaves no menu bar on Windows, so the default menu's DevTools shortcuts never fire.
-  if (!app.isPackaged) {
-    win.webContents.on('before-input-event', (event, input) => {
-      if (input.type !== 'keyDown') return
-      if (input.key === 'F12' || (input.control && input.shift && input.key.toLowerCase() === 'i')) {
-        win.webContents.toggleDevTools()
-        event.preventDefault()
-      }
-    })
-  }
+  // From source they always work; in the installed app only once "Developer tools" is on in Settings.
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown' || (app.isPackaged && !library.sharing.developerTools)) return
+    if (input.key === 'F12' || (input.control && input.shift && input.key.toLowerCase() === 'i')) {
+      win.webContents.toggleDevTools()
+      event.preventDefault()
+    } else if (input.control && input.shift && input.key.toLowerCase() === 'p') {
+      // The plugins run in hidden windows of their own; their network errors only show in those DevTools.
+      togglePluginDevTools()
+      event.preventDefault()
+    }
+  })
 
   const devUrl = process.env.ELECTRON_RENDERER_URL
   if (!app.isPackaged && devUrl) void win.loadURL(devUrl)

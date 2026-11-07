@@ -1,7 +1,9 @@
 import type { UpdateStatus } from '../../../../shared/types'
+import { useLibrary } from '../../useLibrary'
 import { useUpdate } from '../../useUpdate'
 import { SettingRow } from '../controls/SettingRow'
 import { type Status, StatusLine } from '../controls/StatusLine'
+import { Switch } from '../controls/Switch'
 
 function describe(status: UpdateStatus): Status | null {
   switch (status.state) {
@@ -27,6 +29,7 @@ function describe(status: UpdateStatus): Status | null {
 /** The installed version, and checking for (and installing) a newer one. */
 export function UpdateSettings() {
   const update = useUpdate()
+  const { library, apply } = useLibrary()
   if (!update) return null
   const { status } = update
   const line = describe(status)
@@ -60,6 +63,22 @@ export function UpdateSettings() {
         </SettingRow>
       </div>
       {line && <StatusLine status={line} as="p" />}
+      {library && (
+        <div className="sharing">
+          <SettingRow
+            title="Developer tools"
+            hint="F12 or Ctrl+Shift+I opens DevTools for the app, Ctrl+Shift+P for the plugins (to see why a source fails). Never paste anything someone sends you into the console."
+          >
+            <Switch
+              checked={library.sharing.developerTools}
+              label="Developer tools"
+              onChange={developerTools =>
+                void window.chomusuke.setSharing({ ...library.sharing, developerTools }).then(apply)
+              }
+            />
+          </SettingRow>
+        </div>
+      )}
     </section>
   )
 }

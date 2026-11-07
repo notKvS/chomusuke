@@ -74,6 +74,8 @@ export interface SharingSettings {
   uploadLimitKBps: number
   /** Show what's playing as your Discord status. */
   discordStatus: boolean
+  /** Let the DevTools shortcuts work in the installed app (always on when running from source). */
+  developerTools: boolean
 }
 
 /** A song that was played, as remembered for Home's suggestions. */

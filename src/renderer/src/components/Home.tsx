@@ -1,5 +1,4 @@
 import type { Album, SearchAlbum } from '../../../shared/types'
-import { FEATURED, type FeaturedAlbum } from '../featured'
 import { ArtistLink } from './ArtistLink'
 import { Card } from './Card'
 import { HomeShelves } from './HomeShelves'
@@ -39,12 +38,11 @@ function Hero() {
 
 interface Props {
   albums: Album[]
-  onOpenFeatured: (album: FeaturedAlbum, autoplay: boolean) => void
   onOpenAlbum: (infoHash: string, autoplay: boolean) => void
   onOpenSearchAlbum: (album: SearchAlbum, autoplay: boolean) => void
 }
 
-export function Home({ albums, onOpenFeatured, onOpenAlbum, onOpenSearchAlbum }: Props) {
+export function Home({ albums, onOpenAlbum, onOpenSearchAlbum }: Props) {
   return (
     <div className="page home">
       <Hero />
@@ -68,28 +66,6 @@ export function Home({ albums, onOpenFeatured, onOpenAlbum, onOpenSearchAlbum }:
       )}
 
       <HomeShelves onOpenAlbum={onOpenSearchAlbum} />
-
-      <section className="shelf">
-        <p className="shelf__eyebrow">Picked for you</p>
-        <h2 className="shelf__title">Featured albums</h2>
-        <div className="shelf__grid">
-          {FEATURED.map(album => (
-            <Card
-              key={album.id}
-              artwork={album.artwork}
-              title={album.title}
-              subtitle={
-                <>
-                  Album • <ArtistLink name={album.artist} />
-                </>
-              }
-              subtitleText={`Album • ${album.artist}`}
-              badge={album.license}
-              onOpen={autoplay => onOpenFeatured(album, autoplay)}
-            />
-          ))}
-        </div>
-      </section>
     </div>
   )
 }

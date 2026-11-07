@@ -152,9 +152,6 @@ export function App() {
             ratings={ratings}
             playlists={playlists}
             looks={looks}
-            onOpenFeatured={(f, autoplay) =>
-              loadSource(f.source, { title: f.title, artist: f.artist }, f.artwork, autoplay)
-            }
             onOpenAlbum={loader.openAlbum}
             onOpenSearchAlbum={openSearchAlbum}
             onOpenLibraryAlbum={loader.openLibraryAlbum}

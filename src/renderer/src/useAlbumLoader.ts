@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Album, LoadResult, SearchAlbum, SourceHints } from '../../shared/types'
+import type { Album, LoadResult, SearchAlbum } from '../../shared/types'
 import type { Overlay } from './navigation'
 import type { Navigation } from './useNavigation'
 
@@ -117,13 +117,13 @@ export function useAlbumLoader({
 
   /** Opens a magnet or torrent link. */
   const loadSource = useCallback(
-    (source: string, hints?: SourceHints, artwork?: string, autoplay: Autoplay = false) => {
-      if (showKnown(source, autoplay)) return
+    (source: string) => {
+      if (showKnown(source, false)) return
       void runLoad(
-        () => window.chomusuke.loadSource(source, hints),
-        { ...hints, artwork },
-        album => showLoaded(source, album, artwork, autoplay),
-        () => loadSource(source, hints, artwork, autoplay)
+        () => window.chomusuke.loadSource(source),
+        {},
+        album => showLoaded(source, album, undefined, false),
+        () => loadSource(source)
       )
     },
     [runLoad, showKnown, showLoaded]

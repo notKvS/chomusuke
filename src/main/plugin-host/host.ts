@@ -27,6 +27,14 @@ const MAX_ERROR = 300
 
 const hostsByContents = new Map<number, PluginHost>()
 let ipcWired = false
+/** Development only: DevTools open on every plugin's sandbox window, including ones started later. */
+let pluginDevTools = false
+
+/** Toggles DevTools for all plugin sandbox windows (their workers' requests and errors show there). */
+export function togglePluginDevTools(): void {
+  pluginDevTools = !pluginDevTools
+  for (const host of hostsByContents.values()) host.setDevTools(pluginDevTools)
+}
 
 function wireIpc(): void {
   if (ipcWired) return
@@ -56,6 +64,11 @@ function configureSession(ses: Session, hosts: string[], pageUrl: string, jar: C
       (pageDir === null && url.host === page.host && (url.protocol === page.protocol || url.protocol === 'ws:'))
     const declared = url.protocol === 'https:' && url.port === '' && hostAllowed(url.hostname, hosts)
     callback({ cancel: !(ownPage || declared) })
+  })
+
+  // TEMP diagnostic: why a plugin request failed (blocked by allow-list, DNS, reset, timeout…).
+  ses.webRequest.onErrorOccurred(details => {
+    console.warn(`[plugin-net] ${details.method} ${details.url} → ${details.error}`)
   })
 
   // Requests to declared hosts go out without our page's Origin/Referer: some APIs (charts.youtube.com) answer 403
@@ -198,6 +211,13 @@ export class PluginHost implements PluginRuntime {
     else entry.reject(failure())
   }
 
+  setDevTools(open: boolean): void {
+    const contents = this.window?.webContents
+    if (!contents || contents.isDestroyed()) return
+    if (open) contents.openDevTools({ mode: 'detach', title: `Plugin: ${this.manifest.name}` })
+    else contents.closeDevTools()
+  }
+
   dispose(): void {
     if (this.startTimer) clearTimeout(this.startTimer)
     this.startTimer = null
@@ -237,6 +257,7 @@ export class PluginHost implements PluginRuntime {
     })
     this.window = window
     hostsByContents.set(window.webContents.id, this)
+    if (pluginDevTools) this.setDevTools(true)
     window.webContents.on('render-process-gone', () => this.dispose())
     window.webContents.on('did-finish-load', () =>
       window.webContents.send('ext:load', { code: this.code, hosts: this.manifest.hosts })

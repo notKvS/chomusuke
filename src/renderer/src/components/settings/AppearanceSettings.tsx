@@ -15,7 +15,8 @@ import {
   SURFACES,
   sanitizeAppearance
 } from '../../theme/appearance'
-import { encodeBackgroundImage, withImageFallback } from '../../theme/dom'
+import { encodeBackgroundImage, imagePixels, withImageFallback } from '../../theme/dom'
+import { paletteFromPixels } from '../../theme/imagePalette'
 import type { AppearanceControls } from '../../theme/useAppearance'
 import { Range } from '../controls/Range'
 import { Segmented } from '../controls/Segmented'
@@ -101,6 +102,18 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
   const fileInput = useRef<HTMLInputElement>(null)
   const active = matchingPreset(a)
 
+  /** Accent colours taken from the image, or null when it has no real colour (black and white, greys). */
+  const imageColours = async (source: string) => paletteFromPixels(await imagePixels(source), a.mode)
+
+  const NO_COLOURS = { kind: 'ok', text: 'That image has no strong colours, so your accents were kept.' } as const
+
+  const applyImageColours = async () => {
+    if (!image) return
+    const palette = await imageColours(image)
+    if (palette) update(palette)
+    setMessage(palette ? null : NO_COLOURS)
+  }
+
   const pickImage = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     event.target.value = ''
@@ -108,14 +121,17 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
     try {
       const encoded = await encodeBackgroundImage(file, computeTheme(a).tokens['--bg'])
       const stored = setImage(encoded)
-      update({ background: 'image' })
+      const palette = await imageColours(encoded)
+      update({ background: 'image', ...palette })
       setMessage(
-        stored
-          ? null
-          : {
+        !stored
+          ? {
               kind: 'error',
               text: 'That image is too big to remember after a restart — it’s used for this session only.'
             }
+          : palette
+            ? null
+            : NO_COLOURS
       )
     } catch (err) {
       setMessage({ kind: 'error', text: err instanceof Error ? err.message : 'That image couldn’t be used.' })
@@ -205,7 +221,7 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
           </SettingField>
           <SettingField
             label="Your image"
-            hint="Pick any picture from your computer. It's resized and kept on this device only."
+            hint="Pick any picture from your computer. It's resized and kept on this device only. Your accent colours are matched to it."
           >
             <div className="image-picker">
               <span
@@ -215,6 +231,11 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
               <button type="button" className="ghost-button" onClick={() => fileInput.current?.click()}>
                 <Icon name="image" size={18} /> {image ? 'Change' : 'Choose image'}
               </button>
+              {image && (
+                <button type="button" className="ghost-button" onClick={() => void applyImageColours()}>
+                  <Icon name="palette" size={18} /> Use image colours
+                </button>
+              )}
               {image && (
                 <button
                   type="button"

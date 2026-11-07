@@ -312,6 +312,46 @@ test('bundled plugins install once, update when changed, and stay removed', () =
     )
   }))
 
+test('an app update that changes a bundled plugin’s hosts keeps the user’s choices and sign-in', () =>
+  withStore(async (store, file) => {
+    const { parseRepository } = await import('../plugin-host/manifest.ts')
+    const repo = 'https://bundled.chomusuke.invalid/plugins/index.json'
+    const make = (version: string, hosts: string[]) =>
+      parseRepository(
+        [
+          {
+            manifestVersion: 1,
+            id: 'tracker',
+            name: 'Tracker',
+            version,
+            type: 'torrent',
+            code: 't.js',
+            hosts,
+            enabledByDefault: false,
+            options: {
+              mirror: { type: 'string', label: 'Mirror' },
+              password: { type: 'string', label: 'Password', secret: true }
+            }
+          }
+        ],
+        repo
+      )[0]
+    await store.syncBundled(repo, [{ manifest: make('1', ['a.example']), code: 'export default {} // v1' }])
+    await store.setEnabled('plugin-tracker', true)
+    await store.setPluginOptions('plugin-tracker', { mirror: 'a.example', password: 'hunter2' })
+
+    // The next app version adds a mirror.
+    await store.syncBundled(repo, [
+      { manifest: make('2', ['a.example', 'b.example']), code: 'export default {} // v2' }
+    ])
+    const reloaded = new ProviderSettingsStore(file, box)
+    await reloaded.load()
+    assert.equal(reloaded.list().find(p => p.id === 'plugin-tracker')?.enabled, true)
+    const { options } = reloaded.pluginConfig('plugin-tracker')
+    assert.equal(options.mirror, 'a.example')
+    assert.equal(options.password, 'hunter2')
+  }))
+
 test('plugins marked enabledByDefault: false install switched off and keep the user’s choice', () =>
   withStore(async (store, file) => {
     const { parseRepository } = await import('../plugin-host/manifest.ts')

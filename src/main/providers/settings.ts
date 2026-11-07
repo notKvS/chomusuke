@@ -231,8 +231,15 @@ export class ProviderSettingsStore {
     }
   }
 
-  /** Installs or updates plugins from a repository (code already downloaded and validated). */
-  async installPlugins(repository: string, installs: Array<{ manifest: PluginManifest; code: string }>): Promise<void> {
+  /**
+   * Installs or updates plugins from a repository (code already downloaded and validated). `bundled`: they ship
+   * inside the app, so an update that changes their hosts (e.g. a new mirror) is trusted like the rest of it.
+   */
+  async installPlugins(
+    repository: string,
+    installs: Array<{ manifest: PluginManifest; code: string }>,
+    bundled = false
+  ): Promise<void> {
     // Check the limit for the whole batch before touching disk, so files and settings never diverge.
     const installed = new Set(this.entries.filter(e => e.type === 'plugin').map(e => e.id))
     const added = installs.filter(({ manifest }) => !installed.has(`plugin-${manifest.id}`)).length
@@ -247,11 +254,12 @@ export class ProviderSettingsStore {
       this.codes.set(manifest.id, code)
       const previous = index >= 0 ? this.entries[index] : undefined
       // Saved options/secrets only carry over to an update of the same plugin: same repository and the
-      // same hosts. A different repository reusing the id must not receive the user's keys.
+      // same hosts (any hosts for the app's own bundled plugins). A different repository reusing the id must not
+      // receive the user's keys.
       const sameSource =
         previous?.type === 'plugin' &&
         previous.repository === repository &&
-        [...previous.manifest.hosts].sort().join() === [...manifest.hosts].sort().join()
+        (bundled || [...previous.manifest.hosts].sort().join() === [...manifest.hosts].sort().join())
       const kept = sameSource && previous?.type === 'plugin' ? previous : undefined
       const entry: StoredPlugin = {
         type: 'plugin',
@@ -282,7 +290,7 @@ export class ProviderSettingsStore {
       if (entry.type !== 'plugin' || entry.repository !== repository) return false
       return entry.codeSha256 !== sha256(code) || entry.manifest.version !== manifest.version
     })
-    if (pending.length > 0) await this.installPlugins(repository, pending)
+    if (pending.length > 0) await this.installPlugins(repository, pending, true)
   }
 
   /** Saves option values; for secrets, an empty string keeps the saved value. */

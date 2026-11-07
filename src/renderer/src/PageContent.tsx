@@ -7,7 +7,6 @@ import { PlaylistView } from './components/PlaylistView'
 import { SavedAlbumsView } from './components/SavedAlbumsView'
 import { type SearchState, SearchView } from './components/SearchView'
 import { SettingsView } from './components/settings/SettingsView'
-import type { FeaturedAlbum } from './featured'
 import type { SettingsSection, View } from './navigation'
 import type { Queue } from './queue'
 import type { AppearanceControls } from './theme/useAppearance'
@@ -26,7 +25,6 @@ interface Props {
   ratings: Ratings
   playlists: Playlists
   looks: AppearanceControls
-  onOpenFeatured: (album: FeaturedAlbum, autoplay: boolean) => void
   onOpenAlbum: (infoHash: string, autoplay?: boolean) => void
   onOpenSearchAlbum: (album: SearchAlbum, autoplay: Autoplay) => void
   onOpenLibraryAlbum: (infoHash: string) => void
@@ -51,14 +49,7 @@ export function PageContent(props: Props) {
   const { view, player, ratings, playlists } = props
   switch (view.kind) {
     case 'home':
-      return (
-        <Home
-          albums={props.albums}
-          onOpenFeatured={props.onOpenFeatured}
-          onOpenAlbum={props.onOpenAlbum}
-          onOpenSearchAlbum={props.onOpenSearchAlbum}
-        />
-      )
+      return <Home albums={props.albums} onOpenAlbum={props.onOpenAlbum} onOpenSearchAlbum={props.onOpenSearchAlbum} />
     case 'search':
       return (
         <SearchView

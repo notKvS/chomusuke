@@ -100,3 +100,18 @@ export async function encodeBackgroundImage(file: File, fill: string): Promise<s
   bitmap.close()
   return canvas.toDataURL('image/jpeg', 0.85)
 }
+
+/** RGBA pixels of a background image, shrunk to at most 128px a side (plenty for finding its colours). */
+export async function imagePixels(image: string): Promise<Uint8ClampedArray> {
+  const img = new Image()
+  img.src = image
+  await img.decode()
+  const scale = Math.min(1, 128 / img.naturalWidth, 128 / img.naturalHeight)
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(img.naturalWidth * scale))
+  canvas.height = Math.max(1, Math.round(img.naturalHeight * scale))
+  const context = canvas.getContext('2d', { willReadFrequently: true })
+  if (!context) return new Uint8ClampedArray()
+  context.drawImage(img, 0, 0, canvas.width, canvas.height)
+  return context.getImageData(0, 0, canvas.width, canvas.height).data
+}

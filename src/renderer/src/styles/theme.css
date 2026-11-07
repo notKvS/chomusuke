@@ -24,6 +24,10 @@
   html[data-bg='mesh'] body,
   html[data-bg='starfield'] body,
   html[data-bg='image'] body {
+    /* Own stacking context, so the z-index:-1 layers below paint above body's background, not under it.
+       Without it they sit beneath body's opaque background (body's background doesn't move to the canvas
+       because <html> has its own) and never show. */
+    isolation: isolate;
     background: var(--bg);
   }
 
