@@ -1,8 +1,11 @@
 import type { Socket } from 'node:net'
 import { Client, type SetActivity, StatusDisplayType } from '@xhayper/discord-rpc'
 import type { DiscordStatus, NowPlaying } from '../shared/types.ts'
+import { logger } from './log.ts'
 import type { CoverWanted } from './providers/covers.ts'
 import { isRecord, text } from './song-ref.ts'
+
+const log = logger('discord')
 
 /** Chomusuke's application in the Discord developer portal; its name is the "Listening to …" heading. */
 const CLIENT_ID = '1566140226764537896'
@@ -198,7 +201,9 @@ export class DiscordPresence {
       status.kind === this.status.kind &&
       (status as { message?: string }).message === (this.status as { message?: string }).message
     this.status = status
-    if (!same && cause !== undefined) console.error(`[discord] ${status.kind}: ${errorMessage(cause)}`)
+    if (same) return
+    if (cause !== undefined) log.warn(`${status.kind}: ${errorMessage(cause)}`)
+    else log.info(`status: ${status.kind}`)
   }
 
   private async connect(): Promise<Client> {

@@ -1,8 +1,46 @@
 // Checks shared by every IPC handler: who may call, and cleaning up what the renderer sends.
-import type { BrowserWindow, IpcMainInvokeEvent } from 'electron'
+import { type BrowserWindow, type IpcMainInvokeEvent, ipcMain } from 'electron'
 import type { Album, LoadResult, SourceHints } from '../../shared/types.ts'
+import { describeArgs, failureOf, logger } from '../log.ts'
 import type { SeedLibrary } from '../seeding.ts'
 import { SourceError } from '../source.ts'
+
+const log = logger('ipc')
+
+/** Polled, or sent on every step of a slider: logged only when they fail. */
+const QUIET_CHANNELS = new Set([
+  'torrent:details',
+  'library:get',
+  'presence:status',
+  'presence:set',
+  'history:size',
+  'ui:set-window-appearance'
+])
+/** Their arguments can hold sign-in details for a plugin, under any name. */
+const HIDDEN_ARGS_CHANNELS = new Set(['plugins:set-options'])
+
+/**
+ * `ipcMain.handle`, logged: each call with its arguments, how long it took, and how it failed (an `{ ok: false }`
+ * answer or a throw). Answers themselves aren't logged; they're large and carry stream URLs.
+ */
+export function handle(channel: string, handler: Parameters<typeof ipcMain.handle>[1]): void {
+  ipcMain.handle(channel, async (event, ...args) => {
+    const quiet = QUIET_CHANNELS.has(channel)
+    if (!quiet) log.debug(`→ ${channel}(${HIDDEN_ARGS_CHANNELS.has(channel) ? '…' : describeArgs(args)})`)
+    const started = performance.now()
+    const took = () => `${Math.round(performance.now() - started)} ms`
+    try {
+      const result = await handler(event, ...args)
+      const failure = failureOf(result)
+      if (failure) log.warn(`✗ ${channel} failed after ${took()}: ${failure}`)
+      else if (!quiet) log.debug(`← ${channel} in ${took()}`)
+      return result
+    } catch (err) {
+      log.error(`✗ ${channel} threw after ${took()}:`, err)
+      throw err
+    }
+  })
+}
 
 const MAX_HINT_LENGTH = 200
 export const MAX_QUERY_LENGTH = 200
@@ -39,7 +77,7 @@ export async function toResult(library: SeedLibrary, work: () => Promise<Album>)
     return { ok: true, album }
   } catch (err) {
     if (err instanceof SourceError) return { ok: false, error: err.message }
-    console.error('[ipc] unexpected load failure:', err)
+    log.error('unexpected load failure:', err)
     return { ok: false, error: 'Something went wrong while loading this torrent.' }
   }
 }

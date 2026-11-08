@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { log } from './log'
 
 const TOAST_MS = 6000
 
@@ -8,6 +9,7 @@ export function useToast(): [toast: string | null, setToast: (message: string | 
 
   useEffect(() => {
     if (!toast) return
+    log.info('message shown:', toast)
     const timer = setTimeout(() => setToast(null), TOAST_MS)
     return () => clearTimeout(timer)
   }, [toast])

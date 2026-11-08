@@ -2,7 +2,10 @@ import { randomBytes, timingSafeEqual } from 'node:crypto'
 import http from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { pipeline, Readable } from 'node:stream'
+import { logger } from './log.ts'
 import { parseRange } from './range.ts'
+
+const log = logger('stream')
 
 export interface StreamableFile {
   length: number
@@ -54,17 +57,25 @@ export async function startStreamServer(resolve: FileResolver): Promise<StreamSe
     res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox")
     res.setHeader('Cache-Control', 'no-store')
 
-    if (req.headers.host !== expectedHost) return sendStatus(res, 403)
+    if (req.headers.host !== expectedHost) {
+      log.warn(`refused a request for host ${req.headers.host}`)
+      return sendStatus(res, 403)
+    }
     if (req.method !== 'GET' && req.method !== 'HEAD') return sendStatus(res, 405, { Allow: 'GET, HEAD' })
 
     const match = ROUTE.exec(req.url ?? '')
     if (!match || !timingSafeEqual(Buffer.from(match[1]), tokenBytes)) return sendStatus(res, 404)
 
+    const what = `${match[2]}/${match[3]}`
     const file = resolve(match[2], Number(match[3]))
-    if (!file) return sendStatus(res, 404)
+    if (!file) {
+      log.debug(`${what}: not a playable file of an open album`)
+      return sendStatus(res, 404)
+    }
 
     const range = parseRange(req.headers.range, file.length)
     if (range === 'unsatisfiable') {
+      log.debug(`${what}: range ${req.headers.range} is outside ${file.length} bytes`)
       return sendStatus(res, 416, { 'Content-Range': `bytes */${file.length}` })
     }
 
@@ -77,16 +88,22 @@ export async function startStreamServer(resolve: FileResolver): Promise<StreamSe
       'Accept-Ranges': 'bytes',
       ...(range && { 'Content-Range': `bytes ${start}-${end}/${file.length}` })
     })
+    log.debug(`${what}: ${req.method} bytes ${start}-${end} of ${file.length}`)
     if (req.method === 'HEAD' || length === 0) return res.end()
 
     let source: Readable
     try {
       source = file.createReadStream(start, end)
-    } catch {
+    } catch (err) {
+      log.warn(`${what}: couldn't read the file:`, err)
       return res.destroy()
     }
     // Client aborts (seeking, skipping tracks) are routine; pipeline tears down the torrent stream.
-    pipeline(Readable.from(take(source, length)), res, () => source.destroy())
+    pipeline(Readable.from(take(source, length)), res, err => {
+      if (err && (err as NodeJS.ErrnoException).code !== 'ERR_STREAM_PREMATURE_CLOSE')
+        log.warn(`${what}: stream failed:`, err)
+      source.destroy()
+    })
   })
 
   await new Promise<void>((resolveListen, reject) => {
@@ -95,6 +112,7 @@ export async function startStreamServer(resolve: FileResolver): Promise<StreamSe
   })
   const { port } = server.address() as AddressInfo
   expectedHost = `127.0.0.1:${port}`
+  log.info(`listening on ${expectedHost}`)
 
   return {
     baseUrl: `http://${expectedHost}/media/${token}`,

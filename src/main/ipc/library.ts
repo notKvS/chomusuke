@@ -1,11 +1,13 @@
-import { ipcMain } from 'electron'
 import parseTorrent from 'parse-torrent'
 import type { Album, LibraryResponse, LibraryView } from '../../shared/types.ts'
 import type { TorrentEngine } from '../engine.ts'
+import { logger } from '../log.ts'
 import { isInfoHash, type LibraryEntry, LibraryError, type SeedLibrary } from '../seeding.ts'
 import { SourceError } from '../source.ts'
 import type { IpcDeps } from './deps.ts'
-import { toResult } from './guard.ts'
+import { handle, toResult } from './guard.ts'
+
+const log = logger('library')
 
 /** Applies the saved sharing settings to the torrent client. */
 export function applySharing(library: SeedLibrary, torrents: TorrentEngine): void {
@@ -41,7 +43,7 @@ export async function seedLibrary(library: SeedLibrary, torrents: TorrentEngine)
   const entries = [...(kept ? library.list() : []), ...(streamed ? library.listStreamed() : [])]
   for (const entry of entries) {
     await loadFromLibrary(library, torrents, entry.infoHash).catch(err =>
-      console.error(`[library] couldn't seed ${entry.infoHash}:`, err instanceof Error ? err.message : err)
+      log.error(`couldn't seed ${entry.infoHash}:`, err)
     )
   }
 }
@@ -78,7 +80,7 @@ async function toLibraryResponse(
     return { ok: true, library: libraryView(library, torrents) }
   } catch (err) {
     if (err instanceof LibraryError) return { ok: false, error: err.message }
-    console.error('[library]', err)
+    log.error(err)
     return { ok: false, error: 'Something went wrong with your library.' }
   }
 }
@@ -86,12 +88,12 @@ async function toLibraryResponse(
 /** Saved albums, what was streamed, and the sharing (seeding) settings. */
 export function register(deps: IpcDeps): void {
   const { assertTrustedSender, torrents, library, presence } = deps
-  ipcMain.handle('library:get', (event): LibraryView => {
+  handle('library:get', (event): LibraryView => {
     assertTrustedSender(event)
     return libraryView(library, torrents)
   })
 
-  ipcMain.handle('library:keep', (event, infoHash: unknown, info: unknown) => {
+  handle('library:keep', (event, infoHash: unknown, info: unknown) => {
     assertTrustedSender(event)
     return toLibraryResponse(library, torrents, async () => {
       const kept = isInfoHash(infoHash) ? torrents.keep(infoHash) : undefined
@@ -104,7 +106,7 @@ export function register(deps: IpcDeps): void {
     })
   })
 
-  ipcMain.handle('library:remove', (event, infoHash: unknown) => {
+  handle('library:remove', (event, infoHash: unknown) => {
     assertTrustedSender(event)
     return toLibraryResponse(library, torrents, async () => {
       if (!isInfoHash(infoHash)) throw new LibraryError('That album isn’t in your library.')
@@ -112,12 +114,12 @@ export function register(deps: IpcDeps): void {
     })
   })
 
-  ipcMain.handle('library:clear-streamed', event => {
+  handle('library:clear-streamed', event => {
     assertTrustedSender(event)
     return toLibraryResponse(library, torrents, () => library.clearStreamed())
   })
 
-  ipcMain.handle('library:open', (event, infoHash: unknown) => {
+  handle('library:open', (event, infoHash: unknown) => {
     assertTrustedSender(event)
     return toResult(library, async () => {
       if (!isInfoHash(infoHash)) throw new SourceError('That album isn’t in your library.')
@@ -125,7 +127,7 @@ export function register(deps: IpcDeps): void {
     })
   })
 
-  ipcMain.handle('sharing:set', (event, raw: unknown) => {
+  handle('sharing:set', (event, raw: unknown) => {
     assertTrustedSender(event)
     return toLibraryResponse(library, torrents, async () => {
       const before = library.sharing

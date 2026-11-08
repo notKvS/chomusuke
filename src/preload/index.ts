@@ -51,6 +51,8 @@ const api: ChomusukeApi = {
   checkForUpdates: () => ipcRenderer.invoke('update:check'),
   installUpdate: () => ipcRenderer.invoke('update:install'),
   openUpdatePage: () => ipcRenderer.invoke('update:open-page'),
+  log: (level, message) => ipcRenderer.send('logs:write', level, message),
+  openLogs: () => ipcRenderer.invoke('logs:open'),
   onStats: listener => {
     const handler = (_event: IpcRendererEvent, stats: TorrentStats[]) => listener(stats)
     ipcRenderer.on('torrent:stats', handler)

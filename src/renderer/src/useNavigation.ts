@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react'
+import { log } from './log'
 import { historyReducer, INITIAL_HISTORY, type Overlay, type Page, type View } from './navigation'
 
 /**
@@ -21,6 +22,12 @@ export function useNavigation() {
 
   useLayoutEffect(() => {
     contentRef.current?.scrollTo({ top: scrolls.current.get(view) ?? 0 })
+  }, [view])
+
+  // What the user was looking at, so a problem in the log can be read in context.
+  useEffect(() => {
+    const { retry: _retry, ...shown } = view as View & { retry?: unknown }
+    log.debug('showing', shown)
   }, [view])
 
   /** Abandons any album load in flight. */

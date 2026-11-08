@@ -434,6 +434,10 @@ export interface ChomusukeApi {
   /** Opens the new version's release page in the browser. */
   openUpdatePage(): Promise<void>
   onUpdateState(listener: (state: UpdateState) => void): () => void
+  /** Writes a line to the app's log file. */
+  log(level: 'error' | 'warn' | 'info' | 'debug', message: string): void
+  /** Opens the folder with the log files. */
+  openLogs(): Promise<void>
 }
 
 export interface WindowAppearance {

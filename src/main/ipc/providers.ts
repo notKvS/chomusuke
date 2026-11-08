@@ -1,12 +1,15 @@
-import { ipcMain } from 'electron'
 import type { PluginKind, ProvidersResponse, TestResponse } from '../../shared/types.ts'
 import { FetchError, fetchJson, fetchText } from '../http.ts'
+import { logger } from '../log.ts'
 import { forKind, PluginError, type PluginManifest, parseRepository } from '../plugin-host/manifest.ts'
 import { testPlugin } from '../plugin-host/provider.ts'
 import { buildProviders } from '../providers/index.ts'
 import { type ProviderSettingsStore, SettingsError, validateRepositoryUrl } from '../providers/settings.ts'
 import { TorznabError, testTorznab } from '../providers/torznab.ts'
 import type { IpcDeps } from './deps.ts'
+import { handle } from './guard.ts'
+
+const log = logger('sources')
 
 const REPOSITORY_MAX_BYTES = 512 * 1024
 const PLUGIN_CODE_MAX_BYTES = 2 * 1024 * 1024
@@ -63,7 +66,7 @@ async function settingsResult(work: () => Promise<unknown>, store: ProviderSetti
     return { ok: true, providers: store.list() }
   } catch (err) {
     if (err instanceof SettingsError) return { ok: false, error: err.message }
-    console.error('[settings] failed:', err instanceof Error ? err.message : err)
+    log.error('saving failed:', err)
     return { ok: false, error: 'Couldn’t save your sources.' }
   }
 }
@@ -83,12 +86,12 @@ export function register(deps: IpcDeps): void {
   }
   rebuildProviders()
 
-  ipcMain.handle('providers:list', (event): ProvidersResponse => {
+  handle('providers:list', (event): ProvidersResponse => {
     assertTrustedSender(event)
     return { ok: true, providers: settings.list() }
   })
 
-  ipcMain.handle('providers:save-torznab', (event, form: unknown) => {
+  handle('providers:save-torznab', (event, form: unknown) => {
     assertTrustedSender(event)
     return settingsResult(async () => {
       await settings.saveTorznab(form)
@@ -96,7 +99,7 @@ export function register(deps: IpcDeps): void {
     }, settings)
   })
 
-  ipcMain.handle('providers:set-enabled', (event, id: unknown, enabled: unknown) => {
+  handle('providers:set-enabled', (event, id: unknown, enabled: unknown) => {
     assertTrustedSender(event)
     return settingsResult(async () => {
       await settings.setEnabled(id, enabled)
@@ -104,7 +107,7 @@ export function register(deps: IpcDeps): void {
     }, settings)
   })
 
-  ipcMain.handle('providers:remove', (event, id: unknown) => {
+  handle('providers:remove', (event, id: unknown) => {
     assertTrustedSender(event)
     return settingsResult(async () => {
       await settings.remove(id)
@@ -112,7 +115,7 @@ export function register(deps: IpcDeps): void {
     }, settings)
   })
 
-  ipcMain.handle('plugins:import', (event, repositoryUrl: unknown, kind: unknown) => {
+  handle('plugins:import', (event, repositoryUrl: unknown, kind: unknown) => {
     assertTrustedSender(event)
     return settingsResult(async () => {
       const wanted = pluginKind(kind)
@@ -122,7 +125,7 @@ export function register(deps: IpcDeps): void {
     }, settings)
   })
 
-  ipcMain.handle('plugins:set-options', (event, id: unknown, values: unknown) => {
+  handle('plugins:set-options', (event, id: unknown, values: unknown) => {
     assertTrustedSender(event)
     return settingsResult(async () => {
       await settings.setPluginOptions(id, values)
@@ -130,7 +133,7 @@ export function register(deps: IpcDeps): void {
     }, settings)
   })
 
-  ipcMain.handle('plugins:test', async (event, id: unknown): Promise<TestResponse> => {
+  handle('plugins:test', async (event, id: unknown): Promise<TestResponse> => {
     assertTrustedSender(event)
     try {
       const config = settings.pluginConfig(id)
@@ -138,19 +141,19 @@ export function register(deps: IpcDeps): void {
       return { ok: true, message: await testPlugin(config.manifest, runtime, config.options) }
     } catch (err) {
       if (err instanceof SettingsError || err instanceof PluginError) return { ok: false, error: err.message }
-      console.error('[plugins] test failed:', err instanceof Error ? err.message : err)
+      log.error('plugin test failed:', err)
       return { ok: false, error: 'The plugin isn’t working.' }
     }
   })
 
-  ipcMain.handle('providers:test-torznab', async (event, form: unknown): Promise<TestResponse> => {
+  handle('providers:test-torznab', async (event, form: unknown): Promise<TestResponse> => {
     assertTrustedSender(event)
     try {
       const config = settings.resolveTorznab(form)
       return { ok: true, message: await testTorznab({ ...config, id: config.id ?? 'torznab-test' }) }
     } catch (err) {
       if (err instanceof SettingsError || err instanceof TorznabError) return { ok: false, error: err.message }
-      console.error('[settings] test failed:', err instanceof Error ? err.message : err)
+      log.error('Torznab test failed:', err)
       return { ok: false, error: 'Couldn’t reach that indexer.' }
     }
   })

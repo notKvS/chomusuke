@@ -2,7 +2,10 @@
 // file never silently costs the user their data. Each write keeps the version it replaces as `<file>.bak`.
 import { copyFile, readFile, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { logger } from './log.ts'
 import { isRecord } from './song-ref.ts'
+
+const log = logger('store')
 
 type Parsed = Record<string, unknown> | 'missing' | 'damaged'
 
@@ -31,9 +34,7 @@ export async function readJsonFile(file: string): Promise<Record<string, unknown
   if (main === 'damaged') {
     const aside = `${file}.corrupt-${Date.now()}`
     await rename(file, aside).catch(() => {})
-    console.error(
-      `[store] ${path.basename(file)} was damaged; kept it as ${path.basename(aside)}, using the last good copy`
-    )
+    log.error(`${path.basename(file)} was damaged; kept it as ${path.basename(aside)}, using the last good copy`)
   }
   const backup = await parse(`${file}.bak`)
   return typeof backup === 'object' ? backup : undefined

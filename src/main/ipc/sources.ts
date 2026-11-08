@@ -1,5 +1,5 @@
 import { readFile, stat } from 'node:fs/promises'
-import { dialog, ipcMain } from 'electron'
+import { dialog } from 'electron'
 import type { Album } from '../../shared/types.ts'
 import type { TorrentEngine } from '../engine.ts'
 import { annotationsForTorrentUrl } from '../providers/archive.ts'
@@ -8,7 +8,7 @@ import type { Playable } from '../providers/types.ts'
 import { parseSource, SourceError } from '../source.ts'
 import { fetchTorrentFile } from '../torrent-fetch.ts'
 import type { IpcDeps } from './deps.ts'
-import { sanitizeHints, toResult } from './guard.ts'
+import { handle, sanitizeHints, toResult } from './guard.ts'
 
 const MAX_TORRENT_FILE_BYTES = 10 * 1024 * 1024
 
@@ -22,7 +22,7 @@ export async function playableToAlbum(torrents: TorrentEngine, playable: Playabl
 /** Opening a magnet or torrent link, or a .torrent file picked from disk. */
 export function register(deps: IpcDeps): void {
   const { assertTrustedSender, torrents, library } = deps
-  ipcMain.handle('source:load', (event, rawSource: unknown, rawHints: unknown) => {
+  handle('source:load', (event, rawSource: unknown, rawHints: unknown) => {
     assertTrustedSender(event)
     return toResult(library, async () => {
       const source = parseSource(rawSource)
@@ -39,7 +39,7 @@ export function register(deps: IpcDeps): void {
     })
   })
 
-  ipcMain.handle('source:open-file', async event => {
+  handle('source:open-file', async event => {
     assertTrustedSender(event) // also guarantees mainWindow is set
     const mainWindow = deps.mainWindow()
     if (!mainWindow) return null

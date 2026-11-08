@@ -1,10 +1,13 @@
 import { createHash } from 'node:crypto'
 import { parseRegion } from '../../shared/regions.ts'
 import type { ExploreOverview, ProviderSection, SearchAlbum, SearchResults, SearchSong } from '../../shared/types.ts'
+import { logger } from '../log.ts'
 import { SourceError } from '../source.ts'
 import { type ChartWanted, chartQueries, rankReleases } from './chart-match.ts'
 import { TorznabError } from './torznab.ts'
 import type { MusicProvider, Playable, ProviderAlbum, ProviderResults } from './types.ts'
+
+const log = logger('search')
 
 const PROVIDER_TIMEOUT_MS = 25_000
 /** How long a chart shelf waits for missing covers before showing what it has. */
@@ -54,12 +57,18 @@ export class ProviderRegistry {
 
   async search(query: string, signal: AbortSignal): Promise<SearchResults> {
     const providers = this.torrentProviders()
+    log.info(`“${query}” on ${providers.map(p => p.id).join(', ') || 'no providers'}`)
     const settled = await Promise.allSettled(
       providers.map(provider =>
-        provider.search(query, AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)]))
+        timed(`search ${provider.id}`, () =>
+          provider.search(query, AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)]))
+        )
       )
     )
-    if (signal.aborted) throw signal.reason
+    if (signal.aborted) {
+      log.debug(`“${query}” was replaced by a newer search`)
+      throw signal.reason
+    }
 
     const songs: SearchSong[] = []
     const sections: ProviderSection[] = []
@@ -69,10 +78,6 @@ export class ProviderRegistry {
       sections.push(section)
       if (outcome.status === 'rejected') {
         section.error = userMessage(outcome.reason, provider.name)
-        console.error(
-          `[search] ${provider.id} failed:`,
-          outcome.reason instanceof Error ? outcome.reason.message : outcome.reason
-        )
         return
       }
       section.albums = outcome.value.albums.map(album => this.remember(provider, album))
@@ -89,6 +94,10 @@ export class ProviderRegistry {
         })
       }
     })
+    log.info(
+      `“${query}”: ${songs.length} songs;`,
+      sections.map(s => `${s.id} ${s.error ? 'failed' : `${s.albums.length} albums`}`).join(', ')
+    )
     return { query, songs, sections }
   }
 
@@ -128,9 +137,12 @@ export class ProviderRegistry {
 
     const key = `${provider.id}|${categoryId as string}|${pageNumber}|${country ?? 'default'}`
     const cached = this.browsed.get(key)
-    if (cached && Date.now() - cached.at < BROWSE_CACHE_MS) return cached.section
+    if (cached && Date.now() - cached.at < BROWSE_CACHE_MS) {
+      log.debug(`browse ${key}: from cache`)
+      return cached.section
+    }
 
-    const section = await this.section(provider, async () => {
+    const section = await this.section(provider, `browse ${key}`, async () => {
       const results = await browse.call(
         provider,
         categoryId as string,
@@ -159,20 +171,23 @@ export class ProviderRegistry {
     if (!provider) throw new SourceError('That source is no longer available.')
     if (typeof query !== 'string' || !query.trim()) throw new SourceError('Search again to see more.')
     const pageNumber = validPage(page)
-    return this.section(provider, () =>
+    return this.section(provider, `search ${provider.id} “${query.trim()}” page ${pageNumber}`, () =>
       provider.search(query.trim(), AbortSignal.any([signal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)]), pageNumber)
     )
   }
 
   /** One provider's albums as a section; a failure becomes the section's error message. */
-  private async section(provider: MusicProvider, load: () => Promise<ProviderResults>): Promise<ProviderSection> {
+  private async section(
+    provider: MusicProvider,
+    what: string,
+    load: () => Promise<ProviderResults>
+  ): Promise<ProviderSection> {
     const section: ProviderSection = { id: provider.id, name: provider.name, layout: provider.layout, albums: [] }
     try {
-      const results = await load()
+      const results = await timed(what, load)
       section.albums = results.albums.map(album => this.remember(provider, album))
       if (results.hasMore) section.hasMore = true
     } catch (err) {
-      console.error(`[explore] ${provider.id} failed:`, err instanceof Error ? err.message : err)
       section.error = userMessage(err, provider.name)
     }
     return section
@@ -181,11 +196,11 @@ export class ProviderRegistry {
   async open(albumId: unknown, signal?: AbortSignal): Promise<Playable> {
     const entry = typeof albumId === 'string' && RESULT_ID.test(albumId) ? this.results.get(albumId) : undefined
     if (!entry) throw new SourceError('That search result has expired — search again.')
+    log.info(`opening “${entry.album.title}” from ${entry.provider.id}`)
     try {
-      return await entry.provider.open(entry.album, signal)
+      return await timed(`open ${entry.provider.id}`, () => entry.provider.open(entry.album, signal))
     } catch (err) {
       if (err instanceof SourceError) throw err
-      console.error(`[search] opening a ${entry.provider.id} result failed:`, err instanceof Error ? err.message : err)
       throw new SourceError(userMessage(err, entry.provider.name))
     }
   }
@@ -200,13 +215,16 @@ export class ProviderRegistry {
     if (providers.length === 0) {
       throw new SourceError(`Turn on a provider (Settings → Sources) to play ${what}.`)
     }
+    log.info(`finding a release for the chart ${wanted.kind} ${what}`)
     let ranked: Candidate[] = []
     for (const query of chartQueries(wanted)) {
       const found = await this.searchAll(providers, query, signal)
       ranked = rankReleases(wanted, found)
+      log.debug(`chart query “${query}”: ${found.length} found, ${ranked.length} match`)
       if (ranked.length > 0 || signal?.aborted) break
     }
     for (const { provider, album } of ranked.slice(0, CHART_ATTEMPTS)) {
+      log.info(`trying “${album.title}” from ${provider.id}`)
       try {
         const playable = await provider.open(album, signal)
         return {
@@ -219,7 +237,7 @@ export class ProviderRegistry {
         }
       } catch (err) {
         if (signal?.aborted) throw err
-        console.error(`[charts] opening a ${provider.id} release failed:`, err instanceof Error ? err.message : err)
+        log.warn(`opening “${album.title}” from ${provider.id} failed:`, err)
       }
     }
     throw new SourceError(
@@ -269,6 +287,22 @@ export class ProviderRegistry {
     }
     const { ref: _locator, ...shown } = album
     return { id, provider: provider.id, ...shown }
+  }
+}
+
+/** Runs one provider call, logging how long it took and how it failed. */
+async function timed<T>(what: string, call: () => Promise<T>): Promise<T> {
+  const started = performance.now()
+  const took = () => `${Math.round(performance.now() - started)} ms`
+  try {
+    const result = await call()
+    const { albums, songs } = (result ?? {}) as { albums?: unknown[]; songs?: unknown[] }
+    const counts = albums ? `: ${albums.length} albums${songs ? `, ${songs.length} songs` : ''}` : ''
+    log.debug(`${what} done in ${took()}${counts}`)
+    return result
+  } catch (err) {
+    log.warn(`${what} failed after ${took()}:`, err)
+    throw err
   }
 }
 

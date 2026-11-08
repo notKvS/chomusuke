@@ -3,8 +3,11 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { PluginOptionView, ProviderSettingsView } from '../../shared/types.ts'
 import { readJsonFile, writeJsonFile } from '../json-file.ts'
+import { logger } from '../log.ts'
 import { isPrivateHost } from '../net.ts'
 import { missingRequired, type PluginManifest, parseRepository } from '../plugin-host/manifest.ts'
+
+const log = logger('sources')
 
 /** Encrypts secrets at rest; Electron's safeStorage (DPAPI / Keychain / libsecret) in the app, a fake in tests. */
 export interface SecretBox {
@@ -180,8 +183,8 @@ export class ProviderSettingsStore {
             enabled: item.enabled !== false,
             apiKey: typeof item.apiKey === 'string' ? item.apiKey : undefined
           })
-        } catch {
-          // Skip entries that no longer pass validation.
+        } catch (err) {
+          log.warn(`skipping the saved indexer ${item.id}: it no longer passes validation:`, err)
         }
       }
     }
@@ -192,6 +195,7 @@ export class ProviderSettingsStore {
     }
     if (!entries.some(e => e.type === 'archive')) entries.unshift(archiveEntry())
     this.entries = entries.slice(0, MAX_TORZNAB + MAX_PLUGINS + 1)
+    log.info('loaded:', this.entries.map(e => `${e.id}${e.enabled ? '' : ' (off)'}`).join(', '))
   }
 
   /** Re-validates a saved plugin and checks its code file wasn't changed behind our back. */
@@ -203,7 +207,7 @@ export class ProviderSettingsStore {
       const [manifest] = parseRepository([toRawManifest(item.manifest as unknown as PluginManifest)], url, privateHttp)
       const code = await readFile(this.codeFile(manifest), 'utf8')
       if (sha256(code) !== item.codeSha256) {
-        console.error(`[settings] plugin ${manifest.id} was modified on disk; skipping it`)
+        log.error(`plugin ${manifest.id} was modified on disk; skipping it`)
         return undefined
       }
       this.codes.set(manifest.id, code)
@@ -225,7 +229,8 @@ export class ProviderSettingsStore {
         options,
         secrets
       }
-    } catch {
+    } catch (err) {
+      log.warn(`skipping a saved plugin that no longer loads (${String(item.repository)}):`, err)
       return undefined
     }
   }
@@ -274,6 +279,7 @@ export class ProviderSettingsStore {
       }
       if (index >= 0) this.entries[index] = entry
       else this.entries.push(entry)
+      log.info(`${index >= 0 ? 'updated' : 'installed'} ${manifest.id} ${manifest.version} from ${repository}`)
     }
     await this.persist()
   }
@@ -460,7 +466,7 @@ export class ProviderSettingsStore {
         try {
           result.push(this.pluginRuntimeConfig(entry))
         } catch {
-          console.error(`[settings] couldn't decrypt options for ${entry.id}; skipping it`)
+          log.error(`couldn't decrypt options for ${entry.id}; skipping it`)
         }
       } else if (entry.apiKey) {
         try {
@@ -472,7 +478,7 @@ export class ProviderSettingsStore {
             apiKey: this.box.decrypt(entry.apiKey)
           })
         } catch {
-          console.error(`[settings] couldn't decrypt the API key for ${entry.id}; skipping it`)
+          log.error(`couldn't decrypt the API key for ${entry.id}; skipping it`)
         }
       }
     }

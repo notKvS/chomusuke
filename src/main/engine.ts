@@ -3,8 +3,11 @@ import path from 'node:path'
 import WebTorrent, { type Torrent } from 'webtorrent'
 import type { Album, SourceHints, TorrentDetails, TorrentStats, Track } from '../shared/types.ts'
 import { buildLibrary } from './library.ts'
+import { logger } from './log.ts'
 import { SourceError } from './source.ts'
 import type { StreamableFile } from './stream-server.ts'
+
+const log = logger('torrent')
 
 const MIME_TYPES: Record<string, string> = {
   mp3: 'audio/mpeg',
@@ -92,7 +95,7 @@ export class TorrentEngine {
     // No uTP: WebTorrent retries uTP several times before falling back to TCP, which stalls
     // for ~30s per peer on networks that drop UDP (common on corporate Wi-Fi).
     this.client = new WebTorrent({ natUpnp: false, natPmp: false, utp: false })
-    this.client.on('error', (err: unknown) => console.error('[torrent] client error:', errorMessage(err)))
+    this.client.on('error', (err: unknown) => log.error('client error:', errorMessage(err)))
   }
 
   /** `storePath` (inside the library folder) is used for kept albums; everything else goes to the cache. */
@@ -108,13 +111,17 @@ export class TorrentEngine {
   }
 
   private async loadNow(torrentId: string | Uint8Array, hints: SourceHints, storePath?: string): Promise<Album> {
+    const started = performance.now()
+    const what = typeof torrentId === 'string' ? torrentId.slice(0, 120) : `a .torrent file (${torrentId.length} bytes)`
     let torrent: Torrent | null
     try {
       torrent = await this.client.get(torrentId as never)
-    } catch {
+    } catch (err) {
+      log.warn(`not a valid torrent: ${what}:`, err)
       throw new SourceError("That isn't a valid torrent.")
     }
     if (!torrent) {
+      log.info(`adding ${what} into the ${storePath ? 'library' : 'session cache'}`, hints)
       torrent = this.client.add(torrentId as never, {
         // Our own folder per torrent: with addUID the store root would be built from the torrent's
         // unsanitised `name` field, which a hostile torrent can set to "../../somewhere".
@@ -126,6 +133,9 @@ export class TorrentEngine {
         destroyStoreOnDestroy: storePath === undefined
       })
       torrent.on('wire', (wire: unknown) => this.applySharing(wire as ChokeableWire))
+      const added = torrent
+      added.on('warning', (err: unknown) => log.debug(`${added.infoHash || what}: warning:`, errorMessage(err)))
+      added.on('error', (err: unknown) => log.error(`${added.infoHash || what}: error:`, errorMessage(err)))
     }
 
     await whenReady(torrent)
@@ -136,9 +146,17 @@ export class TorrentEngine {
       const entry = this.toAlbum(torrent, hints)
       const { infoHash } = torrent
       this.loaded.set(infoHash, entry)
-      torrent.once('close', () => this.loaded.delete(infoHash))
+      log.info(
+        `${infoHash} ready in ${Math.round(performance.now() - started)} ms: “${torrent.name}”, ` +
+          `${entry.album.tracks.length} tracks of ${torrent.files.length} files, ${torrent.numPeers} peers`
+      )
+      torrent.once('close', () => {
+        log.debug(`${infoHash} closed`)
+        this.loaded.delete(infoHash)
+      })
       return entry.album
     } catch (err) {
+      log.warn(`${torrent.infoHash} (“${torrent.name}”) can't be played:`, errorMessage(err))
       torrent.destroy()
       throw err
     }
@@ -267,6 +285,7 @@ export class TorrentEngine {
   keep(infoHash: string): KeptTorrent | undefined {
     const entry = this.loaded.get(infoHash)
     if (!entry) return undefined
+    log.info(`${infoHash}: downloading every track to keep it`)
     for (const index of entry.servable.keys()) entry.torrent.files[index]?.select()
     return { torrentFile: entry.torrent.torrentFile, size: entry.album.totalSize }
   }
@@ -300,6 +319,7 @@ export class TorrentEngine {
    * uploaded while downloads keep working. `uploadLimit` is bytes/s, 0 for unlimited.
    */
   setSharing(enabled: boolean, uploadLimit: number): void {
+    log.info(`sharing ${enabled ? 'on' : 'off'}, upload limit ${uploadLimit > 0 ? `${uploadLimit} B/s` : 'none'}`)
     this.sharing = enabled
     this.client.throttleUpload(uploadLimit > 0 ? uploadLimit : -1)
     for (const torrent of this.client.torrents) {
@@ -428,9 +448,8 @@ function whenReady(torrent: Torrent): Promise<void> {
       cleanup()
       resolve()
     }
-    const onError = (err: unknown) => {
-      cleanup()
-      console.error('[torrent] load failed:', errorMessage(err))
+    const onError = () => {
+      cleanup() // logged by the torrent's own error listener
       reject(new SourceError("Couldn't load this torrent. Check the link and try again."))
     }
     const onClose = () => {
@@ -439,6 +458,7 @@ function whenReady(torrent: Torrent): Promise<void> {
     }
     const timer = setTimeout(() => {
       cleanup()
+      log.warn(`${torrent.infoHash || 'a torrent'}: no metadata after ${READY_TIMEOUT_MS / 1000} s, giving up`)
       torrent.destroy()
       reject(new SourceError('No peers answered for this torrent. It may be dead — try another one.'))
     }, READY_TIMEOUT_MS)

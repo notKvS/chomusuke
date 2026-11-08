@@ -5,7 +5,10 @@ import path from 'node:path'
 import { app, shell } from 'electron'
 import electronUpdater from 'electron-updater'
 import type { UpdateState, UpdateStatus } from '../shared/types.ts'
+import { logger } from './log.ts'
 import { releasePageUrl, type UpdateMode, updateMode } from './update-mode.ts'
+
+const log = logger('updater')
 
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000
 
@@ -25,6 +28,7 @@ export class Updater {
       appImage: Boolean(process.env.APPIMAGE)
     })
     this.status = this.mode === 'off' ? { state: 'off' } : { state: 'idle' }
+    log.info(`update mode: ${this.mode}`)
     if (this.mode === 'off') return
 
     const { autoUpdater } = electronUpdater
@@ -40,7 +44,7 @@ export class Updater {
     })
     autoUpdater.on('update-downloaded', ({ version }) => this.set({ state: 'ready', version }))
     autoUpdater.on('error', err => {
-      console.error('[updater]', err instanceof Error ? err.message : err)
+      log.error(err)
       this.set({ state: 'error', message: 'Couldn’t check for updates. Try again later.' })
     })
   }
@@ -85,6 +89,8 @@ export class Updater {
   }
 
   private set(status: UpdateStatus): void {
+    // Download progress would be a line per percent; the start and the end are enough.
+    if (status.state !== this.status.state) log.info('status:', status)
     this.status = status
     this.onChange(this.current())
   }

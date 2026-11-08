@@ -1,6 +1,5 @@
-import { ipcMain } from 'electron'
 import type { IpcDeps } from './deps.ts'
-import { HEX_COLOR } from './guard.ts'
+import { HEX_COLOR, handle } from './guard.ts'
 
 /** Height of the renderer's top bar at 100% zoom. */
 const TITLE_BAR_HEIGHT = 68
@@ -15,7 +14,7 @@ export const overlayHeight = (zoom: number) => Math.round(TITLE_BAR_HEIGHT * zoo
 export function register(deps: IpcDeps): void {
   const { assertTrustedSender } = deps
   // Theme-driven window chrome: zoom (the "interface size" setting) and the title-bar overlay colours.
-  ipcMain.handle('ui:set-window-appearance', (event, raw: unknown) => {
+  handle('ui:set-window-appearance', (event, raw: unknown) => {
     assertTrustedSender(event)
     const mainWindow = deps.mainWindow()
     if (!raw || typeof raw !== 'object' || !mainWindow) return

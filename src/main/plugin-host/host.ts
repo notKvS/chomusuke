@@ -1,9 +1,12 @@
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { BrowserWindow, ipcMain, type Session, session } from 'electron'
+import { logger } from '../log.ts'
 import { CookieJar } from './cookie-jar.ts'
 import { hostAllowed, PluginError, type PluginManifest } from './manifest.ts'
 import type { PluginMethod, PluginRuntime } from './provider.ts'
+
+const log = logger('plugins')
 
 /**
  * Sandbox for plugin code. Each plugin gets:
@@ -24,6 +27,8 @@ export interface HostPage {
 const START_TIMEOUT_MS = 15_000
 const CALL_TIMEOUT_MS = 20_000
 const MAX_ERROR = 300
+/** Longest plugin console message kept in the log. */
+const MAX_CONSOLE = 1000
 
 const hostsByContents = new Map<number, PluginHost>()
 let ipcWired = false
@@ -66,9 +71,9 @@ function configureSession(ses: Session, hosts: string[], pageUrl: string, jar: C
     callback({ cancel: !(ownPage || declared) })
   })
 
-  // TEMP diagnostic: why a plugin request failed (blocked by allow-list, DNS, reset, timeout…).
+  // Why a plugin request failed (blocked by allow-list, DNS, reset, timeout…).
   ses.webRequest.onErrorOccurred(details => {
-    console.warn(`[plugin-net] ${details.method} ${details.url} → ${details.error}`)
+    log.warn(`network: ${details.method} ${details.url} → ${details.error}`)
   })
 
   // Requests to declared hosts go out without our page's Origin/Referer: some APIs (charts.youtube.com) answer 403
@@ -172,7 +177,7 @@ export class PluginHost implements PluginRuntime {
         finish()
         reject(new PluginError(`${this.manifest.name} took too long to answer.`))
         // A worker stuck in a loop would burn a core forever; tear the sandbox down (the next call restarts it).
-        this.dispose()
+        this.dispose(`${method} didn't answer within ${CALL_TIMEOUT_MS / 1000} s`)
       }, CALL_TIMEOUT_MS)
       this.pending.set(id, {
         resolve: value => {
@@ -200,8 +205,9 @@ export class PluginHost implements PluginRuntime {
       // Load status of the plugin module.
       if (ok) this.onLoaded?.resolve()
       else {
-        this.onLoaded?.reject(failure())
-        this.dispose()
+        const err = failure()
+        this.onLoaded?.reject(err)
+        this.dispose(`its code failed to load: ${err.message}`)
       }
       return
     }
@@ -218,12 +224,15 @@ export class PluginHost implements PluginRuntime {
     else contents.closeDevTools()
   }
 
-  dispose(): void {
+  /** Stops the sandbox; `reason` is logged when it's a problem rather than a plain shutdown. */
+  dispose(reason?: string): void {
     if (this.startTimer) clearTimeout(this.startTimer)
     this.startTimer = null
     for (const entry of this.pending.values()) entry.reject(new PluginError(`${this.manifest.name} stopped.`))
     this.pending.clear()
     if (this.window && !this.window.isDestroyed()) {
+      if (reason) log.warn(`${this.manifest.id}: stopping the sandbox: ${reason}`)
+      else log.debug(`${this.manifest.id}: sandbox closed`)
       hostsByContents.delete(this.window.webContents.id)
       this.window.destroy()
       void session
@@ -237,6 +246,9 @@ export class PluginHost implements PluginRuntime {
 
   private start(): Promise<void> {
     if (this.started) return this.started
+    const { id, version } = this.manifest
+    const startedAt = performance.now()
+    log.info(`${id} ${version}: starting its sandbox`)
     wireIpc()
     const partition = this.partition // no "persist:" prefix → in-memory: no cookies or storage on disk
     configureSession(session.fromPartition(partition), this.manifest.hosts, this.page.url, this.jar)
@@ -258,20 +270,29 @@ export class PluginHost implements PluginRuntime {
     this.window = window
     hostsByContents.set(window.webContents.id, this)
     if (pluginDevTools) this.setDevTools(true)
-    window.webContents.on('render-process-gone', () => this.dispose())
+    window.webContents.on('render-process-gone', (_event, details) =>
+      this.dispose(`its process ended (${details.reason})`)
+    )
     window.webContents.on('did-finish-load', () =>
       window.webContents.send('ext:load', { code: this.code, hosts: this.manifest.hosts })
     )
+    // What the plugin prints (console.log, uncaught errors) is the best clue to why a source fails.
+    window.webContents.on('console-message', ({ level, message }) => {
+      const text = `${id}: ${message.slice(0, MAX_CONSOLE)}`
+      if (level === 'error') log.warn(text)
+      else log.debug(text)
+    })
 
     this.started = new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
-        this.dispose()
+        this.dispose(`it didn't start within ${START_TIMEOUT_MS / 1000} s`)
         reject(new PluginError(`${this.manifest.name} failed to start.`))
       }, START_TIMEOUT_MS)
       this.startTimer = timer
       this.onLoaded = {
         resolve: () => {
           clearTimeout(timer)
+          log.info(`${id}: running after ${Math.round(performance.now() - startedAt)} ms`)
           resolve()
         },
         reject: error => {

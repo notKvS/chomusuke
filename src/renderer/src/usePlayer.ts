@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Album, Track } from '../../shared/types'
+import { log } from './log'
 
 export interface PlayerState {
   album: Album | null
@@ -95,11 +96,13 @@ export function usePlayer(
       const track = album.tracks[index]
       if (!track) return
       queueRef.current = { album, index }
+      log.info(`playing “${track.title}” (${track.id}) from “${album.title}”`)
       patch({ album, index, currentTime: 0, duration: 0, bufferedEnd: 0, isBuffering: true })
       audio.src = track.url
       audio.play().catch((err: unknown) => {
         // Switching tracks quickly aborts the previous play() — that's expected.
         if (err instanceof DOMException && err.name === 'AbortError') return
+        log.warn(`play() failed for ${track.id}:`, err)
       })
     },
     [audio, patch]
@@ -179,6 +182,7 @@ export function usePlayer(
         if (!audio.src) return
         patch({ isPlaying: false, isBuffering: false })
         const title = current()?.title ?? 'this track'
+        log.error(`audio error on ${current()?.id}: code ${audio.error?.code}`, audio.error?.message ?? '')
         onErrorRef.current(
           `Couldn't play “${title}”. The format may be unsupported, or no peers are sharing it right now.`
         )
@@ -197,7 +201,9 @@ export function usePlayer(
     const timer = setInterval(() => {
       if (Date.now() - Math.max(since, lastDataAt.current) < STALL_MS) return
       clearInterval(timer)
-      const title = queueRef.current.album?.tracks[queueRef.current.index]?.title ?? 'This track'
+      const track = queueRef.current.album?.tracks[queueRef.current.index]
+      const title = track?.title ?? 'This track'
+      log.warn(`stalled: no data for ${STALL_MS / 1000} s on ${track?.id}, buffered to ${bufferedAhead(audio)} s`)
       onErrorRef.current(`“${title}” is stuck — no peer is sharing that part of the torrent right now.`)
     }, 2000)
     return () => clearInterval(timer)

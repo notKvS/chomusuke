@@ -9,7 +9,10 @@ import './styles/index.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
+import { captureErrors } from './log'
 import { applyTheme, loadAppearance, loadBackgroundImage } from './theme/dom'
+
+captureErrors()
 
 // Apply the saved theme before the first paint so there's no flash of the default colours.
 applyTheme(loadAppearance(), loadBackgroundImage())

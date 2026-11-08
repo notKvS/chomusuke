@@ -1,12 +1,16 @@
 import { readFile, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { app, dialog, ipcMain } from 'electron'
+import { app, dialog } from 'electron'
 import parseTorrent, { toMagnetURI } from 'parse-torrent'
 import type { BackupExportResult, BackupImportResult } from '../../shared/types.ts'
 import { BackupError, buildBackup, MAX_BACKUP_BYTES, parseBackup } from '../backup.ts'
 import type { TorrentEngine } from '../engine.ts'
+import { logger } from '../log.ts'
 import type { SeedLibrary } from '../seeding.ts'
 import type { IpcDeps } from './deps.ts'
+import { handle } from './guard.ts'
+
+const log = logger('backup')
 
 /** Re-downloads albums from a backup in the background and keeps them, one at a time. */
 async function restoreAlbums(
@@ -25,7 +29,7 @@ async function restoreAlbums(
         )
       }
     } catch (err) {
-      console.error(`[backup] couldn't restore ${album.infoHash}:`, err instanceof Error ? err.message : err)
+      log.error(`couldn't restore ${album.infoHash}:`, err)
     }
   }
 }
@@ -54,7 +58,7 @@ async function keptAlbumsForBackup(
 /** Exporting ratings, saved albums, playlists and appearance to a file, and importing one. */
 export function register(deps: IpcDeps): void {
   const { assertTrustedSender, torrents, library, ratings, playlists } = deps
-  ipcMain.handle('backup:export', async (event, appearance: unknown): Promise<BackupExportResult> => {
+  handle('backup:export', async (event, appearance: unknown): Promise<BackupExportResult> => {
     assertTrustedSender(event)
     const mainWindow = deps.mainWindow()
     if (!mainWindow) return null
@@ -86,7 +90,7 @@ export function register(deps: IpcDeps): void {
     }
   })
 
-  ipcMain.handle('backup:import', async (event): Promise<BackupImportResult> => {
+  handle('backup:import', async (event): Promise<BackupImportResult> => {
     assertTrustedSender(event)
     const mainWindow = deps.mainWindow()
     if (!mainWindow) return null
@@ -108,7 +112,7 @@ export function register(deps: IpcDeps): void {
       return { ok: true, songs, albums: albums.length, playlists: mergedPlaylists, appearance: backup.appearance }
     } catch (err) {
       if (err instanceof BackupError) return { ok: false, error: err.message }
-      console.error('[backup] import failed:', err)
+      log.error('import failed:', err)
       return { ok: false, error: 'Couldn’t read that backup.' }
     }
   })

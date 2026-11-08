@@ -1,21 +1,21 @@
 import { writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { app, clipboard, dialog, ipcMain } from 'electron'
+import { app, clipboard, dialog } from 'electron'
 import type { SaveTorrentResult, TorrentDetails } from '../../shared/types.ts'
 import { isInfoHash } from '../seeding.ts'
 import type { IpcDeps } from './deps.ts'
-import { safeFileName } from './guard.ts'
+import { handle, safeFileName } from './guard.ts'
 
 /** A loaded torrent's details, and sharing it as a .torrent file or a magnet link. */
 export function register(deps: IpcDeps): void {
   const { assertTrustedSender, torrents, library } = deps
-  ipcMain.handle('torrent:details', (event, infoHash: unknown): TorrentDetails | null => {
+  handle('torrent:details', (event, infoHash: unknown): TorrentDetails | null => {
     assertTrustedSender(event)
     if (!isInfoHash(infoHash)) return null
     return torrents.details(infoHash, library.has(infoHash)) ?? null
   })
 
-  ipcMain.handle('torrent:save-file', async (event, infoHash: unknown): Promise<SaveTorrentResult> => {
+  handle('torrent:save-file', async (event, infoHash: unknown): Promise<SaveTorrentResult> => {
     assertTrustedSender(event)
     const mainWindow = deps.mainWindow()
     const file = isInfoHash(infoHash) ? torrents.torrentFile(infoHash) : undefined
@@ -34,7 +34,7 @@ export function register(deps: IpcDeps): void {
     }
   })
 
-  ipcMain.handle('torrent:copy-magnet', (event, infoHash: unknown): boolean => {
+  handle('torrent:copy-magnet', (event, infoHash: unknown): boolean => {
     assertTrustedSender(event)
     const magnet = isInfoHash(infoHash) ? torrents.magnet(infoHash) : undefined
     if (magnet) clipboard.writeText(magnet)

@@ -1,16 +1,18 @@
-import { ipcMain } from 'electron'
 import type { BrowseResponse, ExploreOverview, LoadResult, SearchResponse } from '../../shared/types.ts'
+import { logger } from '../log.ts'
 import { findTrack } from '../providers/chart-match.ts'
 import { SourceError } from '../source.ts'
 import type { IpcDeps } from './deps.ts'
-import { MAX_QUERY_LENGTH, toResult } from './guard.ts'
+import { handle, MAX_QUERY_LENGTH, toResult } from './guard.ts'
 import { playableToAlbum } from './sources.ts'
+
+const log = logger('search')
 
 /** Searching every enabled source, opening a result, and browsing sources by category on Explore. */
 export function register(deps: IpcDeps): void {
   const { assertTrustedSender, torrents, registry, library } = deps
   let activeSearch: AbortController | null = null
-  ipcMain.handle('search:query', async (event, rawQuery: unknown): Promise<SearchResponse> => {
+  handle('search:query', async (event, rawQuery: unknown): Promise<SearchResponse> => {
     assertTrustedSender(event)
     if (typeof rawQuery !== 'string' || !rawQuery.trim() || rawQuery.length > MAX_QUERY_LENGTH) {
       return { ok: false, error: 'Type a song, album or artist to search for.' }
@@ -23,14 +25,14 @@ export function register(deps: IpcDeps): void {
       return { ok: true, results: await registry.search(rawQuery.trim(), controller.signal) }
     } catch (err) {
       if (controller.signal.aborted) return { ok: false, error: 'Search was replaced by a newer one.' }
-      console.error('[search] failed:', err instanceof Error ? err.message : err)
+      log.error('failed:', err)
       return { ok: false, error: 'Search failed. Check your connection and try again.' }
     } finally {
       if (activeSearch === controller) activeSearch = null
     }
   })
 
-  ipcMain.handle('search:open', async (event, albumId: unknown): Promise<LoadResult> => {
+  handle('search:open', async (event, albumId: unknown): Promise<LoadResult> => {
     assertTrustedSender(event)
     let startKey: string | undefined
     const result = await toResult(library, async () => {
@@ -42,12 +44,12 @@ export function register(deps: IpcDeps): void {
     return result.ok && startKey ? { ...result, startKey } : result
   })
 
-  ipcMain.handle('explore:sources', (event): ExploreOverview => {
+  handle('explore:sources', (event): ExploreOverview => {
     assertTrustedSender(event)
     return registry.explore()
   })
 
-  ipcMain.handle(
+  handle(
     'explore:browse',
     async (
       event,
@@ -64,24 +66,21 @@ export function register(deps: IpcDeps): void {
         }
       } catch (err) {
         if (err instanceof SourceError) return { ok: false, error: err.message }
-        console.error('[explore] failed:', err instanceof Error ? err.message : err)
+        log.error('explore: failed:', err)
         return { ok: false, error: 'Couldn’t load that category.' }
       }
     }
   )
 
-  ipcMain.handle(
-    'search:more',
-    async (event, sourceId: unknown, query: unknown, page: unknown): Promise<BrowseResponse> => {
-      assertTrustedSender(event)
-      if (typeof query !== 'string' || query.length > MAX_QUERY_LENGTH) return { ok: false, error: 'Search again.' }
-      try {
-        return { ok: true, section: await registry.searchMore(sourceId, query, page, AbortSignal.timeout(30_000)) }
-      } catch (err) {
-        if (err instanceof SourceError) return { ok: false, error: err.message }
-        console.error('[search] more failed:', err instanceof Error ? err.message : err)
-        return { ok: false, error: 'Couldn’t load more results.' }
-      }
+  handle('search:more', async (event, sourceId: unknown, query: unknown, page: unknown): Promise<BrowseResponse> => {
+    assertTrustedSender(event)
+    if (typeof query !== 'string' || query.length > MAX_QUERY_LENGTH) return { ok: false, error: 'Search again.' }
+    try {
+      return { ok: true, section: await registry.searchMore(sourceId, query, page, AbortSignal.timeout(30_000)) }
+    } catch (err) {
+      if (err instanceof SourceError) return { ok: false, error: err.message }
+      log.error('more failed:', err)
+      return { ok: false, error: 'Couldn’t load more results.' }
     }
-  )
+  })
 }

@@ -79,6 +79,16 @@ export function UpdateSettings() {
           </SettingRow>
         </div>
       )}
+      <div className="sharing">
+        <SettingRow
+          title="Logs"
+          hint="What the app did and what went wrong, kept in a small file on this computer. Send it along when you report a problem. It can include what you searched for and played, but never passwords or API keys."
+        >
+          <button type="button" className="pill-button" onClick={() => void window.chomusuke.openLogs()}>
+            Open log folder
+          </button>
+        </SettingRow>
+      </div>
     </section>
   )
 }

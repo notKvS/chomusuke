@@ -11,6 +11,7 @@ import { trustedSenderGuard } from './ipc/guard.ts'
 import * as homeIpc from './ipc/home.ts'
 import * as libraryIpc from './ipc/library.ts'
 import { applySharing, seedLibrary } from './ipc/library.ts'
+import * as logsIpc from './ipc/logs.ts'
 import * as playlistsIpc from './ipc/playlists.ts'
 import * as presenceIpc from './ipc/presence.ts'
 import * as providers from './ipc/providers.ts'
@@ -21,6 +22,7 @@ import * as torrent from './ipc/torrent.ts'
 import * as updateIpc from './ipc/update.ts'
 import * as windowIpc from './ipc/window.ts'
 import { overlayHeight } from './ipc/window.ts'
+import { logger } from './log.ts'
 import { PlaylistStore } from './playlists.ts'
 import { BUNDLED_REPOSITORY, bundledPlugins } from './plugin-host/defaults.ts'
 import { hostPage, PluginHost, togglePluginDevTools } from './plugin-host/host.ts'
@@ -32,6 +34,14 @@ import { RatingsStore } from './ratings.ts'
 import { SeedLibrary } from './seeding.ts'
 import { type StreamServer, startStreamServer } from './stream-server.ts'
 import { Updater } from './updater.ts'
+
+const log = logger('app')
+log.info(
+  `Chomusuke ${app.getVersion()} starting (${app.isPackaged ? 'installed' : 'from source'}) — Electron`,
+  process.versions.electron,
+  `Chrome ${process.versions.chrome}, ${process.platform} ${process.getSystemVersion()} ${process.arch}`
+)
+log.info('data folder:', app.getPath('userData'))
 
 const STATS_INTERVAL_MS = 1000
 
@@ -74,6 +84,7 @@ const pluginHosts = new Map<string, { sha: string; host: PluginHost }>()
 function pluginRuntime(manifest: PluginManifest, code: string, codeSha256: string): PluginHost {
   const existing = pluginHosts.get(manifest.id)
   if (existing?.sha === codeSha256) return existing.host
+  if (existing) log.info(`plugin ${manifest.id} changed; replacing its sandbox`)
   existing?.host.dispose()
   const host = new PluginHost(
     manifest,
@@ -88,6 +99,7 @@ function pluginRuntime(manifest: PluginManifest, code: string, codeSha256: strin
 function disposeUnusedHosts(activeIds: Set<string>): void {
   for (const [id, entry] of pluginHosts) {
     if (activeIds.has(id)) continue
+    log.info(`plugin ${id} turned off; closing its sandbox`)
     entry.host.dispose()
     pluginHosts.delete(id)
   }
@@ -95,9 +107,13 @@ function disposeUnusedHosts(activeIds: Set<string>): void {
 
 // Own taskbar identity on Windows, so the icon isn't taken from (or cached as) the generic electron.exe.
 if (process.platform === 'win32') app.setAppUserModelId('com.chomusuke.app')
-if (!app.requestSingleInstanceLock()) app.quit()
+if (!app.requestSingleInstanceLock()) {
+  log.info('already running; handing over to the open window')
+  app.quit()
+}
 
 app.on('second-instance', () => {
+  log.debug('second launch; focusing the window')
   if (!mainWindow) return
   if (mainWindow.isMinimized()) mainWindow.restore()
   mainWindow.focus()
@@ -195,12 +211,15 @@ function registerIpc(
     presenceIpc,
     backup,
     updateIpc,
+    logsIpc,
     windowIpc
   ]
   for (const area of areas) area.register(deps)
 }
 
 async function shutdown(): Promise<void> {
+  const started = performance.now()
+  log.info('shutting down')
   for (const { host } of pluginHosts.values()) host.dispose()
   await presence.dispose()
   // Albums kept or streamed this session were downloaded into the cache: move them into the library before the
@@ -213,18 +232,22 @@ async function shutdown(): Promise<void> {
   for (const t of streamed) {
     await library
       .recordStreamed({ infoHash: t.infoHash, title: t.title, artist: t.artist, addedAt: playedAt }, t.torrentFile)
-      .catch(err => console.error('[library] couldn’t record', t.infoHash, err))
+      .catch(err => log.error('library: couldn’t record', t.infoHash, err))
   }
   const move = new Set([...kept, ...streamed.map(t => t.infoHash)])
-  for (const { infoHash, storePath } of (await engine?.release(move)) ?? []) {
-    await library.adopt(infoHash, storePath).catch(err => console.error('[library] couldn’t keep', infoHash, err))
+  const released = (await engine?.release(move)) ?? []
+  log.info(`keeping ${released.length} album(s) from this session (${streamed.length} streamed)`)
+  for (const { infoHash, storePath } of released) {
+    await library.adopt(infoHash, storePath).catch(err => log.error('library: couldn’t keep', infoHash, err))
   }
   await Promise.allSettled([engine?.destroy(), streamServer?.close()])
   // Opted out: forget streamed music; otherwise trim it to the space the user allowed.
-  if (library.sharing.seedStreamed) await library.enforceStreamCap().catch(() => {})
-  else await library.clearStreamed().catch(() => {})
-  await library.purge().catch(() => {})
-  await rm(cacheDir, { recursive: true, force: true }).catch(() => {})
+  const tidy = (step: string) => (err: unknown) => log.warn(`library: ${step} failed:`, err)
+  if (library.sharing.seedStreamed) await library.enforceStreamCap().catch(tidy('trimming streamed music'))
+  else await library.clearStreamed().catch(tidy('clearing streamed music'))
+  await library.purge().catch(tidy('purging removed albums'))
+  await rm(cacheDir, { recursive: true, force: true }).catch(tidy('clearing the cache'))
+  log.info(`shut down in ${Math.round(performance.now() - started)} ms`)
 }
 
 let shuttingDown = false
@@ -251,7 +274,7 @@ app.whenReady().then(async () => {
   try {
     await settings.syncBundled(BUNDLED_REPOSITORY, bundledPlugins())
   } catch (err) {
-    console.error('[settings] could not install the bundled plugins:', err instanceof Error ? err.message : err)
+    log.error('settings: could not install the bundled plugins:', err)
   }
 
   await library.load()
@@ -259,7 +282,11 @@ app.whenReady().then(async () => {
   await ratings.load()
   await playlists.load()
   await history.load()
-  await library.purge().catch(() => {})
+  await library.purge().catch(err => log.warn('library: purging removed albums failed:', err))
+  log.info(
+    `library: ${library.list().length} kept, ${library.listStreamed().length} streamed; sharing`,
+    library.sharing
+  )
 
   let torrents: TorrentEngine | null = null
   streamServer = await startStreamServer((infoHash, fileIndex) => torrents?.resolveFile(infoHash, fileIndex))
@@ -278,9 +305,12 @@ app.whenReady().then(async () => {
     app.quit()
   })
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
-    console.error('[window] renderer gone:', details.reason)
+    log.error('window: renderer gone:', details.reason, `exit code ${details.exitCode}`)
     if (details.reason !== 'clean-exit') mainWindow?.reload()
   })
+  mainWindow.webContents.once('did-finish-load', () =>
+    log.info(`window loaded ${Math.round(performance.now())} ms after launch`)
+  )
 
   void seedLibrary(library, torrents)
   updater.start()
