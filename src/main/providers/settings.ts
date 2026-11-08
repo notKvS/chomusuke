@@ -1,7 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { PluginOptionView, ProviderSettingsView } from '../../shared/types.ts'
+import { readJsonFile, writeJsonFile } from '../json-file.ts'
 import { isPrivateHost } from '../net.ts'
 import { missingRequired, type PluginManifest, parseRepository } from '../plugin-host/manifest.ts'
 
@@ -154,10 +155,8 @@ export class ProviderSettingsStore {
 
   /** Loads saved settings; unreadable or invalid entries are dropped rather than trusted. */
   async load(): Promise<void> {
-    let raw: unknown
-    try {
-      raw = JSON.parse(await readFile(this.file, 'utf8'))
-    } catch {
+    const raw = await readJsonFile(this.file)
+    if (!raw) {
       this.entries = [archiveEntry()]
       return
     }
@@ -486,8 +485,6 @@ export class ProviderSettingsStore {
       null,
       2
     )
-    const temp = `${this.file}.tmp`
-    await writeFile(temp, body, { encoding: 'utf8', mode: 0o600 })
-    await rename(temp, this.file)
+    await writeJsonFile(this.file, body)
   }
 }

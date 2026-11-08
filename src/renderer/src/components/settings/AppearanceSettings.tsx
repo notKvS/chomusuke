@@ -76,6 +76,8 @@ const LABELS: Record<string, string> = {
   system: 'System',
   serif: 'Serif',
   mono: 'Mono',
+  tiny5duo: 'Tiny5 Duo',
+  doto: 'Doto',
   off: 'Off',
   sakura: 'Sakura',
   snow: 'Snow',
@@ -91,7 +93,9 @@ const FONT_SAMPLES: Record<Appearance['font'], string> = {
   rounded: "'Nunito', sans-serif",
   system: "'Segoe UI', system-ui, sans-serif",
   serif: 'Georgia, serif',
-  mono: "'Cascadia Code', Consolas, monospace"
+  mono: "'Cascadia Code', Consolas, monospace",
+  tiny5duo: "'Tiny5 Duo', sans-serif",
+  doto: "'Doto Variable', sans-serif"
 }
 
 /** Every look-and-feel setting, applied live. */

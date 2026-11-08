@@ -136,3 +136,20 @@ test('adopts cached files on quit and purges removed or orphaned folders', () =>
     assert.deepEqual(await readdir(path.join(dir, 'data')), [HASH])
     await assert.rejects(async () => library.readTorrent(HASH2), LibraryError)
   }))
+
+test('a damaged library.json never costs the saved albums', () =>
+  withLibrary(async (library, dir) => {
+    await library.add({ infoHash: HASH, title: 'First' }, new Uint8Array([1]))
+    await library.add({ infoHash: HASH2, title: 'Second' }, new Uint8Array([2]))
+    await mkdir(path.join(library.dataPath(HASH), 'Album'), { recursive: true })
+    await mkdir(path.join(library.dataPath(HASH2), 'Album'), { recursive: true })
+    await writeFile(path.join(dir, 'library.json'), '{"albums": [trunc')
+
+    const reloaded = new SeedLibrary(dir)
+    await reloaded.load()
+    // The last good copy (saved before the second album was added) comes back…
+    assert.equal(reloaded.has(HASH), true)
+    // …and the newer album's files survive the startup clean-up because its torrent file is still there.
+    await reloaded.purge()
+    assert.deepEqual((await readdir(path.join(dir, 'data'))).sort(), [HASH, HASH2])
+  }))

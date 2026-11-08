@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import { readFile, rename, writeFile } from 'node:fs/promises'
 import type { Playlist, PlaylistSong } from '../shared/types.ts'
+import { readJsonFile, writeJsonFile } from './json-file.ts'
 import { isoDate, isRecord, sanitizeSongRef, text } from './song-ref.ts'
 
 /**
@@ -67,12 +67,7 @@ export class PlaylistStore {
   }
 
   async load(): Promise<void> {
-    let raw: unknown
-    try {
-      raw = JSON.parse(await readFile(this.file, 'utf8'))
-    } catch {
-      return
-    }
+    const raw = await readJsonFile(this.file)
     const list = isRecord(raw) && Array.isArray(raw.playlists) ? raw.playlists : []
     const seen = new Set<string>()
     for (const item of list.slice(0, MAX_PLAYLISTS)) {
@@ -182,7 +177,6 @@ export class PlaylistStore {
 
   private async persist(): Promise<void> {
     const body = JSON.stringify({ version: FILE_VERSION, playlists: this.playlists }, null, 2)
-    await writeFile(`${this.file}.tmp`, body, { encoding: 'utf8', mode: 0o600 })
-    await rename(`${this.file}.tmp`, this.file)
+    await writeJsonFile(this.file, body)
   }
 }

@@ -2,6 +2,7 @@ import type { Dirent } from 'node:fs'
 import { cp, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { SharingSettings } from '../shared/types.ts'
+import { readJsonFile, writeJsonFile } from './json-file.ts'
 
 /**
  * Music this app keeps on disk and seeds, so listeners share with each other. Two kinds of album:
@@ -50,6 +51,12 @@ const GB = 1024 ** 3
 export class LibraryError extends Error {
   name = 'LibraryError'
 }
+
+const exists = (file: string) =>
+  stat(file).then(
+    () => true,
+    () => false
+  )
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -161,13 +168,8 @@ export class SeedLibrary {
   async load(): Promise<void> {
     await mkdir(path.join(this.dir, 'torrents'), { recursive: true })
     await mkdir(this.dataDir, { recursive: true })
-    let raw: unknown
-    try {
-      raw = JSON.parse(await readFile(path.join(this.dir, 'library.json'), 'utf8'))
-    } catch {
-      return
-    }
-    if (!isRecord(raw)) return
+    const raw = await readJsonFile(path.join(this.dir, 'library.json'))
+    if (!raw) return
     this.settings = sanitizeSharing(raw.sharing)
     for (const [list, target] of [
       [raw.albums, this.kept],
@@ -306,6 +308,9 @@ export class SeedLibrary {
     }
     for (const name of folders) {
       if (this.get(name) && !this.removed.has(name)) continue
+      // A folder whose torrent file is still there belongs to an album the user never removed (removing deletes
+      // it), e.g. one a damaged library.json lost track of: keep its music rather than delete it.
+      if (!this.removed.has(name) && isInfoHash(name) && (await exists(this.torrentPath(name)))) continue
       await rm(path.join(this.dataDir, name), { recursive: true, force: true }).catch(() => {})
     }
   }
@@ -316,8 +321,6 @@ export class SeedLibrary {
       null,
       2
     )
-    const file = path.join(this.dir, 'library.json')
-    await writeFile(`${file}.tmp`, body, { encoding: 'utf8', mode: 0o600 })
-    await rename(`${file}.tmp`, file)
+    await writeJsonFile(path.join(this.dir, 'library.json'), body)
   }
 }

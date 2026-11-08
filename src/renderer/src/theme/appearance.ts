@@ -9,7 +9,7 @@ export const BACKGROUNDS = ['aurora', 'mesh', 'starfield', 'gradient', 'solid', 
 export const SURFACES = ['classic', 'glass', 'frosted', 'solid', 'outline'] as const
 export const BUTTON_SHAPES = ['pill', 'rounded', 'square'] as const
 export const BUTTON_STYLES = ['gradient', 'solid', 'outline', 'glow', 'soft'] as const
-export const FONTS = ['rounded', 'system', 'serif', 'mono'] as const
+export const FONTS = ['rounded', 'system', 'serif', 'mono', 'tiny5duo', 'doto'] as const
 export const PARTICLES = [
   'off',
   'sakura',
@@ -307,6 +307,15 @@ const FONT_STACKS: Record<Appearance['font'], [body: string, display: string]> =
   mono: [
     "'Cascadia Code', 'Cascadia Mono', Consolas, monospace",
     "'Cascadia Code', 'Cascadia Mono', Consolas, monospace"
+  ],
+  // Latin only; Japanese and other scripts fall back to the rounded fonts.
+  tiny5duo: [
+    "'Tiny5 Duo', 'Nunito', 'M PLUS Rounded 1c', system-ui, sans-serif",
+    "'Tiny5 Duo', 'M PLUS Rounded 1c', system-ui, sans-serif"
+  ],
+  doto: [
+    "'Doto Variable', 'Nunito', 'M PLUS Rounded 1c', system-ui, sans-serif",
+    "'Doto Variable', 'M PLUS Rounded 1c', system-ui, sans-serif"
   ]
 }
 

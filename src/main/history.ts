@@ -1,6 +1,6 @@
-import { readFile, rename, writeFile } from 'node:fs/promises'
 import { normalizeText } from '../shared/fingerprint.ts'
 import type { PlayedSong } from '../shared/types.ts'
+import { readJsonFile, writeJsonFile } from './json-file.ts'
 import { isoDate, isRecord, text } from './song-ref.ts'
 
 /** The songs you played lately, kept in `<userData>/history.json` to suggest more of what you listen to. */
@@ -43,12 +43,7 @@ export class PlayHistory {
   }
 
   async load(): Promise<void> {
-    let raw: unknown
-    try {
-      raw = JSON.parse(await readFile(this.file, 'utf8'))
-    } catch {
-      return
-    }
+    const raw = await readJsonFile(this.file)
     const list = isRecord(raw) && Array.isArray(raw.plays) ? raw.plays : []
     this.plays = list
       .slice(-MAX_PLAYS)
@@ -96,7 +91,6 @@ export class PlayHistory {
 
   private async persist(): Promise<void> {
     const body = JSON.stringify({ version: FILE_VERSION, plays: this.plays })
-    await writeFile(`${this.file}.tmp`, body, { encoding: 'utf8', mode: 0o600 })
-    await rename(`${this.file}.tmp`, this.file)
+    await writeJsonFile(this.file, body)
   }
 }

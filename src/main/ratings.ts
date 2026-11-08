@@ -1,6 +1,6 @@
-import { readFile, rename, writeFile } from 'node:fs/promises'
 import { songId } from '../shared/fingerprint.ts'
 import type { RatedSong } from '../shared/types.ts'
+import { readJsonFile, writeJsonFile } from './json-file.ts'
 import { isoDate, isRecord, sanitizeSongRef } from './song-ref.ts'
 
 /** Liked and disliked songs, kept in `<userData>/ratings.json`. */
@@ -28,12 +28,7 @@ export class RatingsStore {
   }
 
   async load(): Promise<void> {
-    let raw: unknown
-    try {
-      raw = JSON.parse(await readFile(this.file, 'utf8'))
-    } catch {
-      return
-    }
+    const raw = await readJsonFile(this.file)
     const list = isRecord(raw) && Array.isArray(raw.songs) ? raw.songs : []
     for (const item of list.slice(0, MAX_SONGS)) {
       const song = sanitizeRatedSong(item)
@@ -81,7 +76,6 @@ export class RatingsStore {
 
   private async persist(): Promise<void> {
     const body = JSON.stringify({ version: FILE_VERSION, songs: this.list() }, null, 2)
-    await writeFile(`${this.file}.tmp`, body, { encoding: 'utf8', mode: 0o600 })
-    await rename(`${this.file}.tmp`, this.file)
+    await writeJsonFile(this.file, body)
   }
 }
