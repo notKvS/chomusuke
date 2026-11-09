@@ -193,6 +193,16 @@
     border-width: 0 0 1px;
   }
 
+  /* Image background: the top bar is frosted glass over the picture, not a tinted strip of its own. Only a faint
+     light veil is added, so the picture's colours still come through (the window buttons live inside it too).
+     Blur follows the "glass blur" setting. */
+  html[data-bg='image'][data-surface] .topbar {
+    background: linear-gradient(180deg, rgb(var(--ink-rgb) / 0.1), rgb(var(--ink-rgb) / 0.04));
+    backdrop-filter: blur(var(--panel-blur)) saturate(1.5);
+    box-shadow: inset 0 1px 0 rgb(var(--ink-rgb) / 0.14);
+    border-bottom-color: rgb(var(--ink-rgb) / 0.12);
+  }
+
   html[data-surface='outline'] .card__art {
     outline: 1px solid rgb(var(--accent-rgb) / 0.35);
   }

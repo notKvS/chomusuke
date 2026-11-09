@@ -172,6 +172,7 @@ export function App() {
           onOpenAlbum={() => playingHash && loader.openAlbum(playingHash)}
           ratings={ratings}
           playlists={playlists}
+          seekThumb={looks.appearance.seekThumb}
           queue={queue.queue ? { label: queue.queue.label, ...queueEdges(queue.queue) } : undefined}
         />
         {toast && (

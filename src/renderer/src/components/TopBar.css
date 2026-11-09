@@ -4,13 +4,19 @@
     display: flex;
     align-items: center;
     gap: 24px;
-    padding: 0 var(--window-controls) 0 16px;
+    /* The window buttons sit flush against the right edge (see WindowControls). */
+    padding: 0 0 0 16px;
     border-bottom: 1px solid transparent;
     -webkit-app-region: drag;
     position: relative;
     z-index: 3;
     background: linear-gradient(180deg, rgb(var(--bg-rgb) / 0.96), rgb(var(--bg-rgb) / 0.75));
     backdrop-filter: blur(12px);
+  }
+
+  /* macOS: the traffic lights are inset on the left and there are no buttons on the right. */
+  .topbar--mac {
+    padding: 0 16px 0 84px;
   }
 
   .source-form {

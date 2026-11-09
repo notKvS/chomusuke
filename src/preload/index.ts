@@ -54,6 +54,14 @@ const api: ChomusukeApi = {
   openUpdatePage: () => ipcRenderer.invoke('update:open-page'),
   log: (level, message) => ipcRenderer.send('logs:write', level, message),
   openLogs: () => ipcRenderer.invoke('logs:open'),
+  platform: process.platform,
+  windowControl: action => ipcRenderer.invoke('window:control', action),
+  isWindowMaximized: () => ipcRenderer.invoke('window:is-maximized'),
+  onWindowMaximized: listener => {
+    const handler = (_event: IpcRendererEvent, maximized: boolean) => listener(maximized)
+    ipcRenderer.on('window:maximized', handler)
+    return () => ipcRenderer.removeListener('window:maximized', handler)
+  },
   onStats: listener => {
     const handler = (_event: IpcRendererEvent, stats: TorrentStats[]) => listener(stats)
     ipcRenderer.on('torrent:stats', handler)

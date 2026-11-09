@@ -437,6 +437,11 @@ export interface ChomusukeApi {
   /** Opens the new version's release page in the browser. */
   openUpdatePage(): Promise<void>
   onUpdateState(listener: (state: UpdateState) => void): () => void
+  /** The OS ("win32", "darwin", "linux"): Windows and Linux get window buttons drawn by the top bar. */
+  platform: string
+  windowControl(action: 'minimize' | 'toggle-maximize' | 'close'): Promise<void>
+  isWindowMaximized(): Promise<boolean>
+  onWindowMaximized(listener: (maximized: boolean) => void): () => void
   /** Writes a line to the app's log file. */
   log(level: 'error' | 'warn' | 'info' | 'debug', message: string): void
   /** Opens the folder with the log files. */
@@ -448,5 +453,4 @@ export interface WindowAppearance {
   zoom: number
   /** #rrggbb */
   titleBarColor: string
-  titleBarSymbolColor: string
 }

@@ -44,8 +44,6 @@
     --sidebar-collapsed-width: 80px;
     --topbar-height: 68px;
     --player-height: 80px;
-    /* Room for the native window controls drawn by titleBarOverlay. */
-    --window-controls: 150px;
     --font-body: 'Nunito', 'M PLUS Rounded 1c', 'Segoe UI', system-ui, sans-serif;
     --font-display: 'M PLUS Rounded 1c', 'Nunito', system-ui, sans-serif;
 

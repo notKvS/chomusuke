@@ -1,0 +1,29 @@
+@layer components {
+  .window-controls {
+    display: flex;
+    align-self: flex-start;
+    margin-left: auto;
+    -webkit-app-region: no-drag;
+  }
+
+  .window-controls button {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 36px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    cursor: default;
+    transition: background 0.12s;
+  }
+
+  .window-controls button:hover {
+    background: rgb(var(--tint-rgb) / 0.18);
+  }
+
+  .window-controls .window-controls__close:hover {
+    background: #e81123;
+    color: #fff;
+  }
+}

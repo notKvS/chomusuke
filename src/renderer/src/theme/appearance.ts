@@ -22,6 +22,19 @@ export const PARTICLES = [
   'sparkles'
 ] as const
 
+/** What rides the player's seek bar: one of the pictures in src/renderer/src/assets/seek, Chomusuke's face, or a plain dot. */
+export const SEEK_THUMBS = [
+  'blindfold',
+  'redhead',
+  'darkhair',
+  'pinkhair',
+  'duck',
+  'runner',
+  'hero',
+  'chomusuke',
+  'dot'
+] as const
+
 export interface Appearance {
   mode: (typeof MODES)[number]
   accent: string
@@ -51,6 +64,7 @@ export interface Appearance {
   particleCount: number
   mascotMotion: boolean
   splash: boolean
+  seekThumb: (typeof SEEK_THUMBS)[number]
 }
 
 export const DEFAULT_APPEARANCE: Appearance = {
@@ -74,7 +88,8 @@ export const DEFAULT_APPEARANCE: Appearance = {
   particles: 'sakura',
   particleCount: 12,
   mascotMotion: true,
-  splash: true
+  splash: true,
+  seekThumb: 'blindfold'
 }
 
 export interface Preset {
@@ -267,7 +282,8 @@ export function sanitizeAppearance(raw: unknown): Appearance {
     particles: pick(PARTICLES, v.particles, v.sakura === false ? 'off' : d.particles),
     particleCount: number(v.particleCount ?? v.petals, 4, 40, d.particleCount),
     mascotMotion: bool(v.mascotMotion, d.mascotMotion),
-    splash: bool(v.splash, d.splash)
+    splash: bool(v.splash, d.splash),
+    seekThumb: pick(SEEK_THUMBS, v.seekThumb, d.seekThumb)
   }
 }
 
@@ -329,8 +345,8 @@ export interface ThemeOutput {
   tokens: Record<string, string>
   /** data-* attributes for <html>, read by theme.css. */
   attributes: Record<string, string>
-  /** For the native window title bar overlay. */
-  titleBar: { color: string; symbolColor: string }
+  /** The window's own background colour, seen while the page repaints. */
+  titleBar: { color: string }
 }
 
 /** Turns settings into CSS tokens. Pure, so it is unit-tested; applyTheme() writes the result to the DOM. */
@@ -413,5 +429,5 @@ export function computeTheme(a: Appearance): ThemeOutput {
     'data-motion': a.mascotMotion ? 'on' : 'off'
   }
 
-  return { tokens, attributes, titleBar: { color: rgbToHex(bg), symbolColor: rgbToHex(text) } }
+  return { tokens, attributes, titleBar: { color: rgbToHex(bg) } }
 }

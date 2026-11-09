@@ -21,7 +21,6 @@ import * as sources from './ipc/sources.ts'
 import * as torrent from './ipc/torrent.ts'
 import * as updateIpc from './ipc/update.ts'
 import * as windowIpc from './ipc/window.ts'
-import { overlayHeight } from './ipc/window.ts'
 import { logger } from './log.ts'
 import { PlaylistStore } from './playlists.ts'
 import { BUNDLED_REPOSITORY, bundledPlugins } from './plugin-host/defaults.ts'
@@ -143,8 +142,11 @@ function createWindow(): BrowserWindow {
       process.platform === 'win32' ? '../../build/icon.ico' : '../../build/icon.png'
     ),
     autoHideMenuBar: true,
-    titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#0d0a1a', symbolColor: '#f7f2ff', height: overlayHeight(1) },
+    // No native frame on Windows and Linux: the top bar draws its own window buttons, so it can be themed all the
+    // way across. macOS keeps its traffic lights, inset into the top bar.
+    ...(process.platform === 'darwin'
+      ? { titleBarStyle: 'hidden' as const, trafficLightPosition: { x: 16, y: 26 } }
+      : { frame: false }),
     webPreferences: {
       preload: path.join(import.meta.dirname, '../preload/index.cjs'),
       sandbox: true,
@@ -155,6 +157,12 @@ function createWindow(): BrowserWindow {
     }
   })
   win.once('ready-to-show', () => win.show())
+  // The top bar's maximise button shows "restore" while maximised.
+  const sendMaximized = () => {
+    if (!win.webContents.isDestroyed()) win.webContents.send('window:maximized', win.isMaximized())
+  }
+  win.on('maximize', sendMaximized)
+  win.on('unmaximize', sendMaximized)
 
   // The hidden title bar leaves no menu bar on Windows, so the default menu's DevTools shortcuts never fire.
   // From source they always work; in the installed app only once "Developer tools" is on in Settings.

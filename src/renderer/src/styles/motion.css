@@ -11,6 +11,7 @@
     .chomu *,
     .chomu,
     .loader-scene *,
+    .progress__thumb img,
     .brand__name {
       /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat every component's animation */
       animation: none !important;

@@ -1,6 +1,7 @@
 import { type CSSProperties, useEffect, useRef } from 'react'
 import type { TorrentStats } from '../../../shared/types'
 import { formatSpeed, formatTime, plural } from '../format'
+import type { Appearance } from '../theme/appearance'
 import type { Player } from '../usePlayer'
 import type { Playlists } from '../usePlaylists'
 import type { Ratings } from '../useRatings'
@@ -9,6 +10,7 @@ import { ArtistLink } from './ArtistLink'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
 import { RateButtons } from './RateButtons'
+import { seekPicture } from './seekThumbs'
 import './PlayerBar.css'
 
 interface Props {
@@ -17,6 +19,8 @@ interface Props {
   onOpenAlbum: () => void
   ratings: Ratings
   playlists: Playlists
+  /** What rides the seek bar (the "Seek bar" appearance setting). */
+  seekThumb: Appearance['seekThumb']
   /** Set while a playlist (or the liked list) is playing across albums */
   queue?: { label: string; hasNext: boolean; hasPrev: boolean }
 }
@@ -25,7 +29,7 @@ interface Props {
  * The bar at the bottom while something plays: transport, seek bar, now playing, rating, swarm and volume. Renders
  * nothing until a track is loaded. Previous/next also step through `queue` when a playlist spans several albums.
  */
-export function PlayerBar({ player, stats, onOpenAlbum, ratings, playlists, queue }: Props) {
+export function PlayerBar({ player, stats, onOpenAlbum, ratings, playlists, seekThumb, queue }: Props) {
   const { state, track, audio } = player
   const progressRef = useRef<HTMLDivElement>(null)
 
@@ -52,15 +56,22 @@ export function PlayerBar({ player, stats, onOpenAlbum, ratings, playlists, queu
   const pct = (value: number) => (duration > 0 ? `${Math.min(100, (value / duration) * 100)}%` : '0%')
   const hasPrev = state.index > 0 || currentTime > 0 || Boolean(queue?.hasPrev)
   const hasNext = state.index + 1 < state.album.tracks.length || Boolean(queue?.hasNext)
+  const picture = seekPicture(seekThumb, state.isPlaying)
   const volumeIcon = state.muted || state.volume === 0 ? 'volumeOff' : state.volume < 0.5 ? 'volumeLow' : 'volume'
 
   return (
     <footer className="player">
-      <div className="progress" ref={progressRef} style={{ '--buffered': pct(bufferedEnd) } as CSSProperties}>
+      <div
+        className={`progress${state.isPlaying ? ' is-playing' : ''}`}
+        ref={progressRef}
+        style={{ '--buffered': pct(bufferedEnd) } as CSSProperties}
+      >
         <div className="progress__track">
           <div className="progress__buffered" />
           <div className="progress__played" />
-          <div className="progress__thumb" />
+          <div className={`progress__thumb progress__thumb--${seekThumb}`}>
+            {picture && <img src={picture} alt="" draggable={false} />}
+          </div>
         </div>
         <input
           type="range"

@@ -11,8 +11,7 @@ export function useAppearance() {
     const theme = applyTheme(appearance, image)
     void window.chomusuke.setWindowAppearance({
       zoom: appearance.uiScale / 100,
-      titleBarColor: theme.titleBar.color,
-      titleBarSymbolColor: theme.titleBar.symbolColor
+      titleBarColor: theme.titleBar.color
     })
   }, [appearance, image])
 

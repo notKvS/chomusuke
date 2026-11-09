@@ -12,6 +12,7 @@ import {
   PRESETS,
   presetAppearance,
   randomAppearance,
+  SEEK_THUMBS,
   SURFACES,
   sanitizeAppearance
 } from '../../theme/appearance'
@@ -25,6 +26,7 @@ import { StatusLine } from '../controls/StatusLine'
 import { Swatches } from '../controls/Swatches'
 import { Switch } from '../controls/Switch'
 import { Icon } from '../Icon'
+import { SEEK_LABELS, seekPicture } from '../seekThumbs'
 import './AppearanceSettings.css'
 
 const ACCENTS = [
@@ -78,6 +80,7 @@ const LABELS: Record<string, string> = {
   mono: 'Mono',
   tiny5duo: 'Tiny5 Duo',
   doto: 'Doto',
+
   off: 'Off',
   sakura: 'Sakura',
   snow: 'Snow',
@@ -101,6 +104,8 @@ const FONT_SAMPLES: Record<Appearance['font'], string> = {
 /** Every look-and-feel setting, applied live. */
 export function AppearanceSettings({ controls }: { controls: AppearanceControls }) {
   const { appearance: a, update, replace, reset, image, setImage } = controls
+  /** Of the backgrounds, only these two drift or twinkle (see theme.css). */
+  const animatable = a.background === 'mesh' || a.background === 'starfield'
   const [code, setCode] = useState('')
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -216,9 +221,14 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
               }
             />
           </SettingField>
-          <SettingField label="Animated" row>
+          <SettingField
+            label="Animated"
+            row
+            hint={animatable ? undefined : 'Only Mesh and Starfield move; this background is still.'}
+          >
             <Switch
               checked={a.animatedBackground}
+              disabled={!animatable}
               onChange={animatedBackground => update({ animatedBackground })}
               label="Animate the background"
             />
@@ -393,6 +403,25 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
               onChange={particleCount => update({ particleCount })}
               disabled={a.particles === 'off'}
             />
+          </SettingField>
+          <SettingField label="Seek bar" hint="The little picture that rides the player's seek bar.">
+            <div className="seek-picker">
+              {SEEK_THUMBS.map(option => {
+                const picture = seekPicture(option)
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    className="seek-picker__option"
+                    aria-pressed={a.seekThumb === option}
+                    onClick={() => update({ seekThumb: option })}
+                  >
+                    {picture ? <img src={picture} alt="" draggable={false} /> : <i aria-hidden="true" />}
+                    <span>{SEEK_LABELS[option]}</span>
+                  </button>
+                )
+              })}
+            </div>
           </SettingField>
           <SettingField label="Animated mascot" row>
             <Switch

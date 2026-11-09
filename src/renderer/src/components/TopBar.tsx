@@ -2,6 +2,7 @@ import { type FormEvent, useState } from 'react'
 import { looksLikeSource } from '../source'
 import { Icon } from './Icon'
 import { AnimatedLogo } from './mascot/AnimatedLogo'
+import { WindowControls } from './WindowControls'
 import './TopBar.css'
 
 interface Props {
@@ -31,7 +32,7 @@ export function TopBar({ onSubmit, onHome, playing, canGoBack, canGoForward, onB
   }
 
   return (
-    <header className="topbar">
+    <header className={`topbar${window.chomusuke.platform === 'darwin' ? ' topbar--mac' : ''}`}>
       <AnimatedLogo playing={playing} onHome={onHome} />
       <div className="history-nav">
         <button
@@ -72,6 +73,7 @@ export function TopBar({ onSubmit, onHome, playing, canGoBack, canGoForward, onB
           </button>
         )}
       </form>
+      <WindowControls />
     </header>
   )
 }
