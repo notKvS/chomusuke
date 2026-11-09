@@ -341,7 +341,8 @@ export interface TorznabForm {
 export type PluginKind = 'provider' | 'chart'
 
 export type ProvidersResponse = { ok: true; providers: ProviderSettingsView[] } | { ok: false; error: string }
-export type TestResponse = { ok: true; message: string } | { ok: false; error: string }
+/** `challenge`: the site answered with a bot check, which `passPluginBotCheck` lets the user pass. */
+export type TestResponse = { ok: true; message: string } | { ok: false; error: string; challenge?: boolean }
 
 /** Where the app is with updating itself. */
 export type UpdateStatus =
@@ -379,6 +380,8 @@ export interface ChomusukeApi {
   importPlugins(repositoryUrl: string, kind: PluginKind): Promise<ProvidersResponse>
   setPluginOptions(id: string, values: Record<string, string | boolean>): Promise<ProvidersResponse>
   testPlugin(id: string): Promise<TestResponse>
+  /** Opens the plugin's site in a window to pass its bot check; resolves when the window is closed. */
+  passPluginBotCheck(id: string): Promise<TestResponse>
   exploreSources(): Promise<ExploreOverview>
   /** One page (default 1) of a source's category. */
   /** One page of a chart category. `region` is a country code (or "" for worldwide) instead of the saved default. */

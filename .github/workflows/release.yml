@@ -166,3 +166,20 @@ jobs:
           VERSION: ${{ needs.version.outputs.version }}
         run: |
           gh release create "v${VERSION}" dist/* --target "$GITHUB_SHA" --title "v${VERSION}" --generate-notes --latest
+      # The macOS build isn't notarized (no Apple Developer account), so Gatekeeper calls the download "damaged".
+      - name: Add macOS install note to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          gh release view "v${VERSION}" --json body --jq .body > notes.md
+          cat >> notes.md <<'EOF'
+
+          ### macOS: "Chomusuke is damaged and can't be opened"
+          The app isn't notarized by Apple yet. Drag it to Applications, then run this once in Terminal and open it as usual:
+
+          ```sh
+          xattr -cr /Applications/Chomusuke.app
+          ```
+          EOF
+          gh release edit "v${VERSION}" --notes-file notes.md

@@ -162,14 +162,28 @@ interface PluginRowsProps {
 function PluginRows({ plugins, apply, onToggle, onRemove }: PluginRowsProps) {
   const [setup, setSetup] = useState<{ id: string; enableAfter: boolean } | null>(null)
   const [tests, setTests] = useState<Record<string, Status | undefined>>({})
+  /** Plugins whose last test hit the site's bot check: they get a button that opens the site to pass it. */
+  const [botChecked, setBotChecked] = useState<Record<string, boolean | undefined>>({})
 
   const test = async (provider: ProviderSettingsView) => {
     setTests(prev => ({ ...prev, [provider.id]: { kind: 'busy', text: 'Testing…' } }))
     const result = await window.chomusuke.testPlugin(provider.id)
+    setBotChecked(prev => ({ ...prev, [provider.id]: !result.ok && result.challenge === true }))
     setTests(prev => ({
       ...prev,
       [provider.id]: result.ok ? { kind: 'ok', text: result.message } : { kind: 'error', text: result.error }
     }))
+  }
+
+  // Opens the site in a window; once the user closes it, the test runs again with the cookies it earned.
+  const passBotCheck = async (provider: ProviderSettingsView) => {
+    setTests(prev => ({
+      ...prev,
+      [provider.id]: { kind: 'busy', text: 'Pass the check in the window, then close it…' }
+    }))
+    const result = await window.chomusuke.passPluginBotCheck(provider.id)
+    if (result.ok) await test(provider)
+    else setTests(prev => ({ ...prev, [provider.id]: { kind: 'error', text: result.error } }))
   }
 
   // Switching a plugin on that is still missing details asks for them first.
@@ -199,6 +213,12 @@ function PluginRows({ plugins, apply, onToggle, onRemove }: PluginRowsProps) {
             onRemove={() => onRemove(provider)}
           />
           {tests[provider.id] && <StatusLine status={tests[provider.id] as Status} />}
+          {botChecked[provider.id] && tests[provider.id]?.kind === 'error' && (
+            <button type="button" className="pill-button" onClick={() => void passBotCheck(provider)}>
+              <Icon name="link" size={18} />
+              <span>Open site to pass the check</span>
+            </button>
+          )}
         </div>
       ))}
       {setting && setup && (

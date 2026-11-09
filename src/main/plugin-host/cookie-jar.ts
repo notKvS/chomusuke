@@ -60,6 +60,15 @@ export class CookieJar {
     this.hosts.set(host, cookies)
   }
 
+  /** Remembers cookies a browser window collected for `host` (e.g. after the user passed a site's bot check). */
+  import(host: string, cookies: ReadonlyArray<{ name: string; value: string; expirationDate?: number }>): void {
+    for (const { name, value, expirationDate } of cookies) {
+      // Electron gives expirationDate in seconds; none means a session cookie.
+      const expires = expirationDate === undefined ? '' : `; Expires=${new Date(expirationDate * 1000).toUTCString()}`
+      this.store(host, `${name}=${value}${expires}`)
+    }
+  }
+
   /** The Cookie header for a request to `host`, if it has any cookies. */
   header(host: string): string | undefined {
     const cookies = this.hosts.get(host)

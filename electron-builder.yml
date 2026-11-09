@@ -43,8 +43,10 @@ mac:
   target:
     - target: dmg
     - target: zip
-  # Unsigned until a Developer ID certificate is configured (users open it with right-click → Open the first time).
-  identity: null
+  # Ad-hoc signed ("-") until a Developer ID certificate is configured: Apple Silicon won't run an unsigned arm64
+  # binary, but Gatekeeper still flags the download, so users run `xattr -cr` once (see the release notes).
+  # hardenedRuntime stays off: with an ad-hoc signature it would block loading Electron's own frameworks.
+  identity: '-'
   hardenedRuntime: false
 
 linux:

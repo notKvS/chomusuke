@@ -1,6 +1,7 @@
 import type { PluginKind, ProvidersResponse, TestResponse } from '../../shared/types.ts'
 import { FetchError, fetchJson, fetchText } from '../http.ts'
 import { logger } from '../log.ts'
+import { isBotCheckMessage } from '../plugin-host/challenge.ts'
 import { forKind, PluginError, type PluginManifest, parseRepository } from '../plugin-host/manifest.ts'
 import { testPlugin } from '../plugin-host/provider.ts'
 import { buildProviders } from '../providers/index.ts'
@@ -73,7 +74,7 @@ async function settingsResult(work: () => Promise<unknown>, store: ProviderSetti
 
 /** Managing sources: Torznab indexers, plugins installed from a repository, and testing either. */
 export function register(deps: IpcDeps): void {
-  const { assertTrustedSender, registry, settings, pluginRuntime, disposeUnusedHosts } = deps
+  const { assertTrustedSender, registry, settings, pluginRuntime, disposeUnusedHosts, mainWindow } = deps
   const rebuildProviders = () => {
     const enabled = settings.enabled()
     registry.setProviders(
@@ -140,9 +141,30 @@ export function register(deps: IpcDeps): void {
       const runtime = pluginRuntime(config.manifest, config.code, config.codeSha256)
       return { ok: true, message: await testPlugin(config.manifest, runtime, config.options) }
     } catch (err) {
-      if (err instanceof SettingsError || err instanceof PluginError) return { ok: false, error: err.message }
+      if (err instanceof PluginError)
+        return { ok: false, error: err.message, challenge: isBotCheckMessage(err.message) }
+      if (err instanceof SettingsError) return { ok: false, error: err.message }
       log.error('plugin test failed:', err)
       return { ok: false, error: 'The plugin isn’t working.' }
+    }
+  })
+
+  // The site answered a plugin with a bot check: let the user pass it in a window, then the plugin reuses the cookies.
+  handle('plugins:pass-bot-check', async (event, id: unknown): Promise<TestResponse> => {
+    assertTrustedSender(event)
+    try {
+      const { manifest, code, codeSha256, options } = settings.pluginConfig(id)
+      const mirror = typeof options.mirror === 'string' ? options.mirror.trim().toLowerCase() : ''
+      const host = manifest.hosts.includes(mirror) ? mirror : manifest.hosts.find(h => !h.startsWith('*.'))
+      if (!host) return { ok: false, error: `${manifest.name} has no site to open.` }
+      const kept = await pluginRuntime(manifest, code, codeSha256).passBotCheck(`https://${host}/`, mainWindow())
+      return kept > 0
+        ? { ok: true, message: 'Done. Test the source again.' }
+        : { ok: false, error: 'The site gave nothing to keep. Open it again and wait for the page to load first.' }
+    } catch (err) {
+      if (err instanceof SettingsError || err instanceof PluginError) return { ok: false, error: err.message }
+      log.error('bot check window failed:', err)
+      return { ok: false, error: 'Couldn’t open the site.' }
     }
   })
 

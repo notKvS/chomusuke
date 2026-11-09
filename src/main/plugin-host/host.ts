@@ -2,6 +2,7 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { BrowserWindow, ipcMain, type Session, session } from 'electron'
 import { logger } from '../log.ts'
+import { openBotCheckWindow } from './challenge.ts'
 import { CookieJar } from './cookie-jar.ts'
 import { hostAllowed, PluginError, type PluginManifest } from './manifest.ts'
 import type { PluginMethod, PluginRuntime } from './provider.ts'
@@ -142,8 +143,8 @@ export class PluginHost implements PluginRuntime {
   private onLoaded: { resolve: () => void; reject: (error: Error) => void } | null = null
   private nextId = 1
   private readonly pending = new Map<number, Pending>()
-  /** Cookies for plugins that sign in; null for the rest, which never keep any. */
-  private readonly jar: CookieJar | null
+  /** Cookies for plugins that sign in (or whose site's bot check the user passed); null for the rest, which keep none. */
+  private jar: CookieJar | null
 
   constructor(manifest: PluginManifest, code: string, codeSha256: string, page: HostPage) {
     this.manifest = manifest
@@ -215,6 +216,31 @@ export class PluginHost implements PluginRuntime {
     if (!entry) return
     if (ok) entry.resolve(value)
     else entry.reject(failure())
+  }
+
+  /**
+   * Lets the user pass the plugin site's bot check in a real window, then keeps the cookies it earned for the
+   * plugin's next requests. Returns how many cookies were kept.
+   */
+  async passBotCheck(origin: string, parent: BrowserWindow | null): Promise<number> {
+    const url = new URL(origin)
+    if (url.protocol !== 'https:' || !hostAllowed(url.hostname, this.manifest.hosts)) {
+      throw new PluginError(`${this.manifest.name} doesn't declare ${url.hostname}.`)
+    }
+    const cookies = await openBotCheckWindow({
+      url: url.toString(),
+      hosts: this.manifest.hosts,
+      title: this.manifest.name,
+      parent
+    })
+    // A plugin that doesn't sign in has no jar until now: it only starts keeping cookies once the user passed a check.
+    this.jar ??= new CookieJar()
+    this.jar.import(url.hostname, cookies)
+    // A sandbox that is already running holds the old (jar-less) policy; reapply it with the jar.
+    if (this.window && !this.window.isDestroyed()) {
+      configureSession(session.fromPartition(this.partition), this.manifest.hosts, this.page.url, this.jar)
+    }
+    return cookies.length
   }
 
   setDevTools(open: boolean): void {

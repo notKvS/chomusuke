@@ -16,6 +16,7 @@ const api: ChomusukeApi = {
   importPlugins: (repositoryUrl, kind) => ipcRenderer.invoke('plugins:import', repositoryUrl, kind),
   setPluginOptions: (id, values) => ipcRenderer.invoke('plugins:set-options', id, values),
   testPlugin: id => ipcRenderer.invoke('plugins:test', id),
+  passPluginBotCheck: id => ipcRenderer.invoke('plugins:pass-bot-check', id),
   exploreSources: () => ipcRenderer.invoke('explore:sources'),
   browse: (sourceId, categoryId, page, region) =>
     ipcRenderer.invoke('explore:browse', sourceId, categoryId, page, region),

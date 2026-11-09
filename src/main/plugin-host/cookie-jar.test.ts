@@ -52,3 +52,16 @@ test('malformed or oversized cookies are ignored, and a host keeps at most 50', 
   jar.store('a.example', 'c0=new')
   assert.match(jar.header('a.example') ?? '', /c0=new/)
 })
+
+test('cookies from a browser window are kept like the ones a site sets', () => {
+  let clock = 1_000_000
+  const jar = new CookieJar(() => clock)
+  jar.import('example.org', [
+    { name: 'cf_clearance', value: 'tok', expirationDate: (clock + 120_000) / 1000 },
+    { name: 'session', value: 'abc' },
+    { name: 'stale', value: 'x', expirationDate: (clock - 1000) / 1000 }
+  ])
+  assert.equal(jar.header('example.org'), 'cf_clearance=tok; session=abc')
+  clock += 180_000
+  assert.equal(jar.header('example.org'), 'session=abc')
+})
