@@ -52,7 +52,7 @@ test('create, add across torrents, dedupe, reorder, remove, rename — and it al
       playlist.songs.map(s => s.title),
       ['Two']
     )
-    assert.doesNotMatch(playlist.songs[0].magnet, /x\.pe/) // LAN peers never stored
+    assert.doesNotMatch(String(playlist.songs[0].magnet), /x\.pe/) // LAN peers never stored
     await reloaded.remove(id)
     assert.deepEqual(reloaded.list(), [])
   }))
@@ -71,3 +71,27 @@ test('backup merge: newer copy wins, new playlists are added, junk is dropped', 
     assert.equal(await store.merge([newer]), 0)
     assert.equal(sanitizePlaylist({ id: '00000000-0000-4000-8000-000000000000', name: '' }), undefined)
   }))
+
+test('an http song is kept in a playlist by its plugin and id, and replays without a magnet', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'chomusuke-playlists-'))
+  try {
+    const file = path.join(dir, 'playlists.json')
+    const store = new PlaylistStore(file)
+    await store.load()
+    const { id } = await store.create('Mixed')
+    const http = { provider: 'plugin-demo', id: 'abc123' }
+    await store.add(id, [
+      { infoHash: 'b'.repeat(40), key: '1-get-lucky', title: 'Get Lucky', artist: 'Daft Punk', http },
+      { infoHash: 'c'.repeat(40), key: '1-bad', title: 'Bad', http: { provider: '../evil', id: 'x' } }
+    ])
+
+    const reloaded = new PlaylistStore(file)
+    await reloaded.load()
+    const [saved, ...rest] = reloaded.list()[0].songs
+    assert.deepEqual(saved.http, http)
+    assert.equal(saved.magnet, undefined)
+    assert.deepEqual(rest, []) // the song with a broken plugin reference was not kept
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})

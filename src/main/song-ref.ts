@@ -35,7 +35,7 @@ export function sanitizeSongRef(raw: unknown): SongRef | undefined {
   const artist = text(raw.artist, 200)
   const duration =
     typeof raw.duration === 'number' && Number.isFinite(raw.duration) && raw.duration > 0 ? raw.duration : undefined
-  return {
+  const song = {
     id: songId(infoHash, key),
     infoHash,
     key,
@@ -43,7 +43,24 @@ export function sanitizeSongRef(raw: unknown): SongRef | undefined {
     artist,
     album: text(raw.album, 300),
     duration,
-    fingerprint: songFingerprint(title, artist),
-    magnet: cleanMagnet(raw.magnet, infoHash) ?? `magnet:?xt=urn:btih:${infoHash}`
+    fingerprint: songFingerprint(title, artist)
   }
+  // An http song has no torrent: it comes back by asking its plugin. A broken `http` is a broken song, never a torrent.
+  if (raw.http !== undefined) {
+    const http = cleanHttp(raw.http)
+    return http ? { ...song, http } : undefined
+  }
+  return { ...song, magnet: cleanMagnet(raw.magnet, infoHash) ?? `magnet:?xt=urn:btih:${infoHash}` }
+}
+
+const PROVIDER_ID = /^plugin-[a-z0-9][a-z0-9-]{0,31}$/
+const MAX_HTTP_ID = 300
+
+/** Which plugin to ask, and for what: its provider id and the id the plugin gave the song. */
+function cleanHttp(value: unknown): { provider: string; id: string } | undefined {
+  if (!isRecord(value)) return undefined
+  const { provider, id } = value
+  if (typeof provider !== 'string' || !PROVIDER_ID.test(provider)) return undefined
+  if (typeof id !== 'string' || id.length === 0 || id.length > MAX_HTTP_ID || /\p{Cc}/u.test(id)) return undefined
+  return { provider, id }
 }

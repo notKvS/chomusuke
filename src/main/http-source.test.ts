@@ -66,6 +66,7 @@ after(() => {
 const playable = (urls: string[], headers?: Record<string, string>): HttpPlayable => ({
   kind: 'http',
   id: ID,
+  origin: { provider: 'plugin-demo', id: 'song-1' },
   title: 'An album',
   artist: 'An artist',
   tracks: urls.map((url, i) => ({ title: `Song ${i + 1}`, url, headers }))
@@ -182,4 +183,20 @@ test('plays through the stream server like any other file', async () => {
   } finally {
     await server.close()
   }
+})
+
+test('songInfo says what is needed to rate a track and find it again', () => {
+  const http = source()
+  const album = http.load({ ...playable([`${base}/song.mp3`]), origin: { provider: 'plugin-demo', id: 'abc123' } })
+  assert.deepEqual(http.songInfo(ID, album.tracks[0].key), {
+    infoHash: ID,
+    key: album.tracks[0].key,
+    title: 'Song 1',
+    artist: 'An artist',
+    album: 'An album',
+    duration: undefined,
+    http: { provider: 'plugin-demo', id: 'abc123' }
+  })
+  assert.equal(http.songInfo(ID, 'nope'), undefined)
+  assert.equal(http.songInfo('c'.repeat(40), album.tracks[0].key), undefined)
 })

@@ -5,7 +5,7 @@ import { isoDate, isRecord, sanitizeSongRef, text } from './song-ref.ts'
 
 /**
  * User playlists, kept in `<userData>/playlists.json`. A playlist can mix songs from any torrent and any source;
- * each entry stores enough (torrent magnet + file key) to load and play it again.
+ * each entry stores enough (torrent magnet + file key, or the plugin and song id for an http song) to play it again.
  */
 
 const MAX_PLAYLISTS = 500

@@ -49,7 +49,10 @@ export function register(deps: IpcDeps): void {
     assertTrustedSender(event)
     return playlistCall(async () => {
       // Song details come from the loaded torrent, not from the UI.
-      const info = isInfoHash(infoHash) && typeof key === 'string' ? torrents.songInfo(infoHash, key) : undefined
+      const info =
+        isInfoHash(infoHash) && typeof key === 'string'
+          ? (torrents.songInfo(infoHash, key) ?? deps.httpSource.songInfo(infoHash, key))
+          : undefined
       if (info) await playlists.add(id, [info])
     })()
   })

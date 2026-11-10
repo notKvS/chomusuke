@@ -189,6 +189,7 @@ function createStreamProvider(
           kind: 'http',
           // Stable per plugin and source id, so reopening an album gives the same album.
           id: createHash('sha1').update(`${manifest.id}:${id}`).digest('hex'),
+          origin: { provider: pluginProviderId(manifest), id },
           title: opened.title ?? album.title,
           artist: opened.artist ?? album.artist,
           coverUrl: opened.coverUrl ?? album.artwork,

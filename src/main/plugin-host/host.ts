@@ -4,6 +4,7 @@ import { BrowserWindow, ipcMain, type Session, session } from 'electron'
 import { logger } from '../log.ts'
 import { openBotCheckWindow } from './challenge.ts'
 import { CookieJar } from './cookie-jar.ts'
+import { applyPluginHeaders } from './headers.ts'
 import { hostAllowed, PluginError, type PluginManifest } from './manifest.ts'
 import type { PluginMethod, PluginRuntime } from './provider.ts'
 
@@ -87,9 +88,8 @@ function configureSession(ses: Session, hosts: string[], pageUrl: string, jar: C
       return callback({})
     }
     if (url.protocol !== 'https:' || !hostAllowed(url.hostname, hosts)) return callback({})
-    const requestHeaders = Object.fromEntries(
-      Object.entries(details.requestHeaders).filter(([name]) => !/^(origin|referer)$/i.test(name))
-    )
+    // Our page's Origin/Referer out; the User-Agent, Origin or Referer a plugin asked for (X-Plugin-*) in.
+    const requestHeaders = applyPluginHeaders(details.requestHeaders)
     // A plugin that signs in gets the cookies its site set (the sandbox can't send a Cookie header itself).
     const cookie = jar?.header(url.hostname)
     if (cookie) requestHeaders.Cookie = cookie

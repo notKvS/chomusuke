@@ -1,6 +1,6 @@
 import { lookup } from 'node:dns/promises'
 import { Readable } from 'node:stream'
-import type { Album, Track } from '../shared/types.ts'
+import type { Album, SongRef, Track } from '../shared/types.ts'
 import { logger } from './log.ts'
 import { isPrivateHost } from './net.ts'
 import type { HttpPlayable, HttpTrack } from './providers/types.ts'
@@ -87,7 +87,7 @@ const slug = (title: string): string =>
  * Only public https hosts are contacted, every redirect hop included, and redirects can't carry cookies elsewhere.
  */
 export class HttpSource {
-  private readonly albums = new Map<string, { album: Album; entries: Entry[] }>()
+  private readonly albums = new Map<string, { album: Album; entries: Entry[]; origin: HttpPlayable['origin'] }>()
   private readonly mediaBaseUrl: string
   private readonly allowPrivate: boolean
 
@@ -134,13 +134,29 @@ export class HttpSource {
       totalSize: 0
     }
     this.albums.delete(playable.id)
-    this.albums.set(playable.id, { album, entries })
+    this.albums.set(playable.id, { album, entries, origin: playable.origin })
     if (this.albums.size > MAX_ALBUMS) {
       const oldest = this.albums.keys().next().value
       if (oldest !== undefined) this.albums.delete(oldest)
     }
     log.info(`opened “${album.title}”: ${tracks.length} track(s)`)
     return album
+  }
+
+  /** What's needed to rate a track and find it again later (the counterpart of TorrentEngine.songInfo). */
+  songInfo(infoHash: string, key: string): Omit<SongRef, 'id' | 'fingerprint'> | undefined {
+    const loaded = this.albums.get(infoHash)
+    const track = loaded?.album.tracks.find(t => t.key === key)
+    if (!loaded || !track) return undefined
+    return {
+      infoHash,
+      key,
+      title: track.title,
+      artist: track.artist,
+      album: loaded.album.title,
+      duration: track.duration,
+      http: loaded.origin
+    }
   }
 
   /** The stream server's lookup for a media URL of an http album. */

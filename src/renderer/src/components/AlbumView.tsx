@@ -41,7 +41,7 @@ export function AlbumView({
   playlists
 }: Props) {
   const albumIsCurrent = album.tracks.some(t => t.id === currentTrackId)
-  // An http album has no torrent: no swarm, nothing to save offline, and songs can't be rated or put in playlists yet.
+  // An http album has no torrent: no swarm and nothing to save offline.
   const isTorrent = album.source !== 'http'
   const [details, refreshDetails] = useTorrentDetails(isTorrent ? album.infoHash : null)
   const [showTorrent, setShowTorrent] = useState(false)
@@ -130,17 +130,15 @@ export function AlbumView({
                     : isTorrent && formatBytes(track.size)}
                 </span>
               </button>
-              {isTorrent && (
-                <span className="track-actions">
-                  <AddToPlaylist
-                    playlists={playlists}
-                    infoHash={album.infoHash}
-                    trackKey={track.key}
-                    label={`Add ${track.title} to a playlist`}
-                  />
-                  <RateButtons infoHash={album.infoHash} track={track} ratings={ratings} />
-                </span>
-              )}
+              <span className="track-actions">
+                <AddToPlaylist
+                  playlists={playlists}
+                  infoHash={album.infoHash}
+                  trackKey={track.key}
+                  label={`Add ${track.title} to a playlist`}
+                />
+                <RateButtons infoHash={album.infoHash} track={track} ratings={ratings} />
+              </span>
             </li>
           )
         })}

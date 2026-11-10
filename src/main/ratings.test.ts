@@ -105,3 +105,25 @@ test('backup round-trip; merge keeps the newest rating per song', () =>
     assert.throws(() => parseBackup('not json'), BackupError)
     assert.throws(() => parseBackup(JSON.stringify({ ...backup, version: 99 })), /newer version/)
   }))
+
+test('an http song is rated and remembered by the plugin it came from, with no magnet', () =>
+  withStore(async (store, file) => {
+    const http = { provider: 'plugin-demo', id: 'abc123' }
+    const httpSong = { infoHash: 'b'.repeat(40), key: '1-get-lucky', title: 'Get Lucky', artist: 'Daft Punk', http }
+    await store.set(httpSong, 1)
+
+    const reloaded = new RatingsStore(file)
+    await reloaded.load()
+    const [saved] = reloaded.list()
+    assert.equal(saved.rating, 1)
+    assert.deepEqual(saved.http, http)
+    assert.equal(saved.magnet, undefined)
+    assert.equal(saved.fingerprint, songFingerprint('Get Lucky', 'Daft Punk'))
+
+    // A song with a broken plugin reference is dropped, never turned into a torrent.
+    await assert.rejects(store.set({ ...httpSong, http: { provider: '../evil', id: 'x' } }, 1))
+    await assert.rejects(store.set({ ...httpSong, http: { provider: 'plugin-demo', id: '' } }, 1))
+    // Clearing works like for any song.
+    await store.set(httpSong, 0)
+    assert.deepEqual(store.list(), [])
+  }))

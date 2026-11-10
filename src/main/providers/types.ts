@@ -104,6 +104,8 @@ export interface HttpPlayable {
   kind: 'http'
   /** 40 hex characters, stable per provider and source id; stands in for the torrent info hash everywhere */
   id: string
+  /** Where it came from, so a rated or listed song can be opened again later (see ProviderRegistry.openStored) */
+  origin: { provider: string; id: string }
   title: string
   artist?: string
   /** https image URL */

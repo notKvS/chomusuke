@@ -168,8 +168,13 @@ export interface SongRef {
   duration?: number
   /** Normalised artist|title, to recognise the same song in other torrents */
   fingerprint?: string
-  /** To play it again: the torrent's magnet link with public trackers and web seeds */
-  magnet: string
+  /** To play it again: the torrent's magnet link with public trackers and web seeds. Left out for http songs. */
+  magnet?: string
+  /**
+   * An http song (from a stream plugin) has no torrent: it is played again by asking the plugin for this id. Its
+   * `infoHash` is the made-up id of its album.
+   */
+  http?: { provider: string; id: string }
 }
 
 /** A liked (1) or disliked (-1) song. */
@@ -369,6 +374,8 @@ export interface UpdateState {
 
 export interface ChomusukeApi {
   loadSource(source: string, hints?: SourceHints): Promise<LoadResult>
+  /** Opens the album of a remembered http song again (asks its plugin), for playing a liked song or playlist entry. */
+  openSong(song: SongRef): Promise<LoadResult>
   openTorrentFile(): Promise<LoadResult | null>
   search(query: string): Promise<SearchResponse>
   /** The next page of one source's albums for a search (page 2, 3…), when its section said `hasMore`. */

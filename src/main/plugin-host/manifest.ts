@@ -107,7 +107,7 @@ const ID = /^[a-z0-9][a-z0-9-]{0,31}$/
 const OPTION_KEY = /^[A-Za-z][A-Za-z0-9_]{0,31}$/
 const HOST = /^(\*\.)?(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/
 const INFO_HASH = /^[a-f0-9]{40}$/i
-const MAX_PLUGINS = 20
+const MAX_PLUGINS = 40
 const MAX_HOSTS = 10
 const MAX_CATEGORIES = 20
 const MAX_OPTIONS = 10

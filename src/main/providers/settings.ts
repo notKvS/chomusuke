@@ -64,7 +64,7 @@ const MAX_TORZNAB = 20
 const NAME = /^[^\p{Cc}]{1,60}$/u
 const API_KEY = /^[\x21-\x7e]{1,200}$/
 const ID = /^torznab-[a-f0-9]{8}$/
-const MAX_PLUGINS = 30
+const MAX_PLUGINS = 50
 const MAX_OPTION_LENGTH = 500
 
 const sha256 = (text: string) => createHash('sha256').update(text).digest('hex')

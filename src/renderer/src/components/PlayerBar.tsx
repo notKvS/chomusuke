@@ -127,19 +127,16 @@ export function PlayerBar({ player, stats, onOpenAlbum, ratings, playlists, seek
       </div>
 
       <div className="player__side">
-        {state.album.source !== 'http' && (
-          <>
-            <AddToPlaylist
-              playlists={playlists}
-              infoHash={state.album.infoHash}
-              trackKey={track.key}
-              label={`Add ${track.title} to a playlist`}
-              size={20}
-              className="is-up"
-            />
-            <RateButtons infoHash={state.album.infoHash} track={track} ratings={ratings} size={20} />
-          </>
-        )}
+        <AddToPlaylist
+          playlists={playlists}
+          infoHash={state.album.infoHash}
+          trackKey={track.key}
+          label={`Add ${track.title} to a playlist`}
+          size={20}
+          className="is-up"
+        />
+        <RateButtons infoHash={state.album.infoHash} track={track} ratings={ratings} size={20} />
+
         {stats && (
           <span className="player__swarm" title="Torrent swarm for this album">
             <Icon name="peers" size={16} />

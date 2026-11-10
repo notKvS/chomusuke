@@ -4,6 +4,7 @@ import type { Album } from '../../shared/types.ts'
 import { annotationsForTorrentUrl } from '../providers/archive.ts'
 import { archiveJsonFetcher } from '../providers/index.ts'
 import type { Playable } from '../providers/types.ts'
+import { sanitizeSongRef } from '../song-ref.ts'
 import { parseSource, SourceError } from '../source.ts'
 import { fetchTorrentFile } from '../torrent-fetch.ts'
 import type { IpcDeps } from './deps.ts'
@@ -43,6 +44,16 @@ export function register(deps: IpcDeps): void {
         hints,
         annotations
       })
+    })
+  })
+
+  // A remembered http song (a like, a playlist entry): ask its plugin for the album again.
+  handle('source:open-song', (event, rawSong: unknown) => {
+    assertTrustedSender(event)
+    return toResult(library, async () => {
+      const song = sanitizeSongRef(rawSong)
+      if (!song?.http) throw new SourceError('That song can’t be opened this way.')
+      return playableToAlbum(deps, await deps.registry.openStored(song.http.provider, song.http.id))
     })
   })
 

@@ -582,5 +582,16 @@
     "code": "jiosaavn.js",
     "hosts": ["www.jiosaavn.com", "*.saavncdn.com"],
     "layout": "cards"
+  },
+  {
+    "manifestVersion": 1,
+    "id": "youtube-music",
+    "name": "YouTube Music",
+    "description": "Songs from YouTube Music, played straight from YouTube. Works by asking YouTube for audio the way some device apps do, so it can stop working when YouTube changes that.",
+    "version": "1.0.0",
+    "type": "stream",
+    "code": "youtube-music.js",
+    "hosts": ["music.youtube.com", "www.youtube.com", "*.googlevideo.com"],
+    "layout": "cards"
   }
 ]

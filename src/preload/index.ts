@@ -4,6 +4,7 @@ import type { ChomusukeApi, TorrentStats, UpdateState } from '../shared/types'
 // The renderer only gets these narrow functions — never ipcRenderer itself.
 const api: ChomusukeApi = {
   loadSource: (source, hints) => ipcRenderer.invoke('source:load', source, hints),
+  openSong: song => ipcRenderer.invoke('source:open-song', song),
   openTorrentFile: () => ipcRenderer.invoke('source:open-file'),
   search: query => ipcRenderer.invoke('search:query', query),
   searchMore: (sourceId, query, page) => ipcRenderer.invoke('search:more', sourceId, query, page),

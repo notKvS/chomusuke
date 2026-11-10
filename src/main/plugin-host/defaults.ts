@@ -25,6 +25,7 @@ import rutracker from '../../../plugins/dist/rutracker.js?raw'
 import soundcloud from '../../../plugins/dist/soundcloud.js?raw'
 import spotifyCharts from '../../../plugins/dist/spotify-charts.js?raw'
 import thePirateBay from '../../../plugins/dist/the-pirate-bay.js?raw'
+import youtubeMusic from '../../../plugins/dist/youtube-music.js?raw'
 import youtubeMusicCharts from '../../../plugins/dist/youtube-music-charts.js?raw'
 import repository from '../../../plugins/index.json?raw'
 import { type PluginManifest, parseRepository } from './manifest.ts'
@@ -52,7 +53,8 @@ const CODE: Record<string, string> = {
   'soundcloud.js': soundcloud,
   'spotify-charts.js': spotifyCharts,
   'the-pirate-bay.js': thePirateBay,
-  'youtube-music-charts.js': youtubeMusicCharts
+  'youtube-music-charts.js': youtubeMusicCharts,
+  'youtube-music.js': youtubeMusic
 }
 
 /** The plugins shipped in the app bundle, validated like any repository; entries without bundled code are skipped. */

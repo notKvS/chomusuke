@@ -19,7 +19,7 @@ export function register(deps: IpcDeps): void {
     if (rating === 0) await ratings.set({ infoHash, key }, 0)
     else {
       // Song details come from the loaded torrent, not from the UI.
-      const info = torrents.songInfo(infoHash, key)
+      const info = torrents.songInfo(infoHash, key) ?? deps.httpSource.songInfo(infoHash, key)
       if (info) await ratings.set(info, rating)
     }
     return ratings.list()

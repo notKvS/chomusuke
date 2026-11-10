@@ -34,7 +34,10 @@ export function useQueue({
       const current = { ...q, position }
       setCurrentQueue(current)
       const id = ++queueLoad.current
-      const result = await window.chomusuke.loadSource(item.magnet, { title: item.album, artist: item.artist })
+      // A torrent song loads by its magnet link; an http song by asking its plugin again.
+      const result = item.magnet
+        ? await window.chomusuke.loadSource(item.magnet, { title: item.album, artist: item.artist })
+        : await window.chomusuke.openSong(item)
       if (id !== queueLoad.current || queueRef.current !== current) return // something else started playing
       const track = result.ok ? result.album.tracks.find(t => t.key === item.key) : undefined
       if (!result.ok || !track) {
