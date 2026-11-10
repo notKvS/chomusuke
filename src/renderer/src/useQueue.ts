@@ -34,16 +34,16 @@ export function useQueue({
       const current = { ...q, position }
       setCurrentQueue(current)
       const id = ++queueLoad.current
-      // A torrent song loads by its magnet link; an http song by asking its plugin again.
-      const result = item.magnet
-        ? await window.chomusuke.loadSource(item.magnet, { title: item.album, artist: item.artist })
-        : await window.chomusuke.openSong(item)
+      // The main process opens it from where it was saved, or from whichever plugin can still play it.
+      const result = await window.chomusuke.openSong(item)
       if (id !== queueLoad.current || queueRef.current !== current) return // something else started playing
-      const track = result.ok ? result.album.tracks.find(t => t.key === item.key) : undefined
+      const track = result.ok ? result.album.tracks.find(t => t.key === (result.startKey ?? item.key)) : undefined
       if (!result.ok || !track) {
-        setToast(`Couldn't load “${item.title}” — skipping it.`)
+        setToast(result.ok ? `Couldn’t find “${item.title}” — skipping it.` : `${result.error} Skipping it.`)
         return playQueueAt(current, position + 1)
       }
+      // From another source than the one it was saved from: say so.
+      if (result.notice) setToast(result.notice)
       const album = result.album
       addAlbum(album)
       playAt({ ...album, tracks: [track] }, 0)

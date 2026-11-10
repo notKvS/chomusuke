@@ -21,6 +21,7 @@ import {
   ListPlus,
   type LucideIcon,
   Menu,
+  MicVocal,
   Minus,
   Music,
   Palette,
@@ -98,6 +99,7 @@ const ICONS = {
   image: [Image],
   settings: [Settings],
   menu: [Menu],
+  lyrics: [MicVocal],
   menuOpen: [PanelLeftClose]
 } satisfies Record<string, [LucideIcon, true?]>
 

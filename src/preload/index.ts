@@ -55,6 +55,7 @@ const api: ChomusukeApi = {
   installUpdate: () => ipcRenderer.invoke('update:install'),
   openUpdatePage: () => ipcRenderer.invoke('update:open-page'),
   log: (level, message) => ipcRenderer.send('logs:write', level, message),
+  getLyrics: query => ipcRenderer.invoke('lyrics:get', query),
   openLogs: () => ipcRenderer.invoke('logs:open'),
   exportLogs: () => ipcRenderer.invoke('logs:export'),
   platform: process.platform,

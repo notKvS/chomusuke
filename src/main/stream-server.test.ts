@@ -73,3 +73,9 @@ test('rejects requests for a different Host (DNS rebinding)', async () => {
   })
   assert.equal(status, 403)
 })
+
+test('answers are readable by the player window (its covers are tinted from their pixels)', async () => {
+  const res = await fetch(`${server.baseUrl}/${HASH}/3`)
+  assert.equal(res.headers.get('access-control-allow-origin'), '*')
+  await res.arrayBuffer()
+})

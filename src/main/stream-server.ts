@@ -62,6 +62,9 @@ export async function startStreamServer(resolve: FileResolver): Promise<StreamSe
     res.setHeader('X-Content-Type-Options', 'nosniff')
     res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox")
     res.setHeader('Cache-Control', 'no-store')
+    // Lets the player window read an album cover's pixels (to tint the lyrics panel from it). Nothing is exposed that
+    // wasn't: every URL here needs the per-launch token, and the Host check above stops DNS rebinding.
+    res.setHeader('Access-Control-Allow-Origin', '*')
 
     if (req.headers.host !== expectedHost) {
       log.warn(`refused a request for host ${req.headers.host}`)

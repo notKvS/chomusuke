@@ -101,9 +101,13 @@ export async function encodeBackgroundImage(file: File, fill: string): Promise<s
   return canvas.toDataURL('image/jpeg', 0.85)
 }
 
-/** RGBA pixels of a background image, shrunk to at most 128px a side (plenty for finding its colours). */
+/**
+ * RGBA pixels of an image (a data URL, or a cover from the local stream server, which sends the headers that make
+ * its pixels readable), shrunk to at most 128px a side (plenty for finding its colours).
+ */
 export async function imagePixels(image: string): Promise<Uint8ClampedArray> {
   const img = new Image()
+  img.crossOrigin = 'anonymous'
   img.src = image
   await img.decode()
   const scale = Math.min(1, 128 / img.naturalWidth, 128 / img.naturalHeight)

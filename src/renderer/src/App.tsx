@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SearchSong, TorrentStats, Track } from '../../shared/types'
 import { ArtistSearchContext } from './components/ArtistLink'
 import { Icon } from './components/Icon'
-import { Chomu } from './components/mascot/Chomu'
+import { LyricsPanel } from './components/LyricsPanel'
 import { Particles } from './components/mascot/Particles'
 import { Splash } from './components/mascot/Splash'
 import { PlayerBar } from './components/PlayerBar'
@@ -30,6 +30,7 @@ import { useToast } from './useToast'
 export function App() {
   const [stats, setStats] = useState<Record<string, TorrentStats>>({})
   const [toast, setToast] = useToast()
+  const [lyricsOpen, setLyricsOpen] = useState(false)
   const [sidebarCollapsed, toggleSidebar] = useSidebarCollapsed()
   const looks = useAppearance()
   // Decided once at launch: turning the setting on later shouldn't replay the splash.
@@ -110,7 +111,9 @@ export function App() {
 
   return (
     <ArtistSearchContext.Provider value={searchArtist}>
-      <div className={`app ${player.track ? 'has-player' : ''} ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''}`}>
+      <div
+        className={`app ${player.track ? 'has-player' : ''} ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''} ${lyricsOpen && player.track ? 'has-lyrics' : ''}`}
+      >
         {looks.appearance.particles !== 'off' && (
           <Particles kind={looks.appearance.particles} count={looks.appearance.particleCount} />
         )}
@@ -174,10 +177,12 @@ export function App() {
           playlists={playlists}
           seekThumb={looks.appearance.seekThumb}
           queue={queue.queue ? { label: queue.queue.label, ...queueEdges(queue.queue) } : undefined}
+          lyricsOpen={lyricsOpen}
+          onToggleLyrics={() => setLyricsOpen(open => !open)}
         />
+        <LyricsPanel player={player} open={lyricsOpen} mode={looks.appearance.mode} />
         {toast && (
-          <div className="toast" role="alert">
-            <Chomu mood="sad" size={44} headOnly />
+          <div className="toast" role="status">
             <span>{toast}</span>
             <button type="button" className="icon-button" onClick={() => setToast(null)} aria-label="Dismiss">
               <Icon name="close" size={18} />

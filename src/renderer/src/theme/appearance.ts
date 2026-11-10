@@ -24,13 +24,13 @@ export const PARTICLES = [
 
 /** What rides the player's seek bar: one of the pictures in src/renderer/src/assets/seek, Chomusuke's face, or a plain dot. */
 export const SEEK_THUMBS = [
-  'blindfold',
-  'redhead',
-  'darkhair',
-  'pinkhair',
-  'duck',
-  'runner',
-  'hero',
+  'gojo',
+  'makima',
+  'yor',
+  'anya',
+  'zoro_duck',
+  'pikachu',
+  'batman',
   'chomusuke',
   'dot'
 ] as const
@@ -89,7 +89,7 @@ export const DEFAULT_APPEARANCE: Appearance = {
   particleCount: 12,
   mascotMotion: true,
   splash: true,
-  seekThumb: 'blindfold'
+  seekThumb: 'gojo'
 }
 
 export interface Preset {

@@ -1,10 +1,11 @@
 import { readFile, stat } from 'node:fs/promises'
 import { dialog } from 'electron'
-import type { Album } from '../../shared/types.ts'
+import type { Album, LoadResult } from '../../shared/types.ts'
 import { annotationsForTorrentUrl } from '../providers/archive.ts'
 import { archiveJsonFetcher } from '../providers/index.ts'
 import type { Playable } from '../providers/types.ts'
 import { sanitizeSongRef } from '../song-ref.ts'
+import { type ResolvedSong, SongResolver } from '../song-resolver.ts'
 import { parseSource, SourceError } from '../source.ts'
 import { fetchTorrentFile } from '../torrent-fetch.ts'
 import type { IpcDeps } from './deps.ts'
@@ -47,14 +48,22 @@ export function register(deps: IpcDeps): void {
     })
   })
 
-  // A remembered http song (a like, a playlist entry): ask its plugin for the album again.
-  handle('source:open-song', (event, rawSong: unknown) => {
+  // A saved song (a like, a playlist entry): from where it was saved, or else from whatever plugin can play it.
+  const songs = new SongResolver(deps.registry, {
+    magnet: (magnet, hints) => torrents.load(magnet, hints),
+    playable: playable => playableToAlbum(deps, playable)
+  })
+  handle('source:open-song', async (event, rawSong: unknown): Promise<LoadResult> => {
     assertTrustedSender(event)
-    return toResult(library, async () => {
-      const song = sanitizeSongRef(rawSong)
-      if (!song?.http) throw new SourceError('That song can’t be opened this way.')
-      return playableToAlbum(deps, await deps.registry.openStored(song.http.provider, song.http.id))
+    const song = sanitizeSongRef(rawSong)
+    if (!song) return { ok: false, error: 'That song can’t be opened.' }
+    let resolved: ResolvedSong | undefined
+    const result = await toResult(library, async () => {
+      resolved = await songs.resolve(song)
+      return resolved.album
     })
+    if (!result.ok || !resolved) return result
+    return { ...result, startKey: resolved.startKey, ...(resolved.notice ? { notice: resolved.notice } : {}) }
   })
 
   handle('source:open-file', async event => {

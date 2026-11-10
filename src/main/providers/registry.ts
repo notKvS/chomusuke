@@ -198,20 +198,14 @@ export class ProviderRegistry {
     return section
   }
 
-  /**
-   * Opens a song from a stream plugin again, from what was remembered about it (a rating, a playlist): the provider
-   * and the id the plugin gave it. Works without a search having shown it first.
-   */
-  async openStored(providerId: string, id: string, signal?: AbortSignal): Promise<Playable> {
-    const provider = this.torrentProviders().find(p => p.id === providerId)
-    if (!provider) throw new SourceError('The source for that song is turned off or removed (Settings → Plugins).')
-    log.info(`opening a remembered song from ${provider.id}`)
-    try {
-      return await timed(`open ${provider.id}`, () => provider.open({ ref: JSON.stringify({ id }), title: id }, signal))
-    } catch (err) {
-      if (err instanceof SourceError) throw err
-      throw new SourceError(userMessage(err, provider.name))
-    }
+  /** The enabled providers that find songs (charts don't), in the user's order, of one kind of delivery. */
+  providersOf(delivery: 'torrent' | 'http'): MusicProvider[] {
+    return this.torrentProviders().filter(p => (p.delivery ?? 'torrent') === delivery)
+  }
+
+  /** An enabled song provider by id. */
+  provider(id: string): MusicProvider | undefined {
+    return this.torrentProviders().find(p => p.id === id)
   }
 
   async open(albumId: unknown, signal?: AbortSignal): Promise<Playable> {

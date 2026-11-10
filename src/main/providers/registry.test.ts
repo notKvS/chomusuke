@@ -312,18 +312,24 @@ test('search sections say when a provider has more, and searchMore pages one pro
   await assert.rejects(registry.browse('plugin-charts', 'top', new AbortController().signal, 99), /page/)
 })
 
-test('a remembered song is opened again through its provider, without a search', async () => {
-  const provider = fakeProvider('plugin-demo')
+test('song providers are told apart by how they deliver, charts are left out, and the order is kept', () => {
   const registry = new ProviderRegistry()
-  registry.setProviders([provider])
-  await registry.openStored('plugin-demo', 'abc 123')
-  assert.deepEqual(provider.opened, ['{"id":"abc 123"}'])
-  // A source that is off or removed says so, instead of failing obscurely.
-  await assert.rejects(
-    registry.openStored('plugin-gone', 'abc'),
-    (err: Error) => err instanceof SourceError && /turned off or removed/.test(err.message)
+  const [a, b, c, chart] = [
+    fakeProvider('a'),
+    fakeProvider('plugin-b', { delivery: 'http' }),
+    fakeProvider('c', { delivery: 'torrent' }),
+    fakeProvider('plugin-chart', { chart: true })
+  ]
+  registry.setProviders([a, b, c, chart])
+  assert.deepEqual(
+    registry.providersOf('torrent').map(p => p.id),
+    ['a', 'c']
   )
-  // Charts can't play songs themselves.
-  registry.setProviders([fakeProvider('plugin-chart', { chart: true })])
-  await assert.rejects(registry.openStored('plugin-chart', 'abc'), SourceError)
+  assert.deepEqual(
+    registry.providersOf('http').map(p => p.id),
+    ['plugin-b']
+  )
+  assert.equal(registry.provider('plugin-b'), b)
+  assert.equal(registry.provider('plugin-chart'), undefined)
+  assert.equal(registry.provider('gone'), undefined)
 })

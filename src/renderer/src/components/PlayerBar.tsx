@@ -23,13 +23,25 @@ interface Props {
   seekThumb: Appearance['seekThumb']
   /** Set while a playlist (or the liked list) is playing across albums */
   queue?: { label: string; hasNext: boolean; hasPrev: boolean }
+  lyricsOpen: boolean
+  onToggleLyrics: () => void
 }
 
 /**
  * The bar at the bottom while something plays: transport, seek bar, now playing, rating, swarm and volume. Renders
  * nothing until a track is loaded. Previous/next also step through `queue` when a playlist spans several albums.
  */
-export function PlayerBar({ player, stats, onOpenAlbum, ratings, playlists, seekThumb, queue }: Props) {
+export function PlayerBar({
+  player,
+  stats,
+  onOpenAlbum,
+  ratings,
+  playlists,
+  seekThumb,
+  queue,
+  lyricsOpen,
+  onToggleLyrics
+}: Props) {
   const { state, track, audio } = player
   const progressRef = useRef<HTMLDivElement>(null)
 
@@ -144,6 +156,16 @@ export function PlayerBar({ player, stats, onOpenAlbum, ratings, playlists, seek
             {stats.downloadSpeed > 1024 && <> · {formatSpeed(stats.downloadSpeed)}</>}
           </span>
         )}
+        <button
+          type="button"
+          className={`icon-button ${lyricsOpen ? 'is-on' : ''}`}
+          onClick={onToggleLyrics}
+          aria-pressed={lyricsOpen}
+          aria-label="Lyrics"
+          title="Lyrics"
+        >
+          <Icon name="lyrics" size={20} />
+        </button>
         <div className="volume">
           <button
             type="button"

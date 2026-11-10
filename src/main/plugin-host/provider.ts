@@ -171,6 +171,7 @@ function createStreamProvider(
     id: pluginProviderId(manifest),
     name: manifest.name,
     layout: manifest.layout,
+    delivery: 'http',
     search: (query, signal, page) => results('search', { query }, signal, page),
     categories: browsable ? manifest.categories : undefined,
     browse: browsable ? (category, signal, page) => results('browse', { category }, signal, page) : undefined,

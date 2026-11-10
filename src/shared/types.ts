@@ -211,7 +211,11 @@ export interface SourceHints {
   artist?: string
 }
 
-export type LoadResult = { ok: true; album: Album; startKey?: string } | { ok: false; error: string }
+/**
+ * `startKey`: the track to start with. `notice`: something to tell the user, e.g. that a saved song is playing from
+ * another source than the one it came from.
+ */
+export type LoadResult = { ok: true; album: Album; startKey?: string; notice?: string } | { ok: false; error: string }
 
 /** One album/release found by a provider. `id` is opaque: pass it back to openResult(). */
 export interface SearchAlbum {
@@ -372,8 +376,38 @@ export interface UpdateState {
   status: UpdateStatus
 }
 
+/** One line of a song's lyrics: `time` (seconds) is set when the lyrics are synced. */
+export interface LyricLine {
+  time?: number
+  text: string
+}
+
+export interface Lyrics {
+  lines: LyricLine[]
+  /** Every line has a time, so the line being sung can be followed */
+  synced: boolean
+  /** The song has no words */
+  instrumental: boolean
+  /** Where they came from */
+  source: string
+}
+
+/** What to look the lyrics up by; taken from the track that's playing. */
+export interface LyricsQuery {
+  title: string
+  artist?: string
+  album?: string
+  /** Seconds */
+  duration?: number
+}
+
+/** `lyrics: null` means none were found. */
+export type LyricsResponse = { ok: true; lyrics: Lyrics | null } | { ok: false; error: string }
+
 export interface ChomusukeApi {
   loadSource(source: string, hints?: SourceHints): Promise<LoadResult>
+  /** The lyrics of a song (synced when they can be), looked up from the track's title and artist. */
+  getLyrics(query: LyricsQuery): Promise<LyricsResponse>
   /** Opens the album of a remembered http song again (asks its plugin), for playing a liked song or playlist entry. */
   openSong(song: SongRef): Promise<LoadResult>
   openTorrentFile(): Promise<LoadResult | null>

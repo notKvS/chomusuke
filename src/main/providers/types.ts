@@ -16,6 +16,11 @@ export interface MusicProvider {
   readonly name: string
   /** How the UI lays out this provider's albums: artwork cards, or rows for torrent releases. */
   readonly layout: 'cards' | 'list'
+  /**
+   * What a result opens as: a torrent (the default) or direct audio files ('http', from stream plugins). Saved songs
+   * move between providers of either kind (see SongResolver).
+   */
+  readonly delivery?: 'torrent' | 'http'
   /** `page` starts at 1; later pages are only asked for when the previous one said `hasMore`. */
   search(query: string, signal: AbortSignal, page?: number): Promise<ProviderResults>
   open(album: ProviderAlbum, signal?: AbortSignal): Promise<Playable>
@@ -104,7 +109,7 @@ export interface HttpPlayable {
   kind: 'http'
   /** 40 hex characters, stable per provider and source id; stands in for the torrent info hash everywhere */
   id: string
-  /** Where it came from, so a rated or listed song can be opened again later (see ProviderRegistry.openStored) */
+  /** Where it came from, so a rated or listed song can be opened again later (see SongResolver) */
   origin: { provider: string; id: string }
   title: string
   artist?: string

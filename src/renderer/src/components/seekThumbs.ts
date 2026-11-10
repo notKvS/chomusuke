@@ -10,13 +10,13 @@ import type { Appearance } from '../theme/appearance'
 export type SeekThumb = Appearance['seekThumb']
 
 export const SEEK_LABELS: Record<SeekThumb, string> = {
-  blindfold: 'Blindfold',
-  redhead: 'Red hair',
-  darkhair: 'Dark hair',
-  pinkhair: 'Pink hair',
-  duck: 'Sword duck',
-  runner: 'Yellow runner',
-  hero: 'Night hero',
+  gojo: 'Gojo Satoru',
+  makima: 'Makima',
+  yor: 'Yor Forger',
+  anya: 'Anya Forger',
+  zoro_duck: 'Sword Zoro duck',
+  pikachu: 'Pikachu',
+  batman: 'Batman',
   chomusuke: 'Chomusuke',
   dot: 'Dot'
 }

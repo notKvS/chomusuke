@@ -264,4 +264,8 @@
   .player__play svg {
     color: var(--text);
   }
+
+  .player__side .icon-button.is-on {
+    color: var(--accent);
+  }
 }

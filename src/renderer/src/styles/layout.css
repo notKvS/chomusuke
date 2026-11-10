@@ -6,13 +6,18 @@
 
   .app {
     display: grid;
-    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    /* The third column is the lyrics panel: no width until it is opened. */
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--lyrics-width, 0);
     grid-template-rows: var(--topbar-height) minmax(0, 1fr);
     height: 100vh;
   }
 
   .app.is-sidebar-collapsed {
-    grid-template-columns: var(--sidebar-collapsed-width) minmax(0, 1fr);
+    grid-template-columns: var(--sidebar-collapsed-width) minmax(0, 1fr) var(--lyrics-width, 0);
+  }
+
+  .app.has-lyrics {
+    --lyrics-width: min(380px, 38vw);
   }
 
   /* Collapsing the sidebar: both panels slide to their new size; snapshots are cropped, never stretched. */
@@ -64,6 +69,7 @@
 
   /* ---------- Toast ---------- */
 
+  /* A frosted-glass pill: see-through, blurred, whatever the surface setting is. No picture in it. */
   .toast {
     position: fixed;
     left: 50%;
@@ -74,13 +80,15 @@
     max-width: min(600px, calc(100vw - 32px));
     transform: translateX(-50%);
     z-index: 10;
-    padding: 6px 10px 6px 6px;
-    border: 1px solid rgb(var(--accent-soft-rgb) / 0.35);
-    border-radius: 18px;
-    background: rgb(var(--surface-rgb) / 0.95);
+    padding: 12px 10px 12px 18px;
+    border: 1px solid rgb(var(--ink-rgb) / 0.16);
+    border-radius: 16px;
+    color: var(--text);
+    background: rgb(var(--surface-rgb) / 0.45);
+    backdrop-filter: blur(20px) saturate(1.6);
     box-shadow:
-      0 12px 30px rgba(0, 0, 0, 0.5),
-      var(--glow);
+      inset 0 1px 0 rgb(var(--ink-rgb) / 0.12),
+      0 12px 30px rgb(0 0 0 / 0.35);
     animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
@@ -89,11 +97,6 @@
       opacity: 0;
       transform: translate(-50%, 12px);
     }
-  }
-
-  .toast > svg {
-    flex: none;
-    color: var(--accent);
   }
 
   /* ---------- Narrow windows ---------- */

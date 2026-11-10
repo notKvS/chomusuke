@@ -1,0 +1,111 @@
+@layer components {
+  /* A panel on the right side of the app, its own column between the top bar and the player: the page makes room
+     for it. Glass, like the toast. */
+  .lyrics {
+    grid-column: 3;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    margin: 12px 12px 12px 0;
+    z-index: 2;
+    overflow: hidden;
+    border: 1px solid rgb(var(--ink-rgb) / 0.16);
+    border-radius: 18px;
+    color: var(--text);
+    background: rgb(var(--surface-rgb) / 0.55);
+    backdrop-filter: blur(22px) saturate(1.6);
+    box-shadow:
+      inset 0 1px 0 rgb(var(--ink-rgb) / 0.12),
+      0 16px 40px rgb(0 0 0 / 0.35);
+  }
+
+  /* With a cover to take colours from: a soft diagonal blend of its two main colours (still see-through). */
+  .lyrics.has-tint {
+    background: linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--lyrics-from) 85%, transparent),
+      color-mix(in srgb, var(--lyrics-to) 85%, transparent)
+    );
+  }
+
+  .lyrics__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px 10px;
+    border-bottom: 1px solid rgb(var(--ink-rgb) / 0.1);
+  }
+
+  .lyrics__title {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .lyrics__title h2,
+  .lyrics__title p {
+    margin: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .lyrics__title h2 {
+    font-size: 16px;
+  }
+
+  .lyrics__title p {
+    color: var(--text-2);
+    font-size: 13px;
+  }
+
+  .lyrics__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    scrollbar-color: rgb(var(--tint-rgb) / 0.3) transparent;
+  }
+
+  .lyrics__note {
+    display: grid;
+    gap: 12px;
+    justify-items: start;
+    margin: 8px 0;
+    color: var(--text-2);
+  }
+
+  .lyrics__lines {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .lyrics__line {
+    padding: 3px 0;
+    font-size: 17px;
+    line-height: 1.45;
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+
+  /* Synced: the line being sung is lit, the rest recede. */
+  .lyrics__lines.is-synced .lyrics__line {
+    color: var(--text-2);
+    opacity: 0.6;
+    transition:
+      color 0.25s,
+      opacity 0.25s;
+  }
+
+  .lyrics__lines.is-synced .lyrics__line.is-active {
+    color: var(--text);
+    font-weight: 700;
+    opacity: 1;
+  }
+
+  .lyrics__foot {
+    padding: 8px 20px 12px;
+    color: var(--text-2);
+    font-size: 12px;
+  }
+}

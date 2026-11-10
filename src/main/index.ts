@@ -13,6 +13,7 @@ import * as homeIpc from './ipc/home.ts'
 import * as libraryIpc from './ipc/library.ts'
 import { applySharing, seedLibrary } from './ipc/library.ts'
 import * as logsIpc from './ipc/logs.ts'
+import * as lyricsIpc from './ipc/lyrics.ts'
 import * as playlistsIpc from './ipc/playlists.ts'
 import * as presenceIpc from './ipc/presence.ts'
 import * as providers from './ipc/providers.ts'
@@ -223,6 +224,7 @@ function registerIpc(
     backup,
     updateIpc,
     logsIpc,
+    lyricsIpc,
     windowIpc
   ]
   for (const area of areas) area.register(deps)

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { hexToRgb, rgbToHsl } from './color.ts'
-import { paletteFromPixels } from './imagePalette.ts'
+import { paletteFromPixels, panelColoursFromPixels } from './imagePalette.ts'
 
 /** RGBA bytes: `count` opaque pixels of each colour. */
 function pixels(...parts: Array<[rgb: [number, number, number], count: number]>): Uint8ClampedArray {
@@ -40,4 +40,23 @@ test('a black-and-white image has no colours to use', () => {
     paletteFromPixels(pixels([[0, 0, 0], 500], [[255, 255, 255], 300], [[128, 128, 128], 200]), 'dark'),
     null
   )
+})
+
+test('panel colours follow the picture: deep in dark modes, pale in light mode, none for greys', () => {
+  const red = pixels([[200, 30, 40], 700], [[30, 60, 200], 300])
+  const dark = panelColoursFromPixels(red, 'dark')
+  const light = panelColoursFromPixels(red, 'light')
+  assert.ok(dark && light)
+  assert.ok(lightness(dark.from) < 35, `dark panel ${dark.from} should be deep`)
+  assert.ok(lightness(light.from) > 80, `light panel ${light.from} should be pale`)
+  assert.ok(
+    Math.abs(hue(dark.from) - 355) < 25 || Math.abs(hue(dark.from) - 355) > 335,
+    `${dark.from} should be reddish`
+  )
+  assert.ok(Math.abs(hue(dark.to) - 228) < 25, `${dark.to} should be bluish`)
+  assert.equal(panelColoursFromPixels(pixels([[0, 0, 0], 500], [[255, 255, 255], 300]), 'dark'), null)
+  // One colour: the second end of the gradient is a neighbouring hue.
+  const single = panelColoursFromPixels(pixels([[200, 30, 40], 1000]), 'dark')
+  assert.ok(single)
+  assert.notEqual(single.from, single.to)
 })
