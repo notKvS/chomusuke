@@ -108,6 +108,14 @@ export function register(deps: IpcDeps): void {
     }, settings)
   })
 
+  handle('providers:reorder', (event, ids: unknown) => {
+    assertTrustedSender(event)
+    return settingsResult(async () => {
+      await settings.reorder(ids)
+      rebuildProviders()
+    }, settings)
+  })
+
   handle('providers:remove', (event, id: unknown) => {
     assertTrustedSender(event)
     return settingsResult(async () => {

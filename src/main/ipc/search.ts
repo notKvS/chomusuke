@@ -10,7 +10,7 @@ const log = logger('search')
 
 /** Searching every enabled source, opening a result, and browsing sources by category on Explore. */
 export function register(deps: IpcDeps): void {
-  const { assertTrustedSender, torrents, registry, library } = deps
+  const { assertTrustedSender, registry, library } = deps
   let activeSearch: AbortController | null = null
   handle('search:query', async (event, rawQuery: unknown): Promise<SearchResponse> => {
     assertTrustedSender(event)
@@ -37,7 +37,7 @@ export function register(deps: IpcDeps): void {
     let startKey: string | undefined
     const result = await toResult(library, async () => {
       const playable = await registry.open(albumId)
-      const album = await playableToAlbum(torrents, playable)
+      const album = await playableToAlbum(deps, playable)
       if (playable.startAt) startKey = findTrack(album.tracks, playable.startAt)
       return album
     })

@@ -17,7 +17,10 @@ export interface Track {
 }
 
 export interface Album {
+  /** The torrent's info hash; for an http album a made-up 40-hex id that plays the same part */
   infoHash: string
+  /** Where the audio comes from; left out for torrents. An http album has no torrent: no swarm, no saving offline. */
+  source?: 'http'
   title: string
   artist?: string
   coverUrl?: string
@@ -376,6 +379,8 @@ export interface ChomusukeApi {
   testTorznab(form: TorznabForm): Promise<TestResponse>
   setProviderEnabled(id: string, enabled: boolean): Promise<ProvidersResponse>
   removeProvider(id: string): Promise<ProvidersResponse>
+  /** Sets the order sources are searched and listed in: the given ids take the places those sources held. */
+  reorderProviders(ids: string[]): Promise<ProvidersResponse>
   /** Installs the plugins of one kind from a repository; the other kind is left for its own tab. */
   importPlugins(repositoryUrl: string, kind: PluginKind): Promise<ProvidersResponse>
   setPluginOptions(id: string, values: Record<string, string | boolean>): Promise<ProvidersResponse>
@@ -446,6 +451,8 @@ export interface ChomusukeApi {
   log(level: 'error' | 'warn' | 'info' | 'debug', message: string): void
   /** Opens the folder with the log files. */
   openLogs(): Promise<void>
+  /** Shows a save dialog and writes the log (with a short header about the app and sources) to a text file; null when cancelled. */
+  exportLogs(): Promise<SaveTorrentResult>
 }
 
 export interface WindowAppearance {

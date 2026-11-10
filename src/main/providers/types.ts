@@ -7,8 +7,8 @@ import type { TrackAnnotation } from '../engine.ts'
  * Adding a source means writing one of these and registering its settings type (see settings.ts):
  * - torrent indexers / trackers return `{ kind: 'torrent' }` playables (magnet URI or .torrent bytes);
  * - a website or API that serves .torrent files does the same;
- * - a direct HTTP stream source would add a new Playable kind (e.g. `{ kind: 'http', tracks }`) plus a
- *   playback backend next to TorrentEngine that implements `resolveFile` for the loopback stream server.
+ * - a service with direct audio URLs returns `{ kind: 'http' }` playables, which HttpSource (http-source.ts) plays
+ *   through the loopback stream server, next to TorrentEngine.
  */
 export interface MusicProvider {
   /** Stable, unique id: [a-z0-9-] */
@@ -70,7 +70,9 @@ export interface ProviderResults {
   hasMore?: boolean
 }
 
-export type Playable = {
+export type Playable = TorrentPlayable | HttpPlayable
+
+export interface TorrentPlayable {
   kind: 'torrent'
   /** Magnet URI or .torrent file contents */
   torrent: string | Uint8Array
@@ -79,5 +81,35 @@ export type Playable = {
   /** Better titles/durations for the tracks, keyed by trackKey; may resolve to null. */
   annotations?: Promise<Map<string, TrackAnnotation> | null>
   /** The song to start with once loaded (chart songs found inside an album torrent). */
+  startAt?: { title: string; artist?: string }
+}
+
+/** One track of an http album: an https audio file the stream server proxies (with Range) to the player. */
+export interface HttpTrack {
+  title: string
+  artist?: string
+  /** https audio URL; redirects are followed (public hosts only) */
+  url: string
+  /** Extra request headers for the upstream, e.g. User-Agent or Referer (allow-list: manifest.ts HTTP_HEADERS) */
+  headers?: Record<string, string>
+  /** Seconds */
+  duration?: number
+  /** audio/* type, for when the upstream's own Content-Type says nothing useful */
+  mime?: string
+  /** Short label for the track list, e.g. MP3 */
+  format?: string
+}
+
+export interface HttpPlayable {
+  kind: 'http'
+  /** 40 hex characters, stable per provider and source id; stands in for the torrent info hash everywhere */
+  id: string
+  title: string
+  artist?: string
+  /** https image URL */
+  coverUrl?: string
+  tracks: HttpTrack[]
+  hints?: SourceHints
+  /** The song to start with once loaded (chart songs found in an http album). */
   startAt?: { title: string; artist?: string }
 }

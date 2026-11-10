@@ -170,8 +170,13 @@ export class ProviderSettingsStore {
         : []
     )
     const entries: StoredProvider[] = []
+    // In the saved order: it is the order sources are searched in, which the user can change.
     for (const item of list) {
       if (!isRecord(item)) continue
+      if (item.type === 'plugin') {
+        const plugin = await this.loadPlugin(item)
+        if (plugin) entries.push(plugin)
+      }
       if (item.type === 'archive') entries.push({ type: 'archive', id: 'archive', enabled: item.enabled !== false })
       if (item.type === 'torznab' && typeof item.id === 'string' && ID.test(item.id)) {
         try {
@@ -187,11 +192,6 @@ export class ProviderSettingsStore {
           log.warn(`skipping the saved indexer ${item.id}: it no longer passes validation:`, err)
         }
       }
-    }
-    for (const item of list) {
-      if (!isRecord(item) || item.type !== 'plugin') continue
-      const plugin = await this.loadPlugin(item)
-      if (plugin) entries.push(plugin)
     }
     if (!entries.some(e => e.type === 'archive')) entries.unshift(archiveEntry())
     this.entries = entries.slice(0, MAX_TORZNAB + MAX_PLUGINS + 1)
@@ -443,6 +443,26 @@ export class ProviderSettingsStore {
     if (!entry || typeof enabled !== 'boolean') throw new SettingsError('That source no longer exists.')
     entry.enabled = enabled
     await this.persist()
+  }
+
+  /**
+   * Puts the listed sources in this order, which is the order they are searched in and shown in the results. They
+   * take the places the same sources held; sources that aren't listed stay where they are.
+   */
+  async reorder(ids: unknown): Promise<void> {
+    const wanted: string[] = Array.isArray(ids) && ids.every(id => typeof id === 'string') ? ids : []
+    const known = new Map(this.entries.map(entry => [entry.id, entry]))
+    if (wanted.length === 0 || new Set(wanted).size !== wanted.length || !wanted.every(id => known.has(id))) {
+      throw new SettingsError('That order isn’t valid. Reopen Settings and try again.')
+    }
+    const places = this.entries.flatMap((entry, index) => (wanted.includes(entry.id) ? [index] : []))
+    const next = [...this.entries]
+    places.forEach((place, i) => {
+      next[place] = known.get(wanted[i]) as StoredProvider
+    })
+    this.entries = next
+    await this.persist()
+    log.info('search order:', this.entries.map(e => e.id).join(', '))
   }
 
   async remove(id: unknown): Promise<void> {

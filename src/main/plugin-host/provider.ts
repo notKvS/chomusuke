@@ -1,4 +1,6 @@
+import { createHash } from 'node:crypto'
 import { FetchError, fetchBodyOrMagnet } from '../http.ts'
+import { logger } from '../log.ts'
 import { sanitizeThirdPartyMagnet, stripPrivateEndpoints } from '../net.ts'
 import type { ChartWanted } from '../providers/chart-match.ts'
 import type { MusicProvider, Playable, ProviderResults } from '../providers/types.ts'
@@ -9,10 +11,14 @@ import {
   PluginError,
   type PluginManifest,
   sanitizeChartEntries,
-  sanitizeResults
+  sanitizeResults,
+  sanitizeStreamAlbum,
+  sanitizeStreamResults
 } from './manifest.ts'
 
-export type PluginMethod = 'test' | 'search' | 'browse'
+const log = logger('plugins')
+
+export type PluginMethod = 'test' | 'search' | 'browse' | 'open'
 
 /** Runs a plugin's code (in production: a sandboxed worker, see host.ts). */
 export interface PluginRuntime {
@@ -57,20 +63,17 @@ export function createPluginProvider(
   findRelease?: FindRelease
 ): MusicProvider {
   if (manifest.type === 'chart') return createChartProvider(manifest, runtime, options, findRelease)
+  if (manifest.type === 'stream') return createStreamProvider(manifest, runtime, options)
   const results = async (
     method: PluginMethod,
     args: Record<string, unknown>,
     signal: AbortSignal,
     page = 1
   ): Promise<ProviderResults> => {
-    const missing = missingRequired(manifest, options)
-    if (missing.length > 0) {
-      throw new SourceError(
-        `${manifest.name} needs your ${missing.join(' and ')}: open Settings → Plugins and press its edit button.`
-      )
-    }
+    assertConfigured(manifest, options)
     const { items, hasMore } = unpage(await runtime.call(method, { ...args, page, options }, signal))
     const albums = sanitizeResults(items, manifest)
+    logRejected(manifest, method, items, albums.length)
     return { albums, songs: [], hasMore: hasMore && albums.length > 0 }
   }
   const browsable = manifest.categories.length > 0
@@ -119,6 +122,82 @@ export function createPluginProvider(
       }
       if (ref.hash) return { kind: 'torrent', torrent: magnetOrThrow(`magnet:?xt=urn:btih:${ref.hash}`) }
       throw new SourceError('That result has no download link.')
+    }
+  }
+}
+
+function assertConfigured(manifest: PluginManifest, options: Record<string, string | boolean>): void {
+  const missing = missingRequired(manifest, options)
+  if (missing.length > 0) {
+    throw new SourceError(
+      `${manifest.name} needs your ${missing.join(' and ')}: open Settings → Plugins and press its edit button.`
+    )
+  }
+}
+
+/** Says in the log when a plugin handed back results that were thrown away, which looks like "no results" to the user. */
+function logRejected(manifest: PluginManifest, method: string, items: unknown, kept: number): void {
+  if (!Array.isArray(items) || items.length <= kept) return
+  log.warn(
+    `${manifest.id}: ${method} returned ${items.length} item(s) but only ${kept} passed the checks` +
+      ' (each needs a title and a usable link, hash or id on a host the plugin declared)'
+  )
+}
+
+/**
+ * A stream plugin: search/browse find albums or tracks by an `id`, and `open` turns one into tracks with https audio
+ * URLs, which HttpSource plays.
+ */
+function createStreamProvider(
+  manifest: PluginManifest,
+  runtime: PluginRuntime,
+  options: Record<string, string | boolean>
+): MusicProvider {
+  const results = async (
+    method: 'search' | 'browse',
+    args: Record<string, unknown>,
+    signal: AbortSignal,
+    page = 1
+  ): Promise<ProviderResults> => {
+    assertConfigured(manifest, options)
+    const { items, hasMore } = unpage(await runtime.call(method, { ...args, page, options }, signal))
+    const albums = sanitizeStreamResults(items, manifest)
+    logRejected(manifest, method, items, albums.length)
+    return { albums, songs: [], hasMore: hasMore && albums.length > 0 }
+  }
+  const browsable = manifest.categories.length > 0
+
+  return {
+    id: pluginProviderId(manifest),
+    name: manifest.name,
+    layout: manifest.layout,
+    search: (query, signal, page) => results('search', { query }, signal, page),
+    categories: browsable ? manifest.categories : undefined,
+    browse: browsable ? (category, signal, page) => results('browse', { category }, signal, page) : undefined,
+
+    async open(album, signal): Promise<Playable> {
+      let id: string
+      try {
+        id = String((JSON.parse(album.ref) as { id: unknown }).id)
+      } catch {
+        throw new SourceError('That result is no longer available.')
+      }
+      assertConfigured(manifest, options)
+      try {
+        const opened = sanitizeStreamAlbum(await runtime.call('open', { id, options }, signal), manifest)
+        return {
+          kind: 'http',
+          // Stable per plugin and source id, so reopening an album gives the same album.
+          id: createHash('sha1').update(`${manifest.id}:${id}`).digest('hex'),
+          title: opened.title ?? album.title,
+          artist: opened.artist ?? album.artist,
+          coverUrl: opened.coverUrl ?? album.artwork,
+          tracks: opened.tracks
+        }
+      } catch (err) {
+        if (err instanceof PluginError) throw new SourceError(err.message)
+        throw err
+      }
     }
   }
 }

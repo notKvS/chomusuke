@@ -7,9 +7,12 @@
 
 import x1337x from '../../../plugins/dist/1337x.js?raw'
 import appleMusicCharts from '../../../plugins/dist/apple-music-charts.js?raw'
+import audius from '../../../plugins/dist/audius.js?raw'
+
 import freeMusicArchive from '../../../plugins/dist/free-music-archive.js?raw'
 import great78 from '../../../plugins/dist/great-78.js?raw'
 import jamendo from '../../../plugins/dist/jamendo.js?raw'
+import jiosaavn from '../../../plugins/dist/jiosaavn.js?raw'
 import knaben from '../../../plugins/dist/knaben.js?raw'
 import limetorrents from '../../../plugins/dist/limetorrents.js?raw'
 import listenbrainzCharts from '../../../plugins/dist/listenbrainz-charts.js?raw'
@@ -19,6 +22,7 @@ import nyaa from '../../../plugins/dist/nyaa.js?raw'
 import publicDomainClassical from '../../../plugins/dist/public-domain-classical.js?raw'
 import rutor from '../../../plugins/dist/rutor.js?raw'
 import rutracker from '../../../plugins/dist/rutracker.js?raw'
+import soundcloud from '../../../plugins/dist/soundcloud.js?raw'
 import spotifyCharts from '../../../plugins/dist/spotify-charts.js?raw'
 import thePirateBay from '../../../plugins/dist/the-pirate-bay.js?raw'
 import youtubeMusicCharts from '../../../plugins/dist/youtube-music-charts.js?raw'
@@ -31,9 +35,11 @@ export const BUNDLED_REPOSITORY = 'https://bundled.chomusuke.invalid/plugins/ind
 const CODE: Record<string, string> = {
   '1337x.js': x1337x,
   'apple-music-charts.js': appleMusicCharts,
+  'audius.js': audius,
   'free-music-archive.js': freeMusicArchive,
   'great-78.js': great78,
   'jamendo.js': jamendo,
+  'jiosaavn.js': jiosaavn,
   'knaben.js': knaben,
   'limetorrents.js': limetorrents,
   'listenbrainz-charts.js': listenbrainzCharts,
@@ -43,6 +49,7 @@ const CODE: Record<string, string> = {
   'public-domain-classical.js': publicDomainClassical,
   'rutor.js': rutor,
   'rutracker.js': rutracker,
+  'soundcloud.js': soundcloud,
   'spotify-charts.js': spotifyCharts,
   'the-pirate-bay.js': thePirateBay,
   'youtube-music-charts.js': youtubeMusicCharts

@@ -78,7 +78,11 @@ export class ProviderRegistry {
       sections.push(section)
       if (outcome.status === 'rejected') {
         section.error = userMessage(outcome.reason, provider.name)
+        log.warn(`${provider.name} (${provider.id}) gave no results for “${query}”: ${section.error}`)
         return
+      }
+      if (outcome.value.albums.length === 0 && outcome.value.songs.length === 0) {
+        log.warn(`${provider.name} (${provider.id}) returned no results for “${query}”`)
       }
       section.albums = outcome.value.albums.map(album => this.remember(provider, album))
       if (outcome.value.hasMore) section.hasMore = true
@@ -185,6 +189,7 @@ export class ProviderRegistry {
     const section: ProviderSection = { id: provider.id, name: provider.name, layout: provider.layout, albums: [] }
     try {
       const results = await timed(what, load)
+      if (results.albums.length === 0) log.warn(`${provider.name} (${provider.id}) returned no results for ${what}`)
       section.albums = results.albums.map(album => this.remember(provider, album))
       if (results.hasMore) section.hasMore = true
     } catch (err) {
@@ -256,8 +261,11 @@ export class ProviderRegistry {
     const seen = new Set<string>()
     const found: Candidate[] = []
     settled.forEach((outcome, index) => {
-      if (outcome.status === 'rejected') return
       const provider = providers[index]
+      if (outcome.status === 'rejected') {
+        log.warn(`${provider.name} (${provider.id}) failed while looking for “${query}”:`, outcome.reason)
+        return
+      }
       for (const album of [...outcome.value.albums, ...outcome.value.songs.map(song => song.album)]) {
         const key = `${provider.id}\n${album.ref}`
         if (seen.has(key)) continue

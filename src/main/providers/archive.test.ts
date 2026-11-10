@@ -15,6 +15,7 @@ import {
   searchUrl,
   tokenize
 } from './archive.ts'
+import type { TorrentPlayable } from './types.ts'
 
 const doc = (identifier: string, extra: Record<string, unknown> = {}) => ({ identifier, title: identifier, ...extra })
 const searchResponse = (...docs: unknown[]) => ({ response: { numFound: docs.length, docs } })
@@ -213,7 +214,7 @@ test('archive provider opens an item as its torrent plus tag annotations', async
   assert.deepEqual(fetched, [
     'https://archive.org/download/nine_inch_nails_the_slip/nine_inch_nails_the_slip_archive.torrent'
   ])
-  assert.equal((await playable.annotations)?.get('04_discipline')?.title, 'Discipline')
+  assert.equal((await (playable as TorrentPlayable).annotations)?.get('04_discipline')?.title, 'Discipline')
   await assert.rejects(provider.open({ ref: '../evil', title: 'x' }))
 })
 

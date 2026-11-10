@@ -547,5 +547,40 @@
         "default": ""
       }
     }
+  },
+  {
+    "manifestVersion": 1,
+    "id": "audius",
+    "name": "Audius",
+    "description": "Independent artists on Audius, played straight from the service (no torrent).",
+    "version": "1.0.0",
+    "type": "stream",
+    "code": "audius.js",
+    "hosts": ["api.audius.co"],
+    "layout": "cards",
+    "categories": [{ "id": "week", "name": "Trending this week" }, { "id": "all-time", "name": "Trending of all time" }]
+  },
+  {
+    "manifestVersion": 1,
+    "id": "soundcloud",
+    "name": "SoundCloud",
+    "description": "Tracks from independent artists and labels on SoundCloud, played straight from the service (full-length tracks that come as a plain file).",
+    "version": "1.0.0",
+    "type": "stream",
+    "code": "soundcloud.js",
+    "hosts": ["soundcloud.com", "api-v2.soundcloud.com", "*.sndcdn.com"],
+    "layout": "cards",
+    "categories": [{ "id": "trending", "name": "Trending" }, { "id": "top", "name": "Top" }]
+  },
+  {
+    "manifestVersion": 1,
+    "id": "jiosaavn",
+    "name": "JioSaavn",
+    "description": "Hindi, Punjabi, Tamil, English and more from JioSaavn, played straight from the service.",
+    "version": "1.0.0",
+    "type": "stream",
+    "code": "jiosaavn.js",
+    "hosts": ["www.jiosaavn.com", "*.saavncdn.com"],
+    "layout": "cards"
   }
 ]

@@ -14,7 +14,13 @@ export interface StreamableFile {
   createReadStream(start: number, end: number): Readable
 }
 
-export type FileResolver = (infoHash: string, fileIndex: number) => StreamableFile | undefined
+/** Finds the file behind a media URL. May take a moment (an http source asks its server for the file's length). */
+export type FileResolver = (
+  infoHash: string,
+  fileIndex: number
+) => StreamableFile | undefined | Promise<StreamableFile | undefined>
+
+export const FILE_UNAVAILABLE = 502
 
 export interface StreamServer {
   /** e.g. http://127.0.0.1:51234/media/<token> — append `/<infoHash>/<fileIndex>` */
@@ -52,7 +58,7 @@ export async function startStreamServer(resolve: FileResolver): Promise<StreamSe
   const tokenBytes = Buffer.from(token)
   let expectedHost = ''
 
-  const server = http.createServer((req, res) => {
+  const server = http.createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff')
     res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox")
     res.setHeader('Cache-Control', 'no-store')
@@ -67,7 +73,13 @@ export async function startStreamServer(resolve: FileResolver): Promise<StreamSe
     if (!match || !timingSafeEqual(Buffer.from(match[1]), tokenBytes)) return sendStatus(res, 404)
 
     const what = `${match[2]}/${match[3]}`
-    const file = resolve(match[2], Number(match[3]))
+    let file: StreamableFile | undefined
+    try {
+      file = await resolve(match[2], Number(match[3]))
+    } catch (err) {
+      log.warn(`${what}: couldn't open the file:`, err)
+      return sendStatus(res, FILE_UNAVAILABLE)
+    }
     if (!file) {
       log.debug(`${what}: not a playable file of an open album`)
       return sendStatus(res, 404)

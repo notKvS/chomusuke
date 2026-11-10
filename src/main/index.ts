@@ -5,6 +5,7 @@ import { DiscordPresence } from './discord.ts'
 import { TorrentEngine } from './engine.ts'
 import { createArtistGenres } from './genres.ts'
 import { PlayHistory } from './history.ts'
+import { HttpSource } from './http-source.ts'
 import * as backup from './ipc/backup.ts'
 import type { IpcDeps } from './ipc/deps.ts'
 import { trustedSenderGuard } from './ipc/guard.ts'
@@ -186,6 +187,7 @@ function createWindow(): BrowserWindow {
 
 function registerIpc(
   torrents: TorrentEngine,
+  httpSource: HttpSource,
   registry: ProviderRegistry,
   settings: ProviderSettingsStore,
   updater: Updater
@@ -194,6 +196,7 @@ function registerIpc(
     assertTrustedSender: trustedSenderGuard(() => mainWindow),
     mainWindow: () => mainWindow,
     torrents,
+    httpSource,
     registry,
     settings,
     library,
@@ -297,14 +300,24 @@ app.whenReady().then(async () => {
   )
 
   let torrents: TorrentEngine | null = null
-  streamServer = await startStreamServer((infoHash, fileIndex) => torrents?.resolveFile(infoHash, fileIndex))
+  let httpSource: HttpSource | null = null
+  streamServer = await startStreamServer(
+    (infoHash, fileIndex) => torrents?.resolveFile(infoHash, fileIndex) ?? httpSource?.resolveFile(infoHash, fileIndex)
+  )
   torrents = engine = new TorrentEngine(cacheDir, streamServer.baseUrl, library.dataDir)
+  httpSource = new HttpSource(streamServer.baseUrl)
   applySharing(library, torrents)
   updater = new Updater(state => {
     const contents = mainWindow?.webContents
     if (contents && !contents.isDestroyed()) contents.send('update:state', state)
   })
-  registerIpc(torrents, new ProviderRegistry((albums, signal) => covers.fill(albums, signal)), settings, updater)
+  registerIpc(
+    torrents,
+    httpSource,
+    new ProviderRegistry((albums, signal) => covers.fill(albums, signal)),
+    settings,
+    updater
+  )
 
   mainWindow = createWindow()
   mainWindow.on('closed', () => {

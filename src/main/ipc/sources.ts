@@ -1,7 +1,6 @@
 import { readFile, stat } from 'node:fs/promises'
 import { dialog } from 'electron'
 import type { Album } from '../../shared/types.ts'
-import type { TorrentEngine } from '../engine.ts'
 import { annotationsForTorrentUrl } from '../providers/archive.ts'
 import { archiveJsonFetcher } from '../providers/index.ts'
 import type { Playable } from '../providers/types.ts'
@@ -12,8 +11,16 @@ import { handle, sanitizeHints, toResult } from './guard.ts'
 
 const MAX_TORRENT_FILE_BYTES = 10 * 1024 * 1024
 
-/** Loads a provider's torrent, then adds its song details (titles, durations) if it has any. */
-export async function playableToAlbum(torrents: TorrentEngine, playable: Playable): Promise<Album> {
+/**
+ * Opens what a provider found: its torrent (then adding its song details, titles and durations, if it has any), or
+ * its http tracks.
+ */
+export async function playableToAlbum(
+  sources: Pick<IpcDeps, 'torrents' | 'httpSource'>,
+  playable: Playable
+): Promise<Album> {
+  if (playable.kind === 'http') return sources.httpSource.load(playable)
+  const { torrents } = sources
   const album = await torrents.load(playable.torrent, playable.hints)
   const info = await playable.annotations
   return (info && torrents.annotate(album.infoHash, info)) || album
@@ -30,7 +37,7 @@ export function register(deps: IpcDeps): void {
       if (source.kind === 'magnet') return torrents.load(source.uri, hints)
       // Internet Archive items carry real song titles and durations in their tags; fetch them in parallel.
       const annotations = annotationsForTorrentUrl(source.url, archiveJsonFetcher)
-      return playableToAlbum(torrents, {
+      return playableToAlbum(deps, {
         kind: 'torrent',
         torrent: await fetchTorrentFile(source.url),
         hints,

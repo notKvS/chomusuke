@@ -128,3 +128,24 @@
     gap: 10px;
   }
 }
+
+@layer components {
+  .source-row-wrap.is-dragging {
+    opacity: 0.4;
+  }
+
+  .source-row-wrap.is-drop-target {
+    box-shadow: 0 -2px 0 var(--accent);
+  }
+
+  .source-row__grip {
+    flex: none;
+    margin: 0 -8px 0 -4px;
+    color: var(--text-2);
+    cursor: grab;
+  }
+
+  .source-row__grip:active {
+    cursor: grabbing;
+  }
+}

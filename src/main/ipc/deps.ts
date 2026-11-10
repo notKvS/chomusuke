@@ -3,6 +3,7 @@ import type { DiscordPresence } from '../discord.ts'
 import type { TorrentEngine } from '../engine.ts'
 import type { ArtistGenres } from '../genres.ts'
 import type { PlayHistory } from '../history.ts'
+import type { HttpSource } from '../http-source.ts'
 import type { PlaylistStore } from '../playlists.ts'
 import type { PluginHost } from '../plugin-host/host.ts'
 import type { PluginManifest } from '../plugin-host/manifest.ts'
@@ -21,6 +22,8 @@ export interface IpcDeps {
   /** The player window: null before it opens and after it closes, so read it when a handler runs. */
   mainWindow: () => BrowserWindow | null
   torrents: TorrentEngine
+  /** Plays albums whose tracks are plain https audio files (stream plugins). */
+  httpSource: HttpSource
   registry: ProviderRegistry
   settings: ProviderSettingsStore
   library: SeedLibrary

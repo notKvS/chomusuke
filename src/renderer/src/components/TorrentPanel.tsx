@@ -8,11 +8,13 @@ const REFRESH_MS = 2000
 const SHOWN_FILES = 60
 
 /** Live torrent details for a loaded album, refreshed every couple of seconds. */
-export function useTorrentDetails(infoHash: string): [TorrentDetails | null, () => void] {
+export function useTorrentDetails(infoHash: string | null): [TorrentDetails | null, () => void] {
   const [details, setDetails] = useState<TorrentDetails | null>(null)
   const [tick, setTick] = useState(0)
   // biome-ignore lint/correctness/useExhaustiveDependencies: `tick` forces an immediate refresh after an action
   useEffect(() => {
+    // An album that isn't a torrent (an http source) has nothing to show.
+    if (infoHash === null) return
     let cancelled = false
     const load = () =>
       void window.chomusuke.getTorrentDetails(infoHash).then(next => {

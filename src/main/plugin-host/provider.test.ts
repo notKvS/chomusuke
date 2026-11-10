@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import type { TorrentPlayable } from '../providers/types.ts'
 import { parseRepository } from './manifest.ts'
 import { createPluginProvider, type PluginRuntime, testPlugin } from './provider.ts'
 
@@ -53,8 +54,8 @@ test('search and browse pass the query/category and user options to the plugin',
 test('open validates magnets (stripping xs) and builds magnets from hashes', async () => {
   const provider = createPluginProvider(manifest, fakeRuntime(), {})
   const { albums } = await provider.search('q', new AbortController().signal)
-  assert.equal((await provider.open(albums[0])).torrent, `magnet:?xt=urn:btih:${HASH}`)
-  assert.equal((await provider.open(albums[1])).torrent, `magnet:?xt=urn:btih:${HASH}`)
+  assert.equal(((await provider.open(albums[0])) as TorrentPlayable).torrent, `magnet:?xt=urn:btih:${HASH}`)
+  assert.equal(((await provider.open(albums[1])) as TorrentPlayable).torrent, `magnet:?xt=urn:btih:${HASH}`)
 })
 
 test('plugins can page: { results, hasMore } and the page number', async () => {

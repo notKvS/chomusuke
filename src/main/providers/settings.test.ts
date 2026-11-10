@@ -421,3 +421,49 @@ test('a plugin missing its required details is flagged for the setup window unti
     assert.deepEqual(store.pluginConfig('plugin-asking').options, { username: 'me', password: 'secret' })
     assert.equal(view()?.options?.[1].hasValue, true)
   }))
+
+test('the order of sources can be changed; it is kept across restarts and decides what is searched first', () =>
+  withStore(async (store, file) => {
+    const { parseRepository } = await import('../plugin-host/manifest.ts')
+    const manifests = parseRepository(
+      ['one', 'two', 'three'].map(id => ({
+        manifestVersion: 1,
+        id,
+        name: id,
+        version: '1',
+        type: 'torrent',
+        code: `${id}.js`,
+        hosts: ['example.org']
+      })),
+      'https://example.org/index.json'
+    )
+    await store.saveTorznab(form)
+    await store.installPlugins(
+      'https://example.org/index.json',
+      manifests.map(manifest => ({ manifest, code: 'export default { search: () => [] }' }))
+    )
+    const indexer = store.list()[1].id
+    const ids = () => store.list().map(p => p.id)
+    assert.deepEqual(ids(), ['archive', indexer, 'plugin-one', 'plugin-two', 'plugin-three'])
+
+    // Plugins (and the built-in) move among their own places; the indexer between them stays put.
+    await store.reorder(['plugin-three', 'archive', 'plugin-one', 'plugin-two'])
+    assert.deepEqual(ids(), ['plugin-three', indexer, 'archive', 'plugin-one', 'plugin-two'])
+    assert.deepEqual(
+      store.enabled().map(p => (p.type === 'plugin' ? p.manifest.id : p.type)),
+      ['three', 'torznab', 'archive', 'one', 'two']
+    )
+
+    const reloaded = new ProviderSettingsStore(file, box)
+    await reloaded.load()
+    assert.deepEqual(
+      reloaded.list().map(p => p.id),
+      ids()
+    )
+
+    await assert.rejects(store.reorder(['plugin-one', 'plugin-one']), SettingsError)
+    await assert.rejects(store.reorder(['plugin-one', 'nope']), SettingsError)
+    await assert.rejects(store.reorder([]), SettingsError)
+    await assert.rejects(store.reorder('plugin-one'), SettingsError)
+    assert.deepEqual(ids(), ['plugin-three', indexer, 'archive', 'plugin-one', 'plugin-two'])
+  }))

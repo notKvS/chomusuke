@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { describeArgs, failureOf, scrub } from './log.ts'
+import { buildLogExport, describeArgs, failureOf, scrub } from './log.ts'
 
 test('the stream server token never reaches the log', () => {
   const url = `http://127.0.0.1:5123/media/${'ab'.repeat(32)}/${'c'.repeat(40)}/3`
@@ -32,4 +32,16 @@ test('a failed IPC answer is recognised by its error message', () => {
   assert.equal(failureOf({ ok: false, error: 'No peers' }), 'No peers')
   assert.equal(failureOf({ ok: true, album: {} }), undefined)
   assert.equal(failureOf(undefined), undefined)
+})
+
+test('an exported log has the header first and no secrets, even from older lines', () => {
+  const text = buildLogExport(
+    ['Chomusuke 1.0 log', 'Sources in search order: Audius, Jamendo'],
+    ['[old] GET https://x.example/?apikey=abc', '', `[new] ok /media/${'ab'.repeat(32)}/1`]
+  )
+  const lines = text.split('\n')
+  assert.deepEqual(lines.slice(0, 3), ['Chomusuke 1.0 log', 'Sources in search order: Audius, Jamendo', ''])
+  assert.doesNotMatch(text, /abc|abab/)
+  assert.match(text, /apikey=<hidden>/)
+  assert.match(text, /\/media\/<token>/)
 })

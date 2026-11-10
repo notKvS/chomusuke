@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from 'react'
+import { type FormEvent, type KeyboardEvent, type ReactNode, useEffect, useState } from 'react'
 import type { PluginKind, ProviderSettingsView, ProvidersResponse, TorznabForm } from '../../../../shared/types'
 import { type Status, StatusLine } from '../controls/StatusLine'
 import { Switch } from '../controls/Switch'
@@ -36,12 +36,73 @@ function useProviders() {
     apply(await window.chomusuke.removeProvider(provider.id))
   }
 
+  const reorder = async (ids: string[]) => apply(await window.chomusuke.reorderProviders(ids))
+
   const rowActions = {
     apply,
     onToggle: (provider: ProviderSettingsView) => void toggle(provider),
     onRemove: (provider: ProviderSettingsView) => void remove(provider)
   }
-  return { providers: providers ?? [], error, apply, toggle, remove, rowActions }
+  return { providers: providers ?? [], error, apply, toggle, remove, reorder, rowActions }
+}
+
+/**
+ * Drag-and-drop ordering for a list of rows. `onReorder` gets the new order of ids; without it the rows aren't
+ * draggable. Each row also has a grip button that moves it with Alt+↑ / Alt+↓, for keyboard users.
+ */
+function useDragOrder(items: Array<{ id: string }>, onReorder?: (ids: string[]) => void) {
+  const [dragging, setDragging] = useState<string | null>(null)
+  const [over, setOver] = useState<string | null>(null)
+
+  const place = (id: string, index: number) => {
+    const ids = items.map(item => item.id).filter(other => other !== id)
+    ids.splice(Math.max(0, Math.min(index, ids.length)), 0, id)
+    onReorder?.(ids)
+  }
+  const end = () => {
+    setDragging(null)
+    setOver(null)
+  }
+
+  const rowProps = (id: string) => {
+    if (!onReorder) return {}
+    return {
+      draggable: true,
+      className: `source-row-wrap ${dragging === id ? 'is-dragging' : ''} ${over === id ? 'is-drop-target' : ''}`,
+      onDragStart: (event: React.DragEvent) => {
+        event.dataTransfer.effectAllowed = 'move'
+        event.dataTransfer.setData('text/plain', id)
+        setDragging(id)
+      },
+      onDragOver: (event: React.DragEvent) => {
+        if (!dragging || dragging === id) return
+        event.preventDefault()
+        setOver(id)
+      },
+      onDrop: (event: React.DragEvent) => {
+        event.preventDefault()
+        if (dragging && dragging !== id)
+          place(
+            dragging,
+            items.findIndex(item => item.id === id)
+          )
+        end()
+      },
+      onDragEnd: end
+    }
+  }
+
+  const gripProps = (id: string) => {
+    const index = items.findIndex(item => item.id === id)
+    return {
+      onKeyDown: (event: KeyboardEvent) => {
+        if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return
+        event.preventDefault()
+        place(id, index + (event.key === 'ArrowUp' ? -1 : 1))
+      }
+    }
+  }
+  return { rowProps, gripProps }
 }
 
 function ErrorLine({ error }: { error: string | null }) {
@@ -77,12 +138,12 @@ export function ChartsSettings() {
 
 /** Plugins: where music is found and played from. */
 export function PluginsSettings() {
-  const { providers, error, apply, toggle, remove, rowActions } = useProviders()
+  const { providers, error, apply, toggle, remove, reorder, rowActions } = useProviders()
   const [editing, setEditing] = useState<TorznabForm | null>(null)
 
-  const builtIn = providers.filter(p => p.builtIn)
   const indexers = providers.filter(p => p.type === 'torznab')
-  const plugins = providers.filter(p => p.type === 'plugin' && !p.chart)
+  // The built-in source and the plugins, in the order they are searched in.
+  const plugins = providers.filter(p => p.builtIn || (p.type === 'plugin' && !p.chart))
 
   return (
     <div className="sources">
@@ -100,15 +161,11 @@ export function PluginsSettings() {
           LimeTorrents) come switched off — turn one on and press Test to use it. Charts need at least one plugin that
           carries popular music.
         </p>
-        {builtIn.map(provider => (
-          <SourceRow
-            key={provider.id}
-            provider={provider}
-            description="Searches the Internet Archive's audio collections."
-            onToggle={() => void toggle(provider)}
-          />
-        ))}
-        <PluginRows plugins={plugins} {...rowActions} />
+        <p className="sources__help">
+          Drag a plugin by its handle (or press Alt+↑ / Alt+↓ on it) to change the order. Search results show up in this
+          order, with the plugin at the top first.
+        </p>
+        <PluginRows plugins={plugins} {...rowActions} onReorder={ids => void reorder(ids)} />
       </section>
 
       <section className="shelf">
@@ -156,10 +213,13 @@ interface PluginRowsProps {
   apply: (response: ProvidersResponse) => boolean
   onToggle: (provider: ProviderSettingsView) => void
   onRemove: (provider: ProviderSettingsView) => void
+  /** Rows can be dragged into a new order when this is given. */
+  onReorder?: (ids: string[]) => void
 }
 
 /** Installed plugins (providers or charts), each with Test, a setup window for its options, and Remove. */
-function PluginRows({ plugins, apply, onToggle, onRemove }: PluginRowsProps) {
+function PluginRows({ plugins, apply, onToggle, onRemove, onReorder }: PluginRowsProps) {
+  const { rowProps, gripProps } = useDragOrder(plugins, onReorder)
   const [setup, setSetup] = useState<{ id: string; enableAfter: boolean } | null>(null)
   const [tests, setTests] = useState<Record<string, Status | undefined>>({})
   /** Plugins whose last test hit the site's bot check: they get a button that opens the site to pass it. */
@@ -196,21 +256,38 @@ function PluginRows({ plugins, apply, onToggle, onRemove }: PluginRowsProps) {
   return (
     <>
       {plugins.map(provider => (
-        <div key={provider.id}>
+        <div key={provider.id} {...rowProps(provider.id)}>
           <SourceRow
             provider={provider}
-            description={[
-              `v${provider.version}`,
-              provider.needsSetup && 'Needs your details (edit button)',
-              provider.hosts?.join(', ')
-            ]
-              .filter(Boolean)
-              .join(' • ')}
+            leading={
+              onReorder && (
+                <button
+                  type="button"
+                  className="icon-button source-row__grip"
+                  aria-label={`Move ${provider.name} (drag, or press Alt+Up or Alt+Down)`}
+                  title="Drag to change the order"
+                  {...gripProps(provider.id)}
+                >
+                  <Icon name="grip" size={20} />
+                </button>
+              )
+            }
+            description={
+              provider.builtIn
+                ? "Searches the Internet Archive's audio collections."
+                : [
+                    `v${provider.version}`,
+                    provider.needsSetup && 'Needs your details (edit button)',
+                    provider.hosts?.join(', ')
+                  ]
+                    .filter(Boolean)
+                    .join(' • ')
+            }
             note={provider.description}
             onToggle={() => toggle(provider)}
-            onTest={() => void test(provider)}
+            onTest={provider.builtIn ? undefined : () => void test(provider)}
             onEdit={provider.options?.length ? () => setSetup({ id: provider.id, enableAfter: false }) : undefined}
-            onRemove={() => onRemove(provider)}
+            onRemove={provider.builtIn ? undefined : () => onRemove(provider)}
           />
           {tests[provider.id] && <StatusLine status={tests[provider.id] as Status} />}
           {botChecked[provider.id] && tests[provider.id]?.kind === 'error' && (
@@ -279,6 +356,8 @@ function InstallPlugins({ kind, apply }: { kind: PluginKind; apply: (response: P
 
 interface RowProps {
   provider: ProviderSettingsView
+  /** Shown before the icon, e.g. a drag handle */
+  leading?: ReactNode
   description: string
   /** Optional longer text under the description, wrapped. */
   note?: string
@@ -288,9 +367,10 @@ interface RowProps {
   onRemove?: () => void
 }
 
-function SourceRow({ provider, description, note, onToggle, onTest, onEdit, onRemove }: RowProps) {
+function SourceRow({ provider, leading, description, note, onToggle, onTest, onEdit, onRemove }: RowProps) {
   return (
     <div className={`source-row ${provider.enabled ? '' : 'is-off'}`}>
+      {leading}
       <span className="source-row__icon">
         <Icon name={provider.builtIn ? 'music' : provider.type === 'plugin' ? 'plugin' : 'download'} />
       </span>

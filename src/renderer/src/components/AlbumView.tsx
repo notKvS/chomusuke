@@ -41,7 +41,9 @@ export function AlbumView({
   playlists
 }: Props) {
   const albumIsCurrent = album.tracks.some(t => t.id === currentTrackId)
-  const [details, refreshDetails] = useTorrentDetails(album.infoHash)
+  // An http album has no torrent: no swarm, nothing to save offline, and songs can't be rated or put in playlists yet.
+  const isTorrent = album.source !== 'http'
+  const [details, refreshDetails] = useTorrentDetails(isTorrent ? album.infoHash : null)
   const [showTorrent, setShowTorrent] = useState(false)
 
   return (
@@ -60,9 +62,10 @@ export function AlbumView({
             )}
           </p>
           <p className="album__details">
-            {plural(album.tracks.length, 'song')} • {formatBytes(album.totalSize)}
+            {plural(album.tracks.length, 'song')}
+            {isTorrent && <> • {formatBytes(album.totalSize)}</>}
           </p>
-          <SwarmStatus stats={stats} />
+          {isTorrent && <SwarmStatus stats={stats} />}
           <div className="album__actions">
             <button
               type="button"
@@ -72,21 +75,25 @@ export function AlbumView({
             >
               <Icon name={albumIsCurrent && isPlaying ? 'pause' : 'play'} size={32} />
             </button>
-            <KeepButton album={album} details={details} onChanged={refreshDetails} />
-            <button
-              type="button"
-              className="ghost-button"
-              onClick={() => setShowTorrent(v => !v)}
-              aria-expanded={showTorrent}
-            >
-              <Icon name="info" size={18} />
-              {showTorrent ? 'Hide torrent' : 'Torrent'}
-            </button>
+            {isTorrent && (
+              <>
+                <KeepButton album={album} details={details} onChanged={refreshDetails} />
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={() => setShowTorrent(v => !v)}
+                  aria-expanded={showTorrent}
+                >
+                  <Icon name="info" size={18} />
+                  {showTorrent ? 'Hide torrent' : 'Torrent'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </header>
 
-      {showTorrent && <TorrentPanel details={details} />}
+      {isTorrent && showTorrent && <TorrentPanel details={details} />}
 
       <ol className="tracklist">
         {album.tracks.map((track, index) => {
@@ -120,18 +127,20 @@ export function AlbumView({
                 <span className="track__duration">
                   {(durations[track.id] ?? track.duration)
                     ? formatTime(durations[track.id] ?? track.duration ?? 0)
-                    : formatBytes(track.size)}
+                    : isTorrent && formatBytes(track.size)}
                 </span>
               </button>
-              <span className="track-actions">
-                <AddToPlaylist
-                  playlists={playlists}
-                  infoHash={album.infoHash}
-                  trackKey={track.key}
-                  label={`Add ${track.title} to a playlist`}
-                />
-                <RateButtons infoHash={album.infoHash} track={track} ratings={ratings} />
-              </span>
+              {isTorrent && (
+                <span className="track-actions">
+                  <AddToPlaylist
+                    playlists={playlists}
+                    infoHash={album.infoHash}
+                    trackKey={track.key}
+                    label={`Add ${track.title} to a playlist`}
+                  />
+                  <RateButtons infoHash={album.infoHash} track={track} ratings={ratings} />
+                </span>
+              )}
             </li>
           )
         })}

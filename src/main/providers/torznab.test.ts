@@ -4,6 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { after, before, test } from 'node:test'
 import parseTorrent, { toTorrentFile } from 'parse-torrent'
 import { createTorznabProvider, parseTorznab, TorznabError, testTorznab } from './torznab.ts'
+import type { TorrentPlayable } from './types.ts'
 
 const HASH = 'c9e15763f722f23e98a29decdfae341b98d53056'
 const MAGNET = `magnet:?xt=urn:btih:${HASH}&dn=Album&tr=udp%3A%2F%2Ftracker.example%3A1337`
@@ -114,15 +115,15 @@ test('open resolves magnets, downloads .torrent links and follows magnet redirec
   const provider = createTorznabProvider(config())
   const { albums } = await provider.search('some band', new AbortController().signal)
   const [linked, redirected, magnet] = albums
-  const linkedPlayable = await provider.open(linked)
+  const linkedPlayable = (await provider.open(linked)) as TorrentPlayable
   assert.ok(linkedPlayable.torrent instanceof Uint8Array)
   const [original, opened] = await Promise.all([parseTorrent(TORRENT), parseTorrent(linkedPlayable.torrent)])
   assert.equal(opened.infoHash, original.infoHash)
   // LAN trackers / web seeds from a third-party .torrent are dropped.
   assert.deepEqual(opened.announce, ['udp://tracker.example.org:1337'])
   assert.deepEqual(opened.urlList, ['https://cdn.example.org/'])
-  assert.equal((await provider.open(redirected)).torrent, MAGNET)
-  assert.equal((await provider.open(magnet)).torrent, MAGNET)
+  assert.equal(((await provider.open(redirected)) as TorrentPlayable).torrent, MAGNET)
+  assert.equal(((await provider.open(magnet)) as TorrentPlayable).torrent, MAGNET)
 })
 
 test('indexer errors surface as safe messages without the key', async () => {

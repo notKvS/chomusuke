@@ -74,3 +74,11 @@ export function failureOf(result: unknown): string | undefined {
   const { ok, error } = result as { ok?: unknown; error?: unknown }
   return ok === false && typeof error === 'string' ? error : undefined
 }
+
+/**
+ * The text of an exported log: a header for whoever reads it, then the older log file and the current one.
+ * Scrubbed again here, so a line that was written before a secret pattern was known doesn't leave the computer.
+ */
+export function buildLogExport(header: string[], files: string[]): string {
+  return [...header, '', ...files.filter(Boolean).map(scrub)].join('\n')
+}

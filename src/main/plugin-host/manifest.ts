@@ -1,10 +1,12 @@
 import type { PluginKind, SourceCategory } from '../../shared/types.ts'
-import type { ProviderAlbum } from '../providers/types.ts'
+import type { HttpTrack, ProviderAlbum } from '../providers/types.ts'
 
 /**
  * Plugins add sources. Users import a repository (a JSON manifest listing plugins); each plugin is a
  * bundled ES module that runs in a sandboxed worker. The manifest declares which https hosts it may contact.
  * - `"type": "torrent"` plugins are providers: they turn queries into torrent results.
+ * - `"type": "stream"` plugins are providers too, for services with direct audio URLs: search returns results with
+ *   an `id`, and `open` turns one into tracks with https URLs (played by HttpSource, see http-source.ts).
  * - `"type": "chart"` plugins list top albums/songs from a public chart for Explore (browse only, at least one
  *   category); the app plays an entry by searching the providers for it (ProviderRegistry.findRelease).
  *
@@ -57,8 +59,11 @@ export interface PluginManifest {
   id: string
   name: string
   version: string
-  /** torrent: search/browse torrents; chart: browse top albums/songs that play through the providers */
-  type: 'torrent' | 'chart'
+  /**
+   * torrent: search/browse torrents; stream: search/browse a service with direct audio URLs;
+   * chart: browse top albums/songs that play through the providers
+   */
+  type: 'torrent' | 'stream' | 'chart'
   description: string
   codeUrl: string
   hosts: string[]
@@ -107,6 +112,8 @@ const MAX_HOSTS = 10
 const MAX_CATEGORIES = 20
 const MAX_OPTIONS = 10
 const MAX_RESULTS = 100
+const MAX_STREAM_ID = 300
+const MAX_STREAM_TRACKS = 500
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -134,8 +141,8 @@ export function hostAllowed(hostname: string, hosts: string[]): boolean {
 function parseOne(raw: unknown, base: URL, sameOriginHttp: boolean): PluginManifest {
   if (!isRecord(raw)) throw new PluginError('The plugin manifest is malformed.')
   if (raw.manifestVersion !== 1) throw new PluginError('Unsupported plugin manifest version.')
-  if (raw.type !== 'torrent' && raw.type !== 'chart')
-    throw new PluginError('Only torrent and chart plugins are supported.')
+  if (raw.type !== 'torrent' && raw.type !== 'stream' && raw.type !== 'chart')
+    throw new PluginError('Only torrent, stream and chart plugins are supported.')
   const type = raw.type
   const id = typeof raw.id === 'string' && ID.test(raw.id) ? raw.id : undefined
   if (!id) throw new PluginError('The plugin has an invalid id.')
@@ -196,7 +203,7 @@ function parseOne(raw: unknown, base: URL, sameOriginHttp: boolean): PluginManif
     description: text(raw.description, 300) ?? '',
     codeUrl: codeUrl.toString(),
     hosts: [...new Set(hosts)],
-    layout: raw.layout === 'cards' || type === 'chart' ? 'cards' : 'list',
+    layout: raw.layout === 'cards' || type !== 'torrent' ? 'cards' : 'list',
     categories,
     options,
     setup: text(raw.setup, 400),
@@ -314,4 +321,99 @@ export function sanitizeChartEntries(raw: unknown, manifest: PluginManifest): Pr
     })
   }
   return entries
+}
+
+/**
+ * Turns untrusted stream plugin results into albums. A result needs a title and an `id`: whatever the plugin needs
+ * to find the tracks again when `open` is called (a track id, an album id). Nothing else is trusted as a locator.
+ */
+export function sanitizeStreamResults(raw: unknown, manifest: PluginManifest): ProviderAlbum[] {
+  if (!Array.isArray(raw)) throw new PluginError(`${manifest.name} returned an invalid response.`)
+  const albums: ProviderAlbum[] = []
+  const seen = new Set<string>()
+  for (const item of raw.slice(0, MAX_RESULTS)) {
+    if (!isRecord(item)) continue
+    const title = text(item.title, 300)
+    const id = text(item.id, MAX_STREAM_ID)
+    if (!title || !id || seen.has(id)) continue
+    seen.add(id)
+    albums.push({
+      ref: JSON.stringify({ id }),
+      title,
+      artist: text(item.artist, 120),
+      year: yearOf(item.year),
+      artwork: httpsUrl(item.artwork),
+      size: count(item.size),
+      tags: tagList(item.tags)
+    })
+  }
+  return albums
+}
+
+/** Request headers a stream plugin may ask us to send with the audio requests. */
+export const HTTP_HEADERS = new Set(['user-agent', 'referer', 'origin', 'accept-language', 'cookie', 'authorization'])
+const HEADER_VALUE = /^[\x20-\x7e]{1,2000}$/
+const AUDIO_MIME = /^audio\/[a-z0-9.+-]{1,40}$/i
+
+export interface StreamAlbum {
+  title?: string
+  artist?: string
+  coverUrl?: string
+  tracks: HttpTrack[]
+}
+
+/**
+ * Turns the answer of a stream plugin's `open` into tracks. Each track's URL must be https with no port, on a host
+ * the manifest declares (redirects from there may go anywhere public: see HttpSource). Headers are limited to
+ * {@link HTTP_HEADERS}.
+ */
+export function sanitizeStreamAlbum(raw: unknown, manifest: PluginManifest): StreamAlbum {
+  if (!isRecord(raw) || !Array.isArray(raw.tracks))
+    throw new PluginError(`${manifest.name} returned an invalid response.`)
+  const tracks: HttpTrack[] = []
+  for (const item of raw.tracks.slice(0, MAX_STREAM_TRACKS)) {
+    if (!isRecord(item)) continue
+    const title = text(item.title, 300)
+    let url: string | undefined
+    try {
+      const parsed = new URL(String(item.url))
+      if (
+        parsed.protocol === 'https:' &&
+        parsed.port === '' &&
+        !parsed.username &&
+        !parsed.password &&
+        hostAllowed(parsed.hostname, manifest.hosts)
+      )
+        url = parsed.toString()
+    } catch {
+      // unusable URL
+    }
+    if (!title || !url) continue
+
+    let headers: Record<string, string> | undefined
+    if (isRecord(item.headers)) {
+      const entries = Object.entries(item.headers).filter(
+        (pair): pair is [string, string] =>
+          HTTP_HEADERS.has(pair[0].toLowerCase()) && typeof pair[1] === 'string' && HEADER_VALUE.test(pair[1])
+      )
+      if (entries.length > 0) headers = Object.fromEntries(entries)
+    }
+    const duration = count(item.duration)
+    tracks.push({
+      title,
+      artist: text(item.artist, 120),
+      url,
+      headers,
+      duration: duration !== undefined && duration <= 86_400 ? duration : undefined,
+      mime: typeof item.mime === 'string' && AUDIO_MIME.test(item.mime) ? item.mime.toLowerCase() : undefined,
+      format: text(item.format, 8)?.toUpperCase()
+    })
+  }
+  if (tracks.length === 0) throw new PluginError(`${manifest.name} found nothing to play there.`)
+  return {
+    title: text(raw.title, 300),
+    artist: text(raw.artist, 120),
+    coverUrl: httpsUrl(raw.artwork),
+    tracks
+  }
 }

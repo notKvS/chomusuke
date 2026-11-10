@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { UpdateStatus } from '../../../../shared/types'
 import { useLibrary } from '../../useLibrary'
 import { useUpdate } from '../../useUpdate'
@@ -30,6 +31,7 @@ function describe(status: UpdateStatus): Status | null {
 export function UpdateSettings() {
   const update = useUpdate()
   const { library, apply } = useLibrary()
+  const [logLine, setLogLine] = useState<Status | null>(null)
   if (!update) return null
   const { status } = update
   const line = describe(status)
@@ -82,12 +84,28 @@ export function UpdateSettings() {
       <div className="sharing">
         <SettingRow
           title="Logs"
-          hint="What the app did and what went wrong, kept in a small file on this computer. Send it along when you report a problem. It can include what you searched for and played, but never passwords or API keys."
+          hint="What the app did and what went wrong, kept in a small file on this computer. Send it along when you report a problem. It can include what you searched for and played, but never passwords or API keys. If a source finds nothing, the log says which one and for what search."
         >
+          <button
+            type="button"
+            className="pill-button"
+            onClick={() =>
+              void window.chomusuke.exportLogs().then(result => {
+                if (result === null) setLogLine(null)
+                else
+                  setLogLine(
+                    result.ok ? { kind: 'ok', text: `Saved to ${result.path}` } : { kind: 'error', text: result.error }
+                  )
+              })
+            }
+          >
+            Save log as a file
+          </button>
           <button type="button" className="pill-button" onClick={() => void window.chomusuke.openLogs()}>
             Open log folder
           </button>
         </SettingRow>
+        {logLine && <StatusLine status={logLine} as="p" />}
       </div>
     </section>
   )
