@@ -55,6 +55,7 @@
     font-weight: 500;
     border: 1px dashed rgb(var(--accent-soft-rgb) / 0.4);
     background: rgb(var(--accent-rgb) / 0.08);
+    padding: 10px;
   }
 
   .pill-button:hover {
@@ -288,7 +289,7 @@
 
   .sources__lead,
   .sources__help {
-    max-width: 760px;
+    max-width: 940px;
     margin: -16px 0 32px;
     color: var(--text-2);
     line-height: 1.6;

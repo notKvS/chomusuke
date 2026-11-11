@@ -9,6 +9,7 @@ import './styles/index.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { captureErrors } from './log'
 import { applyTheme, loadAppearance, loadBackgroundImage } from './theme/dom'
 
@@ -22,6 +23,8 @@ if (!root) throw new Error('index.html is missing #root')
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>
 )

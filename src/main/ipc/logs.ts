@@ -1,18 +1,18 @@
-import { readFile, writeFile } from 'node:fs/promises'
-import os from 'node:os'
-import path from 'node:path'
-import { app, dialog, ipcMain, shell } from 'electron'
+import { ipcMain, shell } from 'electron'
 import type { SaveTorrentResult } from '../../shared/types.ts'
-import { buildLogExport, logDir, logger } from '../log.ts'
+import { handleCrash } from '../crash.ts'
+import { logDir, logger } from '../log.ts'
+import { saveLogFile } from '../log-export.ts'
 import type { IpcDeps } from './deps.ts'
 import { handle } from './guard.ts'
 
 const LEVELS = new Set(['error', 'warn', 'info', 'debug'])
 const MAX_MESSAGE = 4000
-/** The log file and the one before it (see log.ts), oldest first. */
-const LOG_FILES = ['main.old.log', 'main.log']
 
-/** Lines from the player window into the app log, opening the log folder, and saving the log as a file to send on. */
+/**
+ * Lines from the player window into the app log, opening the log folder, saving the log as a file to send on, and
+ * the player window reporting that it broke (which ends in the crash dialog).
+ */
 export function register(deps: IpcDeps): void {
   const { assertTrustedSender } = deps
   const log = logger('renderer')
@@ -38,28 +38,13 @@ export function register(deps: IpcDeps): void {
     assertTrustedSender(event)
     const mainWindow = deps.mainWindow()
     if (!mainWindow) return null
-    const picked = await dialog.showSaveDialog(mainWindow, {
-      title: 'Save the log',
-      defaultPath: path.join(app.getPath('downloads'), `chomusuke-log-${new Date().toISOString().slice(0, 10)}.txt`),
-      filters: [{ name: 'Text file', extensions: ['txt'] }]
-    })
-    if (picked.canceled || !picked.filePath) return null
-    try {
-      const files = await Promise.all(
-        LOG_FILES.map(name => readFile(path.join(logDir(), name), 'utf8').catch(() => ''))
-      )
-      const sources = deps.settings.list().map(p => `${p.name}${p.enabled ? '' : ' (off)'}`)
-      const header = [
-        `Chomusuke ${app.getVersion()} log, saved ${new Date().toISOString()}`,
-        `System: ${os.type()} ${os.release()} (${process.arch}), Electron ${process.versions.electron}`,
-        `Sources in search order: ${sources.join(', ')}`,
-        'Lines saying a source "returned no results" show which source found nothing, and for what.'
-      ]
-      await writeFile(picked.filePath, buildLogExport(header, files), 'utf8')
-      return { ok: true, path: picked.filePath }
-    } catch (err) {
-      log.error('couldn’t save the log:', err)
-      return { ok: false, error: 'Couldn’t save the log file.' }
-    }
+    const sources = deps.settings.list().map(p => `${p.name}${p.enabled ? '' : ' (off)'}`)
+    return saveLogFile(mainWindow, [`Sources in search order: ${sources.join(', ')}`])
+  })
+
+  // The window's page couldn't draw itself any more (see ErrorBoundary): tell the user and restart.
+  handle('crash:report', (event, details: unknown) => {
+    assertTrustedSender(event)
+    void handleCrash('window-error', typeof details === 'string' ? details.slice(0, MAX_MESSAGE) : undefined)
   })
 }

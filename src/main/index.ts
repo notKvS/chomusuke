@@ -1,6 +1,8 @@
 import { mkdir, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { app, BrowserWindow, safeStorage, session } from 'electron'
+import { handleCrash, watchForCrashes } from './crash.ts'
+import { isCrash } from './crash-info.ts'
 import { DiscordPresence } from './discord.ts'
 import { TorrentEngine } from './engine.ts'
 import { createArtistGenres } from './genres.ts'
@@ -37,6 +39,7 @@ import { type StreamServer, startStreamServer } from './stream-server.ts'
 import { Updater } from './updater.ts'
 
 const log = logger('app')
+watchForCrashes()
 log.info(
   `Chomusuke ${app.getVersion()} starting (${app.isPackaged ? 'installed' : 'from source'}) — Electron`,
   process.versions.electron,
@@ -329,7 +332,7 @@ app.whenReady().then(async () => {
   })
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
     log.error('window: renderer gone:', details.reason, `exit code ${details.exitCode}`)
-    if (details.reason !== 'clean-exit') mainWindow?.reload()
+    if (isCrash(details.reason)) void handleCrash('window-gone', `${details.reason}, exit code ${details.exitCode}`)
   })
   mainWindow.webContents.once('did-finish-load', () =>
     log.info(`window loaded ${Math.round(performance.now())} ms after launch`)

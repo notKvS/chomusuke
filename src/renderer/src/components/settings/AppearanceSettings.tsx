@@ -162,10 +162,12 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
         <p>Make Chomusuke yours. Every change applies instantly and is remembered.</p>
         <div className="appearance__actions">
           <button type="button" className="solid-button" onClick={() => replace(randomAppearance())}>
-            <Icon name="shuffle" size={18} /> Surprise me
+            <Icon name="shuffle" size={16} />
+            <span>Surprise me</span>
           </button>
           <button type="button" className="ghost-button" onClick={reset}>
-            <Icon name="reset" size={18} /> Reset
+            <Icon name="reset" size={16} />
+            <span>Reset</span>
           </button>
         </div>
       </div>

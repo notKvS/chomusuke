@@ -1,0 +1,23 @@
+@layer components {
+  /* What the window shows for a moment when it can't draw itself, until the crash dialog takes over. */
+  .crashed {
+    display: grid;
+    place-content: center;
+    gap: 8px;
+    height: 100vh;
+    padding: 24px;
+    text-align: center;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  .crashed h1 {
+    margin: 0;
+    font-size: 22px;
+  }
+
+  .crashed p {
+    margin: 0;
+    color: var(--text-2);
+  }
+}

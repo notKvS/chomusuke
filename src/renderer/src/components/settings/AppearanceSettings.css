@@ -15,7 +15,19 @@
 
   .appearance__actions {
     display: flex;
+    align-items: center;
+    justify-content: center;
     gap: 8px;
+  }
+
+  .solid-button,
+  .ghost-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    span {
+      margin-left: 10px;
+    }
   }
 
   .preset-grid {

@@ -58,6 +58,7 @@ const api: ChomusukeApi = {
   getLyrics: query => ipcRenderer.invoke('lyrics:get', query),
   openLogs: () => ipcRenderer.invoke('logs:open'),
   exportLogs: () => ipcRenderer.invoke('logs:export'),
+  reportCrash: details => ipcRenderer.invoke('crash:report', details),
   platform: process.platform,
   windowControl: action => ipcRenderer.invoke('window:control', action),
   isWindowMaximized: () => ipcRenderer.invoke('window:is-maximized'),

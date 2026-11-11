@@ -494,6 +494,8 @@ export interface ChomusukeApi {
   openLogs(): Promise<void>
   /** Shows a save dialog and writes the log (with a short header about the app and sources) to a text file; null when cancelled. */
   exportLogs(): Promise<SaveTorrentResult>
+  /** The window broke and can't draw itself: asks the main process to tell the user and restart the app. */
+  reportCrash(details: string): Promise<void>
 }
 
 export interface WindowAppearance {

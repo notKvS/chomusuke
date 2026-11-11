@@ -80,5 +80,5 @@ export function failureOf(result: unknown): string | undefined {
  * Scrubbed again here, so a line that was written before a secret pattern was known doesn't leave the computer.
  */
 export function buildLogExport(header: string[], files: string[]): string {
-  return [...header, '', ...files.filter(Boolean).map(scrub)].join('\n')
+  return [...header.map(scrub), '', ...files.filter(Boolean).map(scrub)].join('\n')
 }
