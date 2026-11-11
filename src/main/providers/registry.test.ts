@@ -266,7 +266,7 @@ test('findRelease tries the next match when one fails, and explains when nothing
   registry.setProviders([chartProvider()])
   await assert.rejects(
     registry.findRelease({ kind: 'album', title: 'Mayhem', artist: 'Lady Gaga' }),
-    /Turn on a provider/
+    /Turn on a plugin/
   )
 })
 

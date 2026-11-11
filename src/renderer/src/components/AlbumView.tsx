@@ -180,8 +180,8 @@ export function AlbumLoading({
     <div className="page album is-loading">
       <LoaderScene
         compact
-        title={finding ? 'Finding a torrent' : 'Loading'}
-        subtitle={[title ?? 'Opening torrent', artist].filter(Boolean).join(' — ')}
+        title={finding ? 'Finding your music' : 'Loading'}
+        subtitle={[title ?? 'Opening album', artist].filter(Boolean).join(' — ')}
       />
     </div>
   )
@@ -199,7 +199,7 @@ export function AlbumError({
   return (
     <div className="page error-page">
       <Sticker scene="album-error" size={200}>
-        <h1>Couldn't open that torrent</h1>
+        <h1>Couldn't open that album</h1>
         <p>{message}</p>
         <div className="error-page__actions">
           {onRetry && (

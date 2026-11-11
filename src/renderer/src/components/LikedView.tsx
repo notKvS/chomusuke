@@ -26,8 +26,9 @@ export function LikedView({
     <div className="page liked">
       <h1 className="search__title">Liked songs</h1>
       <p className="sources__lead">
-        Ratings follow the song, not the source: a song is remembered by its torrent and file, and also recognised by
-        artist and title in other releases. Disliked songs are skipped when an album plays on.
+        Ratings follow the song, not the source: a song is remembered by where it came from (a torrent file or a
+        plugin), and also recognised by artist and title in other releases and sources. Disliked songs are skipped when
+        an album plays on.
       </p>
 
       <div className="liked__toolbar">

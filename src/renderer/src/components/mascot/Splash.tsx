@@ -25,7 +25,7 @@ export function Splash() {
     // biome-ignore lint/a11y/noStaticElementInteractions: see above
     // biome-ignore lint/a11y/useKeyWithClickEvents: see above
     <div className={`splash ${phase === 'fade' ? 'is-fading' : ''}`} onClick={() => setPhase('fade')}>
-      <LoaderScene title="Chomusuke" subtitle="Torrent music, served with whiskers" />
+      <LoaderScene title="Chomusuke" subtitle="Music, served with whiskers" />
     </div>
   )
 }

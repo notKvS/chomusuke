@@ -69,7 +69,7 @@ export function useAlbumLoader({
       if (typeof autoplay === 'object') {
         const index = album.tracks.findIndex(t => t.key === autoplay.key)
         if (index >= 0) play(album, index)
-        else setToast("That song isn't in this torrent's playable files — here's the rest of the album.")
+        else setToast("That song isn't among this album's playable tracks — here's the rest of the album.")
       }
     },
     [addAlbum, navigate, play, setToast]

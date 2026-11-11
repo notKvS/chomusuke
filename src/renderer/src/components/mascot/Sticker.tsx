@@ -51,7 +51,7 @@ const SCENES: Record<Scene, { character: Character; mood: ChomuMood; lines: stri
     character: 'megumin',
     mood: 'dead',
     lines: [
-      'This torrent refused to load. If only I were allowed to blow it up instead…',
+      'This one refused to load. If only I were allowed to blow it up instead…',
       'A dud! It fizzled before the fun part. Let’s pick another one — preferably one that goes boom.'
     ]
   },

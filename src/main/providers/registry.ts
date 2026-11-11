@@ -228,7 +228,7 @@ export class ProviderRegistry {
     const providers = this.torrentProviders()
     const what = `“${wanted.title}” by ${wanted.artist}`
     if (providers.length === 0) {
-      throw new SourceError(`Turn on a provider (Settings → Sources) to play ${what}.`)
+      throw new SourceError(`Turn on a plugin (Settings → Plugins) to play ${what}.`)
     }
     log.info(`finding a release for the chart ${wanted.kind} ${what}`)
     let ranked: Candidate[] = []
@@ -258,7 +258,7 @@ export class ProviderRegistry {
     throw new SourceError(
       ranked.length > 0
         ? `Found ${what}, but couldn’t open it. Try again later.`
-        : `Couldn’t find ${what} on your providers. Turn on more in Settings → Sources, or search for it.`
+        : `Couldn’t find ${what} on your plugins. Turn on more in Settings → Plugins, or search for it.`
     )
   }
 

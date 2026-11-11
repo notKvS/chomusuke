@@ -183,9 +183,11 @@ export function usePlayer(
         patch({ isPlaying: false, isBuffering: false })
         const title = current()?.title ?? 'this track'
         log.error(`audio error on ${current()?.id}: code ${audio.error?.code}`, audio.error?.message ?? '')
-        onErrorRef.current(
-          `Couldn't play “${title}”. The format may be unsupported, or no peers are sharing it right now.`
-        )
+        const why =
+          queueRef.current.album?.source === 'http'
+            ? 'its source isn’t sending the audio right now'
+            : 'no peers are sharing it right now'
+        onErrorRef.current(`Couldn't play “${title}”. The format may be unsupported, or ${why}.`)
       }
     }
     for (const [name, handler] of Object.entries(handlers)) audio.addEventListener(name, handler)
@@ -204,7 +206,11 @@ export function usePlayer(
       const track = queueRef.current.album?.tracks[queueRef.current.index]
       const title = track?.title ?? 'This track'
       log.warn(`stalled: no data for ${STALL_MS / 1000} s on ${track?.id}, buffered to ${bufferedAhead(audio)} s`)
-      onErrorRef.current(`“${title}” is stuck — no peer is sharing that part of the torrent right now.`)
+      const why =
+        queueRef.current.album?.source === 'http'
+          ? 'its source has stopped sending the audio'
+          : 'no peer is sharing that part of the torrent'
+      onErrorRef.current(`“${title}” is stuck — ${why} right now.`)
     }, 2000)
     return () => clearInterval(timer)
   }, [state.isBuffering, state.index])

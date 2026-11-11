@@ -78,7 +78,7 @@ export async function toResult(library: SeedLibrary, work: () => Promise<Album>)
   } catch (err) {
     if (err instanceof SourceError) return { ok: false, error: err.message }
     log.error('unexpected load failure:', err)
-    return { ok: false, error: 'Something went wrong while loading this torrent.' }
+    return { ok: false, error: 'Something went wrong while loading this album.' }
   }
 }
 

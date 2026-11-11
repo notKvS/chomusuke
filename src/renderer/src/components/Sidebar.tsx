@@ -109,7 +109,7 @@ export function Sidebar({
                       {playingAlbum === album.infoHash && (
                         <Icon name="volume" size={12} className="sidebar-album__playing" />
                       )}
-                      {album.artist ?? 'Torrent'}
+                      {album.artist ?? 'Unknown artist'}
                     </span>
                   </span>
                 </button>

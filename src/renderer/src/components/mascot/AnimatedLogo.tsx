@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { Chomu } from './Chomu'
 import './AnimatedLogo.css'
 
-const NYAS = ['nya~', 'nyaa!', '♪ ♫ ♪', 'feed me seeders', '(=^･ω･^=)', 'boop!', 'more bass pls', 'nyan nyan']
+const NYAS = ['nya~', 'nyaa!', '♪ ♫ ♪', 'feed me songs', '(=^･ω･^=)', 'boop!', 'more bass pls', 'nyan nyan']
 
 /** Animated brand: Chomu's face (blinks, twitches, dances while music plays) + wordmark. Click for a quip. */
 export function AnimatedLogo({ playing, onHome }: { playing: boolean; onHome: () => void }) {

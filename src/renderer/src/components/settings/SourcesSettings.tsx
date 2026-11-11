@@ -149,8 +149,8 @@ export function PluginsSettings() {
     <div className="sources">
       <p className="sources__lead">
         Plugins are where Chomusuke finds music and plays it from. Search looks through all of them at once, and so does
-        playing an entry from a chart. Everything currently plays over BitTorrent, and only the songs you play are
-        downloaded.
+        playing an entry from a chart. Some plugins stream straight from a service; torrent plugins play over
+        BitTorrent, and only the songs you play are downloaded.
       </p>
       <ErrorLine error={error} />
 

@@ -4,16 +4,16 @@ import { rem } from '../../units'
 import './LoaderScene.css'
 
 const QUIPS = [
-  'Chomusuke is chasing seeders around the neighbourhood…',
-  'Negotiating with peers. They want grilled fish.',
-  'Untangling the torrent yarn ball…',
-  'Asking the DHT nicely. Very nicely.',
-  'Polishing the bits until they sparkle ✧',
-  'Downloading only the good parts…',
+  'Chomusuke is padding off to find your song…',
+  'Negotiating with the plugins. They want grilled fish.',
+  'Untangling the speaker cables…',
+  'Asking every source nicely. Very nicely.',
+  'Polishing the notes until they sparkle ✧',
+  'Fetching only the good parts…',
   'Charging an EXPLOSION-grade loading screen…',
-  'Feeding the hamsters that power the swarm…',
-  'Roasting a fish while the pieces arrive…',
-  'Consulting the ancient scroll of info hashes…'
+  'Feeding the hamsters that power the stereo…',
+  'Roasting a fish while the music arrives…',
+  'Consulting the ancient scroll of playlists…'
 ]
 
 const EMBERS = Array.from({ length: 18 }, (_, i) => ({

@@ -32,7 +32,7 @@ export type Options = Record<string, string | boolean>
 export type Paged<T> = T[] | { results: T[]; hasMore?: boolean }
 
 export interface ProviderPlugin {
-  /** Self-check for the Sources page; return true or throw an Error with a user-facing message. */
+  /** Self-check for the Plugins page; return true or throw an Error with a user-facing message. */
   test?(context: { options: Options }): Promise<true>
   /** `page` starts at 1 (and is 1 when omitted). */
   search(context: { query: string; page?: number; options: Options }): Promise<Paged<TorrentResult>>

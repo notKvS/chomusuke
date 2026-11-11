@@ -13,9 +13,9 @@ const GREETINGS: Array<[number, string, string]> = [
 ]
 const LINES = [
   'What are we vibing to today?',
-  'Chomusuke has warmed up the swarm for you.',
+  'Chomusuke has warmed up the speakers for you.',
   'Pick something. Chomusuke’s ears are ready.',
-  'Fresh seeds, crisp bits, zero ads. Nya.'
+  'Fresh tunes, crisp sound, zero ads. Nya.'
 ]
 
 function Hero() {
@@ -56,8 +56,8 @@ export function Home({ albums, onOpenAlbum, onOpenSearchAlbum }: Props) {
                 key={album.infoHash}
                 artwork={album.coverUrl}
                 title={album.title}
-                subtitle={<>Album • {album.artist ? <ArtistLink name={album.artist} /> : 'Torrent'}</>}
-                subtitleText={`Album • ${album.artist ?? 'Torrent'}`}
+                subtitle={<>Album • {album.artist ? <ArtistLink name={album.artist} /> : 'Unknown artist'}</>}
+                subtitleText={`Album • ${album.artist ?? 'Unknown artist'}`}
                 onOpen={autoplay => onOpenAlbum(album.infoHash, autoplay)}
               />
             ))}
