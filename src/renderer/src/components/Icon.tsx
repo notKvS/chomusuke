@@ -1,4 +1,5 @@
 // Icons from Lucide (ISC). Call sites use these names, so swapping an icon happens here only.
+
 import {
   ArrowLeft,
   ArrowRight,
@@ -49,6 +50,7 @@ import {
   VolumeX,
   X
 } from 'lucide-react'
+import { rem } from '../units'
 
 /** Each name's icon; `true` draws it filled (player controls, and a chosen like/dislike). */
 const ICONS = {
@@ -107,5 +109,5 @@ export type IconName = keyof typeof ICONS
 
 export function Icon({ name, size = 24, className }: { name: IconName; size?: number; className?: string }) {
   const [Glyph, filled] = ICONS[name] as [LucideIcon, true?]
-  return <Glyph className={className} size={size} fill={filled ? 'currentColor' : 'none'} aria-hidden="true" />
+  return <Glyph className={className} size={rem(size)} fill={filled ? 'currentColor' : 'none'} aria-hidden="true" />
 }

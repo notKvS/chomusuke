@@ -15,15 +15,15 @@
   }
 
   .torrent-panel {
-    margin-top: 32px;
-    padding: 20px 24px;
-    border: 1px solid var(--border);
+    margin-top: 2rem;
+    padding: 1.25rem 1.5rem;
+    border: 0.0625rem solid var(--border);
     border-radius: var(--radius);
     background: rgb(var(--surface-rgb) / 0.55);
   }
 
   .torrent-panel__empty {
-    margin-top: 32px;
+    margin-top: 2rem;
     color: var(--text-3);
   }
 
@@ -31,14 +31,14 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 18px;
+    gap: 0.625rem;
+    margin-bottom: 1.125rem;
   }
 
   .torrent-panel__actions button {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 0.375rem;
   }
 
   .torrent-panel__note {
@@ -48,7 +48,7 @@
   .torrent-panel__facts {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
-    gap: 6px 20px;
+    gap: 0.375rem 1.25rem;
     margin: 0;
   }
 
@@ -62,38 +62,38 @@
   }
 
   .torrent-panel__block {
-    margin-top: 20px;
+    margin-top: 1.25rem;
   }
 
   .torrent-panel__block h3 {
-    margin: 0 0 8px;
-    font-size: 15px;
+    margin: 0 0 0.5rem;
+    font-size: 0.9375rem;
   }
 
   .torrent-panel__trackers,
   .torrent-panel__files {
-    margin: 0 0 6px;
+    margin: 0 0 0.375rem;
     padding: 0;
     list-style: none;
   }
 
   .torrent-panel__trackers li {
-    padding: 2px 0;
+    padding: 0.125rem 0;
     overflow: hidden;
     color: var(--text-2);
     font-family: 'Cascadia Mono', Consolas, monospace;
-    font-size: 12px;
+    font-size: 0.75rem;
     white-space: nowrap;
     text-overflow: ellipsis;
   }
 
   .torrent-panel__files li {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 80px 120px;
+    grid-template-columns: minmax(0, 1fr) 5rem 7.5rem;
     align-items: center;
-    gap: 12px;
-    padding: 5px 0;
-    border-bottom: 1px solid rgb(var(--ink-rgb) / 0.05);
+    gap: 0.75rem;
+    padding: 0.3125rem 0;
+    border-bottom: 0.0625rem solid rgb(var(--ink-rgb) / 0.05);
   }
 
   .torrent-panel__files li.is-extra {
@@ -113,9 +113,9 @@
 
   .torrent-panel__progress {
     display: block;
-    height: 4px;
+    height: 0.25rem;
     overflow: hidden;
-    border-radius: 2px;
+    border-radius: 0.125rem;
     background: rgb(var(--ink-rgb) / 0.12);
   }
 

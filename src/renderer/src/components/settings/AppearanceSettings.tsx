@@ -19,6 +19,7 @@ import {
 import { encodeBackgroundImage, imagePixels, withImageFallback } from '../../theme/dom'
 import { paletteFromPixels } from '../../theme/imagePalette'
 import type { AppearanceControls } from '../../theme/useAppearance'
+import { rem } from '../../units'
 import { Range } from '../controls/Range'
 import { Segmented } from '../controls/Segmented'
 import { SettingField } from '../controls/SettingField'
@@ -275,7 +276,7 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
           </SettingField>
           {a.background === 'image' && (
             <>
-              <SettingField label="Image blur" value={`${a.backgroundBlur}px`}>
+              <SettingField label="Image blur" value={rem(a.backgroundBlur)}>
                 <Range
                   min={0}
                   max={40}
@@ -297,12 +298,12 @@ export function AppearanceSettings({ controls }: { controls: AppearanceControls 
           <SettingField label="Surface" hint="Glass and Frosted look best over Mesh, Starfield or your own image.">
             <Segmented labels={LABELS} options={SURFACES} value={a.surface} onChange={surface => update({ surface })} />
           </SettingField>
-          <SettingField label="Corner radius" value={`${a.radius}px`}>
+          <SettingField label="Corner radius" value={rem(a.radius)}>
             <Range min={0} max={28} value={a.radius} onChange={radius => update({ radius })} />
           </SettingField>
           {(a.surface === 'glass' || a.surface === 'frosted') && (
             <>
-              <SettingField label="Glass blur" value={`${a.glassBlur}px`}>
+              <SettingField label="Glass blur" value={rem(a.glassBlur)}>
                 <Range min={0} max={48} value={a.glassBlur} onChange={glassBlur => update({ glassBlur })} />
               </SettingField>
               <SettingField label="Glass opacity" value={`${a.glassOpacity}%`}>
@@ -488,8 +489,8 @@ function PresetCard({
 }) {
   const { tokens } = computeTheme(values)
   const preview: CSSProperties = {
-    background: `radial-gradient(120px 60px at 85% 110%, ${tokens['--accent']}55, transparent 70%), linear-gradient(135deg, ${tokens['--bg']}, ${tokens['--surface-raised']})`,
-    border: `1px solid ${tokens['--surface-raised']}`
+    background: `radial-gradient(7.5rem 3.75rem at 85% 110%, ${tokens['--accent']}55, transparent 70%), linear-gradient(135deg, ${tokens['--bg']}, ${tokens['--surface-raised']})`,
+    border: `0.0625rem solid ${tokens['--surface-raised']}`
   }
   return (
     <button type="button" className={`preset ${active ? 'is-active' : ''}`} onClick={onPick} aria-pressed={active}>

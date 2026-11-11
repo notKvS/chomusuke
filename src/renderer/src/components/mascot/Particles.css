@@ -28,24 +28,24 @@
   }
 
   .particles--fall .particle {
-    top: -40px;
+    top: -2.5rem;
     animation-name: particle-fall;
   }
 
   @keyframes particle-fall {
     to {
-      transform: translateY(calc(100vh + 80px));
+      transform: translateY(calc(100vh + 5rem));
     }
   }
 
   .particles--rise .particle {
-    bottom: -40px;
+    bottom: -2.5rem;
     animation-name: particle-rise;
   }
 
   @keyframes particle-rise {
     to {
-      transform: translateY(calc(-100vh - 80px));
+      transform: translateY(calc(-100vh - 5rem));
     }
   }
 
@@ -60,13 +60,13 @@
       transform: translate(0, 0);
     }
     33% {
-      transform: translate(60px, -40px);
+      transform: translate(3.75rem, -2.5rem);
     }
     66% {
-      transform: translate(20px, -90px);
+      transform: translate(1.25rem, -5.625rem);
     }
     100% {
-      transform: translate(-50px, -30px);
+      transform: translate(-3.125rem, -1.875rem);
     }
   }
 
@@ -79,13 +79,13 @@
       transform: translate(0, 0);
     }
     33% {
-      transform: translate(-70px, 30px);
+      transform: translate(-4.375rem, 1.875rem);
     }
     66% {
-      transform: translate(-20px, 80px);
+      transform: translate(-1.25rem, 5rem);
     }
     100% {
-      transform: translate(50px, 20px);
+      transform: translate(3.125rem, 1.25rem);
     }
   }
 
@@ -103,10 +103,10 @@
 
   @keyframes sway-spin {
     from {
-      transform: translateX(-30px) rotate(0deg);
+      transform: translateX(-1.875rem) rotate(0deg);
     }
     to {
-      transform: translateX(40px) rotate(220deg);
+      transform: translateX(2.5rem) rotate(220deg);
     }
   }
 
@@ -124,10 +124,10 @@
 
   @keyframes sway {
     from {
-      transform: translateX(-18px);
+      transform: translateX(-1.125rem);
     }
     to {
-      transform: translateX(18px);
+      transform: translateX(1.125rem);
     }
   }
 
@@ -145,10 +145,10 @@
 
   @keyframes tumble {
     from {
-      transform: translateX(-40px) rotate(-30deg) scaleX(1);
+      transform: translateX(-2.5rem) rotate(-30deg) scaleX(1);
     }
     to {
-      transform: translateX(40px) rotate(320deg) scaleX(0.6);
+      transform: translateX(2.5rem) rotate(320deg) scaleX(0.6);
     }
   }
 
@@ -171,7 +171,7 @@
   }
 
   .particles--bubbles .particle__body {
-    border: 1.5px solid rgb(var(--accent-soft-rgb) / 0.9);
+    border: 0.0938rem solid rgb(var(--accent-soft-rgb) / 0.9);
     border-radius: 50%;
     background:
       radial-gradient(circle at 32% 30%, rgb(255 255 255 / 0.9) 0 10%, transparent 18%),
@@ -190,11 +190,11 @@
   @keyframes flicker {
     from {
       opacity: 0.35;
-      transform: translateX(-10px) scale(0.8);
+      transform: translateX(-0.625rem) scale(0.8);
     }
     to {
       opacity: 1;
-      transform: translateX(10px) scale(1.15);
+      transform: translateX(0.625rem) scale(1.15);
     }
   }
 
@@ -212,10 +212,10 @@
 
   @keyframes rock {
     from {
-      transform: translateX(-14px) rotate(-14deg);
+      transform: translateX(-0.875rem) rotate(-14deg);
     }
     to {
-      transform: translateX(14px) rotate(14deg);
+      transform: translateX(0.875rem) rotate(14deg);
     }
   }
 

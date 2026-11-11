@@ -384,10 +384,12 @@ function SourceRow({ provider, leading, description, note, onToggle, onTest, onE
           Test
         </button>
       )}
-      {onEdit && (
+      {onEdit ? (
         <button type="button" className="icon-button" onClick={onEdit} aria-label={`Edit ${provider.name}`}>
           <Icon name="edit" size={20} />
         </button>
+      ) : (
+        onTest && <span className="source-row__slot" aria-hidden="true" />
       )}
       {onRemove && (
         <button type="button" className="icon-button" onClick={onRemove} aria-label={`Remove ${provider.name}`}>

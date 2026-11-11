@@ -1,6 +1,8 @@
 // The Appearance model: every look-and-feel setting, the built-in themes, validation of saved/imported
 // settings, and the translation into CSS custom properties + data attributes (written to <html> by dom.ts and
 // used by theme.css). No DOM access here, so it runs in unit tests.
+
+import { rem } from '../units.ts'
 import { channels, hexToRgb, hslToRgb, isHex, mix, onColor, type Rgb, rgbToHex, rgbToHsl } from './color.ts'
 
 /** `amoled` is dark mode on pure black (pixels off on OLED screens). */
@@ -335,7 +337,7 @@ const FONT_STACKS: Record<Appearance['font'], [body: string, display: string]> =
   ]
 }
 
-const BUTTON_RADII: Record<Appearance['buttonShape'], string> = { pill: '999px', rounded: '12px', square: '4px' }
+const BUTTON_RADII: Record<Appearance['buttonShape'], string> = { pill: rem(999), rounded: rem(12), square: rem(4) }
 
 const WHITE: Rgb = [255, 255, 255]
 const BLACK: Rgb = [0, 0, 0]
@@ -401,21 +403,21 @@ export function computeTheme(a: Appearance): ThemeOutput {
     '--gradient': `linear-gradient(120deg, ${rgbToHex(accent)} 0%, ${rgbToHex(gradientMid)} 55%, ${rgbToHex(gradientEnd)} 100%)`,
     '--glow':
       glow > 0
-        ? `0 0 ${Math.round(24 * glow)}px rgb(${channels(accent)} / ${Math.min(0.8, 0.35 * glow).toFixed(2)})`
+        ? `0 0 ${rem(Math.round(24 * glow))} rgb(${channels(accent)} / ${Math.min(0.8, 0.35 * glow).toFixed(2)})`
         : 'none',
     // The "Glow" button style: a bigger two-colour halo, scaled by the same slider.
     '--glow-strong':
       glow > 0
-        ? `0 0 ${Math.round(16 * glow)}px rgb(${channels(accent)} / ${Math.min(0.9, 0.6 * glow).toFixed(2)}), ` +
-          `0 0 ${Math.round(40 * glow)}px rgb(${channels(accent2)} / ${Math.min(0.7, 0.35 * glow).toFixed(2)})`
+        ? `0 0 ${rem(Math.round(16 * glow))} rgb(${channels(accent)} / ${Math.min(0.9, 0.6 * glow).toFixed(2)}), ` +
+          `0 0 ${rem(Math.round(40 * glow))} rgb(${channels(accent2)} / ${Math.min(0.7, 0.35 * glow).toFixed(2)})`
         : 'none',
-    '--radius': `${a.radius}px`,
+    '--radius': rem(a.radius),
     '--btn-radius': BUTTON_RADII[a.buttonShape],
     '--font-body': FONT_STACKS[a.font][0],
     '--font-display': FONT_STACKS[a.font][1],
     '--panel-alpha': (surfaceAlpha / 100).toFixed(2),
-    '--panel-blur': `${Math.round(surfaceBlur)}px`,
-    '--bg-blur': `${a.backgroundBlur}px`,
+    '--panel-blur': rem(Math.round(surfaceBlur)),
+    '--bg-blur': rem(a.backgroundBlur),
     '--bg-dim': (a.backgroundDim / 100).toFixed(2)
   }
 

@@ -4,16 +4,16 @@
     overflow: hidden;
     width: 100%;
     height: 100%;
-    min-height: 320px;
-    border-radius: 24px;
+    min-height: 20rem;
+    border-radius: 1.5rem;
     background: #000;
     isolation: isolate;
   }
 
   .loader-scene.is-compact {
-    height: min(62vh, 520px);
-    border: 1px solid rgba(255, 190, 70, 0.25);
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
+    height: min(62vh, 32.5rem);
+    border: 0.0625rem solid rgba(255, 190, 70, 0.25);
+    box-shadow: 0 1.875rem 3.75rem rgba(0, 0, 0, 0.45);
   }
 
   .loader-scene__art {
@@ -68,10 +68,10 @@
 
   .loader-scene__embers span {
     position: absolute;
-    bottom: -10px;
+    bottom: -0.625rem;
     border-radius: 50%;
     background: radial-gradient(circle, #fff3c4, #ffb347 60%, transparent 70%);
-    box-shadow: 0 0 8px #ffb347;
+    box-shadow: 0 0 0.5rem #ffb347;
     animation-name: ember-rise;
     animation-timing-function: ease-out;
     animation-iteration-count: infinite;
@@ -87,7 +87,7 @@
     }
     100% {
       opacity: 0;
-      transform: translate(40px, -70vh) scale(0.4);
+      transform: translate(2.5rem, -70vh) scale(0.4);
     }
   }
 
@@ -97,30 +97,30 @@
     right: 0;
     bottom: 6%;
     text-align: center;
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85);
+    text-shadow: 0 0.125rem 0.75rem rgba(0, 0, 0, 0.85);
   }
 
   .loader-scene__title {
     margin: 0;
     color: #ffd25c;
     font-family: var(--font-display);
-    font-size: clamp(26px, 4vw, 44px);
+    font-size: clamp(1.625rem, 4vw, 2.75rem);
     font-weight: 800;
-    letter-spacing: 6px;
+    letter-spacing: 0.375rem;
   }
 
   .is-compact .loader-scene__title {
-    font-size: 28px;
+    font-size: 1.75rem;
   }
 
   .loader-scene__subtitle {
-    margin: 4px 0 0;
+    margin: 0.25rem 0 0;
     color: #ffe2a8;
     font-weight: 700;
   }
 
   .loader-scene__quip {
-    margin: 6px 0 0;
+    margin: 0.375rem 0 0;
     color: var(--text-2);
     animation: quip-in 0.5s ease-out;
   }
@@ -128,20 +128,20 @@
   @keyframes quip-in {
     from {
       opacity: 0;
-      transform: translateY(6px);
+      transform: translateY(0.375rem);
     }
   }
 
   .loader-dots {
     display: inline-flex;
-    gap: 5px;
-    margin-left: 6px;
+    gap: 0.3125rem;
+    margin-left: 0.375rem;
     vertical-align: middle;
   }
 
   .loader-dots i {
-    width: 8px;
-    height: 8px;
+    width: 0.5rem;
+    height: 0.5rem;
     border-radius: 50%;
     background: #ffb347;
     animation: dot-hop 1s ease-in-out infinite;
@@ -154,7 +154,7 @@
       transform: translateY(0);
     }
     30% {
-      transform: translateY(-8px);
+      transform: translateY(-0.5rem);
     }
   }
 

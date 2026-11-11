@@ -4,42 +4,42 @@
     grid-column: 1 / -1;
     grid-row: 3;
     display: grid;
-    grid-template-columns: minmax(240px, 1fr) minmax(0, 1.6fr) minmax(240px, 1fr);
+    grid-template-columns: minmax(15rem, 1fr) minmax(0, 1.6fr) minmax(15rem, 1fr);
     align-items: center;
-    gap: 16px;
-    padding: 0 16px 0 8px;
+    gap: 1rem;
+    padding: 0 1rem 0 0.5rem;
     z-index: 3;
-    margin: 0 12px 12px;
-    border: 1px solid rgb(var(--tint-rgb) / 0.14);
-    border-radius: 22px;
+    margin: 0 0.75rem 0.75rem;
+    border: 0.0625rem solid rgb(var(--tint-rgb) / 0.14);
+    border-radius: 1.375rem;
     background: rgb(var(--surface-rgb) / 0.85);
-    backdrop-filter: blur(16px);
-    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(1rem);
+    box-shadow: 0 -0.5rem 1.875rem rgba(0, 0, 0, 0.35);
   }
 
   .progress {
     position: absolute;
-    top: -7px;
+    top: -0.4375rem;
     display: flex;
     align-items: center;
-    height: 14px;
+    height: 0.875rem;
     z-index: 1;
-    left: 22px;
-    right: 22px;
+    left: 1.375rem;
+    right: 1.375rem;
   }
 
   .progress__track {
     position: relative;
     width: 100%;
-    height: 2px;
+    height: 0.125rem;
     background: rgb(var(--ink-rgb) / 0.1);
     transition: height 0.1s;
-    border-radius: 4px;
+    border-radius: 0.25rem;
     overflow: visible;
   }
 
   .progress:hover .progress__track {
-    height: 4px;
+    height: 0.25rem;
   }
 
   .progress__buffered,
@@ -55,9 +55,9 @@
 
   .progress__played {
     width: var(--played);
-    border-radius: 4px;
+    border-radius: 0.25rem;
     background: var(--gradient);
-    box-shadow: 0 0 10px rgb(var(--accent-rgb) / 0.6);
+    box-shadow: 0 0 0.625rem rgb(var(--accent-rgb) / 0.6);
   }
 
   /* A small picture riding the bar (see PlayerBar.tsx); it grows a little on hover and bobs while playing. */
@@ -65,17 +65,17 @@
     position: absolute;
     top: 50%;
     left: var(--played);
-    width: 30px;
-    height: 30px;
+    width: 1.875rem;
+    height: 1.875rem;
     transform: translate(-50%, -50%);
     pointer-events: none;
   }
 
   /* The plain dot: shown only while the bar is hovered, like a classic seek bar. */
   .progress__thumb--dot {
-    width: 16px;
-    height: 16px;
-    border: 3px solid #fff;
+    width: 1rem;
+    height: 1rem;
+    border: 0.1875rem solid #fff;
     border-radius: 50%;
     background: var(--accent);
     transform: translate(-50%, -50%) scale(0);
@@ -91,7 +91,7 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
-    filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.45));
+    filter: drop-shadow(0 0.125rem 0.25rem rgb(0 0 0 / 0.45));
     transition: transform 0.12s;
   }
 
@@ -109,10 +109,10 @@
 
   @keyframes thumb-bob {
     from {
-      transform: translateY(1px) rotate(-6deg);
+      transform: translateY(0.0625rem) rotate(-6deg);
     }
     to {
-      transform: translateY(-2px) rotate(6deg);
+      transform: translateY(-0.125rem) rotate(6deg);
     }
   }
 
@@ -133,19 +133,19 @@
   .player__controls {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 0.25rem;
   }
 
   .player__play {
     position: relative;
-    width: 52px;
-    height: 52px;
+    width: 3.25rem;
+    height: 3.25rem;
   }
 
   .player__time {
-    margin-left: 12px;
+    margin-left: 0.75rem;
     color: var(--text-2);
-    font-size: 12px;
+    font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
@@ -154,10 +154,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 16px;
+    gap: 1rem;
     min-width: 0;
-    padding: 4px 8px;
-    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
   }
 
   .player__now:hover {
@@ -165,7 +165,7 @@
   }
 
   .player__now .cover {
-    border-radius: 3px;
+    border-radius: 0.1875rem;
   }
 
   .player__now-cover {
@@ -193,7 +193,7 @@
   .player__title {
     display: block;
     max-width: 100%;
-    font-size: 15px;
+    font-size: 0.9375rem;
     font-weight: 500;
     font-family: var(--font-display);
   }
@@ -206,15 +206,15 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 16px;
+    gap: 1rem;
   }
 
   .player__swarm {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 0.375rem;
     color: var(--text-3);
-    font-size: 12px;
+    font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
@@ -222,28 +222,28 @@
   .volume {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 0.25rem;
   }
 
   .volume input {
-    width: 96px;
-    height: 4px;
+    width: 6rem;
+    height: 0.25rem;
     margin: 0;
-    border-radius: 2px;
+    border-radius: 0.125rem;
     appearance: none;
     cursor: pointer;
     background: linear-gradient(to right, var(--accent) var(--level), rgb(var(--ink-rgb) / 0.2) var(--level));
   }
 
   .volume input::-webkit-slider-thumb {
-    width: 12px;
-    height: 12px;
+    width: 0.75rem;
+    height: 0.75rem;
     border-radius: 50%;
     appearance: none;
     background: var(--text);
   }
 
-  @media (max-width: 1100px) {
+  @media (max-width: 68.75rem) {
     .player__swarm {
       display: none;
     }
@@ -256,8 +256,8 @@
   .player__mascot {
     display: grid;
     place-items: center;
-    width: 46px;
-    height: 46px;
+    width: 2.875rem;
+    height: 2.875rem;
     flex: none;
   }
 

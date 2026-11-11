@@ -3,32 +3,32 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
+    gap: 0.875rem;
     text-align: center;
   }
 
   .sticker__stage {
     display: flex;
     align-items: center;
-    gap: 18px;
-    max-width: 640px;
+    gap: 1.125rem;
+    max-width: 40rem;
   }
 
   .sticker__art {
     flex: none;
     width: auto;
-    max-width: 240px;
+    max-width: 15rem;
     object-fit: contain;
-    filter: drop-shadow(0 10px 24px rgb(0 0 0 / 0.35));
+    filter: drop-shadow(0 0.625rem 1.5rem rgb(0 0 0 / 0.35));
     animation: chomu-float 3.6s ease-in-out infinite;
   }
 
   .sticker__bubble {
     position: relative;
     margin: 0;
-    padding: 14px 18px;
-    border: 1px solid rgb(var(--accent-rgb) / 0.35);
-    border-radius: 18px 18px 18px 4px;
+    padding: 0.875rem 1.125rem;
+    border: 0.0625rem solid rgb(var(--accent-rgb) / 0.35);
+    border-radius: 1.125rem 1.125rem 1.125rem 0.25rem;
     background: rgb(var(--surface-raised-rgb) / 0.9);
     box-shadow: var(--glow);
     text-align: left;
@@ -37,30 +37,30 @@
 
   .sticker__bubble::before {
     position: absolute;
-    bottom: 14px;
-    left: -8px;
-    width: 14px;
-    height: 14px;
-    border-bottom: 1px solid rgb(var(--accent-rgb) / 0.35);
-    border-left: 1px solid rgb(var(--accent-rgb) / 0.35);
+    bottom: 0.875rem;
+    left: -0.5rem;
+    width: 0.875rem;
+    height: 0.875rem;
+    border-bottom: 0.0625rem solid rgb(var(--accent-rgb) / 0.35);
+    border-left: 0.0625rem solid rgb(var(--accent-rgb) / 0.35);
     background: rgb(var(--surface-raised-rgb) / 0.9);
     content: '';
     transform: rotate(45deg);
   }
 
   .sticker__name {
-    margin-bottom: 4px;
+    margin-bottom: 0.25rem;
     color: var(--accent);
     font-family: var(--font-display);
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 800;
-    letter-spacing: 1px;
+    letter-spacing: 0.0625rem;
   }
 
   .sticker__bubble blockquote {
     margin: 0;
     color: var(--text);
-    font-size: 15px;
+    font-size: 0.9375rem;
     line-height: 1.45;
   }
 

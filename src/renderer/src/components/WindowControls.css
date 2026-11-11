@@ -9,8 +9,8 @@
   .window-controls button {
     display: grid;
     place-items: center;
-    width: 46px;
-    height: 36px;
+    width: 2.875rem;
+    height: 2.25rem;
     border: 0;
     background: transparent;
     color: var(--text);

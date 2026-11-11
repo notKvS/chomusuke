@@ -1,27 +1,27 @@
 @layer components {
   .liked__list {
-    margin: 24px 0 0;
+    margin: 1.5rem 0 0;
     padding: 0;
     list-style: none;
   }
 
   .liked-song {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 64px;
+    grid-template-columns: minmax(0, 1fr) 4rem;
     grid-auto-columns: auto;
     grid-auto-flow: column;
     align-items: center;
-    gap: 12px;
-    border-bottom: 1px solid var(--border);
+    gap: 0.75rem;
+    border-bottom: 0.0625rem solid var(--border);
   }
 
   .liked-song__play {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 0.875rem;
     min-width: 0;
-    padding: 10px 8px;
-    border-radius: 10px;
+    padding: 0.625rem 0.5rem;
+    border-radius: 0.625rem;
   }
 
   .liked-song__play:hover {
@@ -46,14 +46,14 @@
   }
 
   .liked-song__date {
-    width: 100px;
+    width: 6.25rem;
   }
 
   .liked-song__sub,
   .liked-song__duration,
   .liked-song__date {
     color: var(--text-3);
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .liked-song.is-current .liked-song__title {
@@ -63,14 +63,14 @@
   .liked__toolbar {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 14px;
+    gap: 0.5rem;
+    margin-bottom: 0.875rem;
   }
 
   .liked__toolbar .solid-button {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 0.375rem;
   }
 
   .liked-song:has(.playlist-menu),

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import scene from '../../assets/mascot/chomusuke-fire-scene.jpg'
+import { rem } from '../../units'
 import './LoaderScene.css'
 
 const QUIPS = [
@@ -49,8 +50,8 @@ export function LoaderScene({ title = 'Loading', subtitle, compact = false }: Pr
             key={ember.id}
             style={{
               left: `${ember.left}%`,
-              width: ember.size,
-              height: ember.size,
+              width: rem(ember.size),
+              height: rem(ember.size),
               animationDelay: `${ember.delay}s`,
               animationDuration: `${ember.duration}s`
             }}

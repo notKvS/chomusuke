@@ -12,6 +12,7 @@ import sleepyArt from '../../assets/mascot/chomusuke-sleepy.png'
 import sleepyFace from '../../assets/mascot/chomusuke-sleepy-face.png'
 import squintArt from '../../assets/mascot/chomusuke-squint.png'
 import squintFace from '../../assets/mascot/chomusuke-squint-face.png'
+import { rem } from '../../units'
 import './Chomu.css'
 
 /**
@@ -60,7 +61,7 @@ export function Chomu({ mood = 'idle', size = 160, className = '', dancing = fal
   return (
     <span
       className={`chomu chomu--${mood} ${awake ? 'is-awake' : 'is-calm'} ${dancing ? 'is-dancing' : ''} ${headOnly ? 'is-head' : ''} ${className}`}
-      style={{ width: size, height: headOnly ? size : size * 1.19 }}
+      style={{ width: rem(size), height: rem(headOnly ? size : size * 1.19) }}
       {...(title ? { role: 'img', 'aria-label': title } : { 'aria-hidden': true })}
     >
       <img className="chomu__art" src={headOnly ? face : full} alt="" draggable={false} />

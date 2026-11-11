@@ -3,20 +3,20 @@
     grid-column: 1 / -1;
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 1.5rem;
     /* The window buttons sit flush against the right edge (see WindowControls). */
-    padding: 0 0 0 16px;
-    border-bottom: 1px solid transparent;
+    padding: 0 0 0 1rem;
+    border-bottom: 0.0625rem solid transparent;
     -webkit-app-region: drag;
     position: relative;
     z-index: 3;
     background: linear-gradient(180deg, rgb(var(--bg-rgb) / 0.96), rgb(var(--bg-rgb) / 0.75));
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(0.75rem);
   }
 
   /* macOS: the traffic lights are inset on the left and there are no buttons on the right. */
   .topbar--mac {
-    padding: 0 16px 0 84px;
+    padding: 0 1rem 0 5.25rem;
   }
 
   .source-form {
@@ -24,14 +24,14 @@
     position: relative;
     display: flex;
     align-items: center;
-    flex: 0 1 560px;
-    padding: 0 4px 0 12px;
+    flex: 0 1 35rem;
+    padding: 0 0.25rem 0 0.75rem;
     transition:
       background 0.15s,
       border-color 0.15s;
-    height: 42px;
-    border: 1px solid rgb(var(--tint-rgb) / 0.18);
-    border-radius: 21px;
+    height: 2.625rem;
+    border: 0.0625rem solid rgb(var(--tint-rgb) / 0.18);
+    border-radius: 1.3125rem;
     background: rgb(var(--surface-raised-rgb) / 0.55);
   }
 
@@ -50,11 +50,11 @@
     flex: 1;
     min-width: 0;
     height: 100%;
-    margin-left: 12px;
+    margin-left: 0.75rem;
     border: 0;
     outline: none;
     font: inherit;
-    font-size: 15px;
+    font-size: 0.9375rem;
     color: var(--text);
     background: transparent;
     user-select: text;
@@ -66,14 +66,14 @@
 
   .history-nav {
     display: flex;
-    gap: 4px;
+    gap: 0.25rem;
     -webkit-app-region: no-drag;
   }
 
   .history-nav .icon-button {
-    width: 36px;
-    height: 36px;
-    border: 1px solid rgb(var(--tint-rgb) / 0.16);
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 0.0625rem solid rgb(var(--tint-rgb) / 0.16);
     border-radius: 50%;
     background: rgb(var(--surface-raised-rgb) / 0.45);
   }

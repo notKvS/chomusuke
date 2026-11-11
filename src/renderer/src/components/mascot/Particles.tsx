@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { Appearance } from '../../theme/appearance'
+import { rem } from '../../units'
 import './Particles.css'
 
 // Decorative particles drifting behind the whole app: sakura petals, snow, leaves and more. Each particle is an outer
@@ -72,9 +73,9 @@ export function Particles({ kind, count }: { kind: Kind; count: number }) {
             className={`particle__body v${p.variant}`}
             style={{
               // Notes are text, sized by font; the rest are shapes.
-              width: p.glyph ? undefined : p.size,
-              height: p.glyph ? undefined : kind === 'sakura' ? p.size * 0.8 : p.size,
-              fontSize: p.glyph ? p.size : undefined,
+              width: p.glyph ? undefined : rem(p.size),
+              height: p.glyph ? undefined : rem(kind === 'sakura' ? p.size * 0.8 : p.size),
+              fontSize: p.glyph ? rem(p.size) : undefined,
               animationDelay: `${p.delay}s`,
               animationDuration: `${p.inner}s`
             }}

@@ -9,46 +9,46 @@
   }
 
   .add-to-playlist__button {
-    width: 34px;
-    height: 34px;
+    width: 2.125rem;
+    height: 2.125rem;
     color: var(--text-3);
   }
 
   .playlist-menu {
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + 0.375rem);
     right: 0;
     z-index: 20;
     display: flex;
     flex-direction: column;
-    min-width: 230px;
-    max-height: 320px;
-    padding: 6px;
+    min-width: 14.375rem;
+    max-height: 20rem;
+    padding: 0.375rem;
     overflow-y: auto;
-    border: 1px solid var(--border);
-    border-radius: 14px;
+    border: 0.0625rem solid var(--border);
+    border-radius: 0.875rem;
     background: var(--surface-raised);
-    box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+    box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 0.45);
   }
 
   .add-to-playlist.is-up .playlist-menu {
     top: auto;
-    bottom: calc(100% + 10px);
+    bottom: calc(100% + 0.625rem);
   }
 
   .playlist-menu__title {
-    margin: 4px 8px 6px;
+    margin: 0.25rem 0.5rem 0.375rem;
     color: var(--text-3);
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 700;
   }
 
   .playlist-menu__item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px;
-    border-radius: 8px;
+    gap: 0.625rem;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
     text-align: left;
   }
 
@@ -65,19 +65,19 @@
   .playlist-menu__new {
     display: flex;
     align-items: center;
-    gap: 4px;
-    margin-top: 4px;
-    padding-top: 6px;
-    border-top: 1px solid var(--border);
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+    padding-top: 0.375rem;
+    border-top: 0.0625rem solid var(--border);
   }
 
   .playlist-menu__new input {
     flex: 1;
     min-width: 0;
-    height: 32px;
-    padding: 0 10px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
+    height: 2rem;
+    padding: 0 0.625rem;
+    border: 0.0625rem solid var(--border);
+    border-radius: 0.5rem;
     color: var(--text);
     background: var(--bg);
     font: inherit;
@@ -86,8 +86,8 @@
   .playlist-menu__done {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin: 8px;
+    gap: 0.375rem;
+    margin: 0.5rem;
     color: var(--text-2);
   }
 }

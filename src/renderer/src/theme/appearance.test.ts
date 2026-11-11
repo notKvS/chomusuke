@@ -24,8 +24,8 @@ test('the default theme reproduces the original palette', () => {
   const { tokens, attributes } = computeTheme(DEFAULT_APPEARANCE)
   assert.equal(tokens['--accent'], '#ff5c8a')
   assert.equal(tokens['--accent-rgb'], '255 92 138')
-  assert.equal(tokens['--btn-radius'], '999px')
-  assert.equal(tokens['--radius'], '16px')
+  assert.equal(tokens['--btn-radius'], '62.4375rem')
+  assert.equal(tokens['--radius'], '1rem')
   assert.equal(attributes['data-surface'], 'classic')
   // Background stays a deep violet close to the hand-picked #0d0a1a.
   const [r, g, b] = hexToRgb(tokens['--bg'])
@@ -52,7 +52,7 @@ test('AMOLED mode puts readable text on pure black', () => {
 test('glow 0 turns glows off; frosted is stronger than glass', () => {
   assert.equal(computeTheme({ ...DEFAULT_APPEARANCE, glow: 0 }).tokens['--glow'], 'none')
   assert.equal(computeTheme({ ...DEFAULT_APPEARANCE, glow: 0 }).tokens['--glow-strong'], 'none')
-  assert.match(computeTheme(DEFAULT_APPEARANCE).tokens['--glow-strong'], /^0 0 16px .*, 0 0 40px /)
+  assert.match(computeTheme(DEFAULT_APPEARANCE).tokens['--glow-strong'], /^0 0 1rem .*, 0 0 2.5rem /)
   const glass = computeTheme({ ...DEFAULT_APPEARANCE, surface: 'glass' }).tokens
   const frosted = computeTheme({ ...DEFAULT_APPEARANCE, surface: 'frosted' }).tokens
   assert.ok(Number(frosted['--panel-alpha']) > Number(glass['--panel-alpha']))
@@ -77,9 +77,9 @@ test('sanitizeAppearance keeps valid values and repairs the rest', () => {
   assert.equal(clean.surface, DEFAULT_APPEARANCE.surface)
   assert.equal(clean.font, 'serif')
   assert.equal(clean.particles, DEFAULT_APPEARANCE.particles)
-  assert.equal(clean.seekThumb, 'blindfold')
+  assert.equal(clean.seekThumb, DEFAULT_APPEARANCE.seekThumb)
   assert.equal(sanitizeAppearance({ seekThumb: 'dot' }).seekThumb, 'dot')
-  assert.equal(sanitizeAppearance({ seekThumb: 'rocket' }).seekThumb, 'blindfold')
+  assert.equal(sanitizeAppearance({ seekThumb: 'rocket' }).seekThumb, DEFAULT_APPEARANCE.seekThumb)
   assert.equal('extra' in clean, false)
   assert.deepEqual(sanitizeAppearance('not json'), DEFAULT_APPEARANCE)
   assert.equal(sanitizeAppearance({ accent: 'red; background: url(x)' }).accent, DEFAULT_APPEARANCE.accent)

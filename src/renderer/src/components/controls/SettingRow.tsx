@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react'
 
-/** A setting as one row: bold title and a hint on the left, the control on the right. `off` dims it. */
+/**
+ * A setting as one row: bold title and a hint on the left, the control(s) on the right. `off` dims it. Several buttons
+ * sit side by side and wrap under each other in a narrow window; the text takes the rest of the width.
+ */
 export function SettingRow({
   title,
   hint,
@@ -14,11 +17,11 @@ export function SettingRow({
 }) {
   return (
     <div className={`sharing__row ${off ? 'is-off' : ''}`}>
-      <span>
+      <span className="sharing__text">
         <strong>{title}</strong>
         <small>{hint}</small>
       </span>
-      {children}
+      <div className="sharing__control">{children}</div>
     </div>
   )
 }

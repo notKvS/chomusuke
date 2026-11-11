@@ -1,13 +1,13 @@
 @layer components {
   .backup__actions {
     display: flex;
-    gap: 10px;
-    margin-bottom: 12px;
+    gap: 0.625rem;
+    margin-bottom: 0.75rem;
   }
 
   .backup__actions button {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 0.375rem;
   }
 }

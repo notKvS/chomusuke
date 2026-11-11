@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from 'react'
+import { rem } from '../../units'
 import { Chomu, type ChomuMood } from './Chomu'
 import './Sticker.css'
 
@@ -102,7 +103,13 @@ export function Sticker({ scene, size = 180, children }: { scene: Scene; size?: 
     <div className={`sticker sticker--${character}`}>
       <div className="sticker__stage">
         {art ? (
-          <img className="sticker__art" src={art} alt={NAMES[character]} style={{ height: size }} draggable={false} />
+          <img
+            className="sticker__art"
+            src={art}
+            alt={NAMES[character]}
+            style={{ height: rem(size) }}
+            draggable={false}
+          />
         ) : (
           <Chomu mood={mood} size={size * 0.8} />
         )}

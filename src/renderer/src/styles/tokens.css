@@ -36,20 +36,24 @@
     --gold: #ffd25c;
     --ok: #6ee7b7;
     --gradient: linear-gradient(120deg, #ff5c8a 0%, #c86bff 55%, #6b8cff 100%);
-    --glow: 0 0 24px rgb(var(--accent-rgb) / 0.35);
-    --glow-strong: 0 0 16px rgb(var(--accent-rgb) / 0.6), 0 0 40px rgb(var(--accent-2-rgb) / 0.35);
-    --radius: 16px;
-    --btn-radius: 999px;
-    --sidebar-width: 248px;
-    --sidebar-collapsed-width: 80px;
-    --topbar-height: 68px;
-    --player-height: 80px;
+    --glow: 0 0 1.5rem rgb(var(--accent-rgb) / 0.35);
+    --glow-strong: 0 0 1rem rgb(var(--accent-rgb) / 0.6), 0 0 2.5rem rgb(var(--accent-2-rgb) / 0.35);
+    --radius: 1rem;
+    --btn-radius: 62.4375rem;
+    /* How wide the text-and-control rows of Settings (and their intro text) run, so every tab ends at the same edge. */
+    --settings-measure: 52rem;
+    --sidebar-width: 15.5rem;
+    --sidebar-collapsed-width: 5rem;
+    --topbar-height: 4.25rem;
+    --player-height: 5rem;
     --font-body: 'Nunito', 'M PLUS Rounded 1c', 'Segoe UI', system-ui, sans-serif;
     --font-display: 'M PLUS Rounded 1c', 'Nunito', system-ui, sans-serif;
 
     color-scheme: dark;
     font-family: var(--font-body);
-    font-size: 14px;
+    /* The root stays at the browser default, so 1rem is the size the user chose (16px at 100%); the text size below is
+       set on the body. */
+    font-size: 100%;
     color: var(--text);
     background: var(--bg);
     -webkit-font-smoothing: antialiased;
