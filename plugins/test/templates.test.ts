@@ -35,6 +35,10 @@ import torrentdownloads, {
   parseListing as parseTorrentDownloads,
   MIRRORS as TORRENTDOWNLOADS_MIRRORS
 } from '../src/torrentdownloads.ts'
+import torrentgalaxy, {
+  parseListing as parseTorrentGalaxy,
+  MIRRORS as TORRENTGALAXY_MIRRORS
+} from '../src/torrentgalaxy.ts'
 
 /** The results of a search, whether or not the plugin pages them. */
 const list = async <T>(paged: Promise<Paged<T>>): Promise<T[]> => {
@@ -738,6 +742,124 @@ describe('TorrentDownloads', () => {
 
   it('declares its mirror list', () => {
     assert.deepEqual(TORRENTDOWNLOADS_MIRRORS, ['www.torrentdownloads.pro'])
+  })
+})
+
+// TorrentGalaxy's markup below is written from the upstream qBittorrent engine's regexes, not copied from the site.
+const TGX_ROW = (id: number, name: string, size: string, seeders: string, leechers: string) =>
+  `<div class="tgxtablerow txlight">
+  <div class="tgxtablecell"><a class="txlight" title="x"><b>${name}</b></a></div>
+  <div class="tgxtablecell"><a href="/post-detail/${id}/adele-30/">Details</a></div>
+  <div class="tgxtablecell"><span>${size}</span></div>
+  <div class="tgxtablecell"><font color="green"><b>${seeders}</b></font> / <font color="#ff0000"><b>${leechers}</b></font></div>
+  <table><tr><td>x</td></tr></table>
+</div>`
+const TGX_LISTING = `<html><body><div class="tgxtable">
+${TGX_ROW(1, 'Adele - 30 (2021) [FLAC]', '1.2 GB', '1,234', '123')}
+${TGX_ROW(2, 'Rock &amp; <i>Roll</i> Hits', '700.5 MB', '9', '0')}
+</div></body></html>`
+const TGX_MAGNET_PAGE = `<html><a href="magnet:?xt=urn:btih:${HASH}&amp;dn=Adele">Magnet</a></html>`
+const TGX_ITORRENTS_PAGE = `<html><a href="https://itorrents.org/torrent/${HASH2.toUpperCase()}.torrent?title=x">Download</a></html>`
+
+function stubTorrentGalaxy(listing: string, second = TGX_ITORRENTS_PAGE): void {
+  stub([
+    [/torrentgalaxy\.one\/get-posts\//, html(listing)],
+    [/torrentgalaxy\.one\/post-detail\/1\//, html(TGX_MAGNET_PAGE)],
+    [/torrentgalaxy\.one\/post-detail\/2\//, html(second)],
+    [/torrentgalaxy\.one\/post-detail\/\d+\//, html(TGX_MAGNET_PAGE)]
+  ])
+}
+
+describe('TorrentGalaxy', () => {
+  it('parses both rows: path, clean name, size in bytes, seeders and leechers', () => {
+    const rows = parseTorrentGalaxy(TGX_LISTING)
+    assert.equal(rows.length, 2)
+    assert.deepEqual(rows[0], {
+      path: '/post-detail/1/adele-30/',
+      name: 'Adele - 30 (2021) [FLAC]',
+      size: Math.round(1.2 * 1024 ** 3),
+      seeders: 1234,
+      leechers: 123
+    })
+    assert.equal(rows[1].name, 'Rock & Roll Hits')
+    assert.equal(rows[1].path, '/post-detail/2/adele-30/')
+    assert.equal(rows[1].seeders, 9)
+    assert.equal(rows[1].leechers, 0)
+    assert.equal(parseTorrentGalaxy('<html>nothing here</html>').length, 0)
+  })
+
+  it('fetches the listing, then each row detail page in order', async () => {
+    stubTorrentGalaxy(TGX_LISTING)
+    const paged = await torrentgalaxy.search({ query: 'adele', options: {} })
+    assert.deepEqual(
+      requests.map(r => r.url),
+      [
+        'https://torrentgalaxy.one/get-posts/keywords:adele:category:Music/?page=1',
+        'https://torrentgalaxy.one/post-detail/1/adele-30/',
+        'https://torrentgalaxy.one/post-detail/2/adele-30/'
+      ]
+    )
+    assert.ok(!Array.isArray(paged))
+    assert.equal(paged.hasMore, true)
+    assert.equal(paged.results.length, 2)
+    assert.equal(paged.results[0].link, `magnet:?xt=urn:btih:${HASH}&dn=Adele`)
+    assert.match(
+      paged.results[1].link ?? '',
+      new RegExp(`^magnet:\\?xt=urn:btih:${HASH2}&dn=Rock%20%26%20Roll%20Hits&tr=`)
+    )
+    assert.equal(paged.results[0].artist, 'Adele')
+    assert.equal(paged.results[0].leechers, 123)
+    assert.equal(paged.results[0].seeders, 1234)
+    assert.equal(paged.results[1].title, 'Rock & Roll Hits')
+  })
+
+  it('drops a row whose detail page has no download link', async () => {
+    stubTorrentGalaxy(TGX_LISTING, '<html>No download here</html>')
+    const paged = await torrentgalaxy.search({ query: 'adele', options: {} })
+    assert.ok(!Array.isArray(paged))
+    assert.equal(paged.results.length, 1)
+    assert.equal(paged.results[0].link, `magnet:?xt=urn:btih:${HASH}&dn=Adele`)
+  })
+
+  it('looks up at most the top 10 rows', async () => {
+    const many = Array.from({ length: 12 }, (_, i) => TGX_ROW(10 + i, `Album ${i}`, '1 MB', '1', '1')).join('')
+    stubTorrentGalaxy(many)
+    const paged = await torrentgalaxy.search({ query: 'adele', options: {} })
+    assert.ok(!Array.isArray(paged))
+    assert.equal(requests.length, 11)
+    assert.equal(paged.results.length, 10)
+  })
+
+  it('requests page 2, stops at page 20 and skips blank queries', async () => {
+    stubTorrentGalaxy(TGX_LISTING)
+    await torrentgalaxy.search({ query: 'adele', page: 2, options: {} })
+    assert.equal(requests[0].url, 'https://torrentgalaxy.one/get-posts/keywords:adele:category:Music/?page=2')
+    const last = await torrentgalaxy.search({ query: 'adele', page: 20, options: {} })
+    assert.ok(!Array.isArray(last))
+    assert.equal(last.hasMore, false)
+    requests.length = 0
+    assert.deepEqual(await torrentgalaxy.search({ query: '  ', options: {} }), [])
+    assert.equal(requests.length, 0)
+  })
+
+  it('has no more pages, and fetches no detail pages, when the listing has no rows', async () => {
+    stubTorrentGalaxy('<html><body>No results</body></html>')
+    const paged = await torrentgalaxy.search({ query: 'adele', options: {} })
+    assert.ok(!Array.isArray(paged))
+    assert.equal(paged.hasMore, false)
+    assert.deepEqual(paged.results, [])
+    assert.equal(requests.length, 1)
+  })
+
+  it('self-test fails when the page has no torrents', async () => {
+    stub([[/torrentgalaxy\.one/, html('<html>redesigned</html>')]])
+    await assert.rejects(torrentgalaxy.test?.({ options: {} }), /no torrents/)
+    stubTorrentGalaxy(TGX_LISTING)
+    assert.equal(await torrentgalaxy.test?.({ options: {} }), true)
+  })
+
+  it('declares its mirror list', () => {
+    assert.deepEqual(TORRENTGALAXY_MIRRORS, ['torrentgalaxy.one'])
   })
 })
 

@@ -598,6 +598,18 @@
   },
   {
     "manifestVersion": 1,
+    "id": "torrentgalaxy",
+    "name": "TorrentGalaxy",
+    "description": "Template, off by default: enable it in Plugins and press Test. Music from TorrentGalaxy (scraped).",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "torrentgalaxy.js",
+    "enabledByDefault": false,
+    "hosts": ["torrentgalaxy.one"],
+    "layout": "list"
+  },
+  {
+    "manifestVersion": 1,
     "id": "audius",
     "name": "Audius",
     "description": "Independent artists on Audius, played straight from the service (no torrent).",

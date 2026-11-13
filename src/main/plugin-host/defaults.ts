@@ -29,6 +29,7 @@ import spotifyCharts from '../../../plugins/dist/spotify-charts.js?raw'
 import thePirateBay from '../../../plugins/dist/the-pirate-bay.js?raw'
 import torrentdownload from '../../../plugins/dist/torrentdownload.js?raw'
 import torrentdownloads from '../../../plugins/dist/torrentdownloads.js?raw'
+import torrentgalaxy from '../../../plugins/dist/torrentgalaxy.js?raw'
 import youtubeMusic from '../../../plugins/dist/youtube-music.js?raw'
 import youtubeMusicCharts from '../../../plugins/dist/youtube-music-charts.js?raw'
 import repository from '../../../plugins/index.json?raw'
@@ -61,6 +62,7 @@ const CODE: Record<string, string> = {
   'the-pirate-bay.js': thePirateBay,
   'torrentdownload.js': torrentdownload,
   'torrentdownloads.js': torrentdownloads,
+  'torrentgalaxy.js': torrentgalaxy,
   'youtube-music-charts.js': youtubeMusicCharts,
   'youtube-music.js': youtubeMusic
 }
