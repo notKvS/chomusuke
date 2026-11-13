@@ -79,6 +79,8 @@ export interface SharingSettings {
   discordStatus: boolean
   /** Let the DevTools shortcuts work in the installed app (always on when running from source). */
   developerTools: boolean
+  /** Download new versions in the background (off: ask first). Only where the app can install updates itself. */
+  autoUpdate: boolean
 }
 
 /** A song that was played, as remembered for Home's suggestions. */
@@ -367,13 +369,15 @@ export type UpdateStatus =
   | { state: 'downloading'; version: string; percent: number }
   /** Downloaded: restarting installs it (so does quitting). */
   | { state: 'ready'; version: string }
-  /** This copy can't install it itself (macOS, Windows zip, .deb): download it from its release page. */
+  /** Out but not downloaded: automatic updates are off, or this copy can't install it itself (see `selfUpdate`). */
   | { state: 'available'; version: string }
   | { state: 'error'; message: string }
 
 export interface UpdateState {
   currentVersion: string
   status: UpdateStatus
+  /** Downloads and installs updates itself (Windows installer, AppImage); elsewhere "Download" opens the release page. */
+  selfUpdate: boolean
 }
 
 /** One line of a song's lyrics: `time` (seconds) is set when the lyrics are synced. */
@@ -480,8 +484,8 @@ export interface ChomusukeApi {
   checkForUpdates(): Promise<UpdateState>
   /** Quits (finishing up as usual) and installs the downloaded update, then reopens. */
   installUpdate(): Promise<void>
-  /** Opens the new version's release page in the browser. */
-  openUpdatePage(): Promise<void>
+  /** Downloads the new version in the background, or opens its release page where the app can't install it itself. */
+  downloadUpdate(): Promise<void>
   onUpdateState(listener: (state: UpdateState) => void): () => void
   /** The OS ("win32", "darwin", "linux"): Windows and Linux get window buttons drawn by the top bar. */
   platform: string

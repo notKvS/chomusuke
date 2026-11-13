@@ -31,10 +31,12 @@ test('sharing is on by default and only accepts known values', () => {
       streamCacheGB: 5,
       uploadLimitKBps: 512,
       discordStatus: true,
-      developerTools: false
+      developerTools: false,
+      autoUpdate: true
     }
   )
   assert.equal(sanitizeSharing({ developerTools: true }).developerTools, true)
+  assert.equal(sanitizeSharing({ autoUpdate: false }).autoUpdate, false)
   assert.equal(sanitizeSharing({ uploadLimitKBps: 3 }).uploadLimitKBps, 0)
   assert.equal(sanitizeSharing({ streamCacheGB: 999 }).streamCacheGB, DEFAULT_SHARING.streamCacheGB)
 })

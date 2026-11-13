@@ -315,7 +315,7 @@ app.whenReady().then(async () => {
   updater = new Updater(state => {
     const contents = mainWindow?.webContents
     if (contents && !contents.isDestroyed()) contents.send('update:state', state)
-  })
+  }, library.sharing.autoUpdate)
   registerIpc(
     torrents,
     httpSource,

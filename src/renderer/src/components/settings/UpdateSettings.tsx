@@ -6,7 +6,7 @@ import { SettingRow } from '../controls/SettingRow'
 import { type Status, StatusLine } from '../controls/StatusLine'
 import { Switch } from '../controls/Switch'
 
-function describe(status: UpdateStatus): Status | null {
+function describe(status: UpdateStatus, selfUpdate: boolean): Status | null {
   switch (status.state) {
     case 'off':
       return { kind: 'ok', text: 'Running from source: updates are off.' }
@@ -21,7 +21,10 @@ function describe(status: UpdateStatus): Status | null {
     case 'ready':
       return { kind: 'ok', text: `${status.version} is downloaded. Restart to update (or it installs when you quit).` }
     case 'available':
-      return { kind: 'ok', text: `${status.version} is out. Download it from its release page.` }
+      return {
+        kind: 'ok',
+        text: selfUpdate ? `${status.version} is out.` : `${status.version} is out. Download it from its release page.`
+      }
     case 'error':
       return { kind: 'error', text: status.message }
   }
@@ -34,22 +37,27 @@ export function UpdateSettings() {
   const [logLine, setLogLine] = useState<Status | null>(null)
   if (!update) return null
   const { status } = update
-  const line = describe(status)
+  const line = describe(status, update.selfUpdate)
   const busy = status.state === 'off' || status.state === 'checking' || status.state === 'downloading'
+  const autoUpdate = update.selfUpdate && (library?.sharing.autoUpdate ?? true)
 
   return (
     <section className="shelf">
       <div className="sharing">
         <SettingRow
           title={`Chomusuke ${update.currentVersion}`}
-          hint="New versions are checked for when the app opens and every few hours, and downloaded in the background."
+          hint={
+            autoUpdate
+              ? 'New versions are checked for when the app opens and every few hours, and downloaded in the background.'
+              : 'New versions are checked for when the app opens and every few hours. You choose whether to download them.'
+          }
         >
           {status.state === 'ready' ? (
             <button type="button" className="pill-button" onClick={() => void window.chomusuke.installUpdate()}>
               Restart now
             </button>
           ) : status.state === 'available' ? (
-            <button type="button" className="pill-button" onClick={() => void window.chomusuke.openUpdatePage()}>
+            <button type="button" className="pill-button" onClick={() => void window.chomusuke.downloadUpdate()}>
               Download
             </button>
           ) : (
@@ -65,6 +73,20 @@ export function UpdateSettings() {
         </SettingRow>
       </div>
       {line && <StatusLine status={line} as="p" />}
+      {library && update.selfUpdate && (
+        <div className="sharing">
+          <SettingRow
+            title="Automatic updates"
+            hint="Download new versions in the background. Off: you're asked first, and “Later” skips that version for 7 days."
+          >
+            <Switch
+              checked={library.sharing.autoUpdate}
+              label="Automatic updates"
+              onChange={autoUpdate => void window.chomusuke.setSharing({ ...library.sharing, autoUpdate }).then(apply)}
+            />
+          </SettingRow>
+        </div>
+      )}
       {library && (
         <div className="sharing">
           <SettingRow

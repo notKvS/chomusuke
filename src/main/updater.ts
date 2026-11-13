@@ -1,5 +1,6 @@
 // Updating from GitHub releases: checks at launch and every few hours; where this copy can replace itself it downloads
-// in the background and asks to restart, elsewhere it only says a new version is out (see update-mode.ts).
+// (in the background, or when asked if automatic updates are off) and asks to restart, elsewhere it only says a new
+// version is out (see update-mode.ts).
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { app, shell } from 'electron'
@@ -18,7 +19,8 @@ export class Updater {
   private restartPending = false
   private readonly onChange: (state: UpdateState) => void
 
-  constructor(onChange: (state: UpdateState) => void) {
+  /** `autoUpdate`: download new versions without asking (the `autoUpdate` setting). */
+  constructor(onChange: (state: UpdateState) => void, autoUpdate: boolean) {
     this.onChange = onChange
     this.mode = updateMode({
       isPackaged: app.isPackaged,
@@ -32,12 +34,15 @@ export class Updater {
     if (this.mode === 'off') return
 
     const { autoUpdater } = electronUpdater
-    autoUpdater.autoDownload = this.mode === 'auto'
+    autoUpdater.autoDownload = this.mode === 'auto' && autoUpdate
+    // Applies only once an update is downloaded, so also to one downloaded on request.
     autoUpdater.autoInstallOnAppQuit = this.mode === 'auto'
     autoUpdater.on('checking-for-update', () => this.set({ state: 'checking' }))
     autoUpdater.on('update-not-available', () => this.set({ state: 'up-to-date' }))
     autoUpdater.on('update-available', ({ version }) =>
-      this.set(this.mode === 'auto' ? { state: 'downloading', version, percent: 0 } : { state: 'available', version })
+      this.set(
+        autoUpdater.autoDownload ? { state: 'downloading', version, percent: 0 } : { state: 'available', version }
+      )
     )
     autoUpdater.on('download-progress', ({ percent }) => {
       if (this.status.state === 'downloading') this.set({ ...this.status, percent: Math.round(percent) })
@@ -57,7 +62,14 @@ export class Updater {
   }
 
   current(): UpdateState {
-    return { currentVersion: app.getVersion(), status: this.status }
+    return { currentVersion: app.getVersion(), status: this.status, selfUpdate: this.mode === 'auto' }
+  }
+
+  /** The `autoUpdate` setting changed; turning it on downloads a version that is waiting to be asked for. */
+  setAutoUpdate(on: boolean): void {
+    if (this.mode !== 'auto') return
+    electronUpdater.autoUpdater.autoDownload = on
+    if (on) this.download()
   }
 
   async check(): Promise<UpdateState> {
@@ -84,8 +96,17 @@ export class Updater {
     app.quit()
   }
 
-  openReleasePage(): void {
-    if (this.status.state === 'available') void shell.openExternal(releasePageUrl(this.status.version))
+  /** "Download": fetches the new version in the background where this copy can install it, else opens its release page. */
+  download(): void {
+    if (this.status.state !== 'available') return
+    const { version } = this.status
+    if (this.mode !== 'auto') {
+      void shell.openExternal(releasePageUrl(version))
+      return
+    }
+    this.set({ state: 'downloading', version, percent: 0 })
+    // Failures also arrive as the 'error' event, which sets the status.
+    electronUpdater.autoUpdater.downloadUpdate().catch(() => undefined)
   }
 
   private set(status: UpdateStatus): void {

@@ -18,8 +18,8 @@ export function register(deps: IpcDeps): void {
     assertTrustedSender(event)
     if (updater.requestRestart()) app.quit()
   })
-  handle('update:open-page', event => {
+  handle('update:download', event => {
     assertTrustedSender(event)
-    updater.openReleasePage()
+    updater.download()
   })
 }

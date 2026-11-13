@@ -87,7 +87,7 @@ async function toLibraryResponse(
 
 /** Saved albums, what was streamed, and the sharing (seeding) settings. */
 export function register(deps: IpcDeps): void {
-  const { assertTrustedSender, torrents, library, presence } = deps
+  const { assertTrustedSender, torrents, library, presence, updater } = deps
   handle('library:get', (event): LibraryView => {
     assertTrustedSender(event)
     return libraryView(library, torrents)
@@ -135,6 +135,7 @@ export function register(deps: IpcDeps): void {
       applySharing(library, torrents)
       const after = library.sharing
       presence.setEnabled(after.discordStatus)
+      updater.setAutoUpdate(after.autoUpdate)
       // Turning seeding on starts it now rather than at the next launch.
       const seeds = (s: typeof after) => [s.enabled && s.seedLibrary, s.enabled && s.seedStreamed]
       const [keptNow, streamedNow] = seeds(after)
