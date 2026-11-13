@@ -574,6 +574,18 @@
   },
   {
     "manifestVersion": 1,
+    "id": "torrentdownload",
+    "name": "TorrentDownload",
+    "description": "Template, off by default: enable it in Plugins and press Test. Music from TorrentDownload (scraped).",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "torrentdownload.js",
+    "enabledByDefault": false,
+    "hosts": ["www.torrentdownload.info"],
+    "layout": "list"
+  },
+  {
+    "manifestVersion": 1,
     "id": "audius",
     "name": "Audius",
     "description": "Independent artists on Audius, played straight from the service (no torrent).",

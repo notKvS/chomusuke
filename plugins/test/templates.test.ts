@@ -26,6 +26,10 @@ import rutracker, {
 } from '../src/rutracker.ts'
 import type { Paged } from '../src/sdk.ts'
 import thePirateBay from '../src/the-pirate-bay.ts'
+import torrentdownload, {
+  parseListing as parseTorrentDownload,
+  MIRRORS as TORRENTDOWNLOAD_MIRRORS
+} from '../src/torrentdownload.ts'
 
 /** The results of a search, whether or not the plugin pages them. */
 const list = async <T>(paged: Promise<Paged<T>>): Promise<T[]> => {
@@ -513,6 +517,88 @@ describe('GloTorrents', () => {
 
   it('declares its mirror list', () => {
     assert.deepEqual(GLOTORRENTS_MIRRORS, ['glodls.to'])
+  })
+})
+
+// TorrentDownload's markup below is written from the upstream qBittorrent engine's regexes, not copied from the site.
+const TD_ROW = (
+  hash: string,
+  name: string,
+  category: string,
+  size: string,
+  seeders: string,
+  leechers: string
+) => `<tr><td class="tdleft"><div class="tt-name"><a href="/${hash}/adele-30">${name}</a>
+  <span class="smallish"> ${category}</span></div></td>
+  <td class="tdnormal">2 years</td>
+  <td class="tdnormal">${size}</td>
+  <td class="tdseed">${seeders}</td>
+  <td class="tdleech">${leechers}</td></tr>`
+const TD_HASH3 = 'c'.repeat(40)
+const TD_LISTING = `<html><body><table><tr><th>Name</th></tr>
+${TD_ROW(HASH.toUpperCase(), 'Adele - 30 (2021) [FLAC]', '&raquo; Music', '1.2 GB', '1,234', '56')}
+${TD_ROW(HASH2, '<b>Rock</b> &amp; Roll Hits', '» Audio » Lossless', '700.5 MB', '9', '0')}
+${TD_ROW(TD_HASH3, 'Adele Live Movie', '&raquo; Movies', '4 GB', '5', '1')}
+<tr><td>not a torrent row</td></tr></table></body></html>`
+
+describe('TorrentDownload', () => {
+  it('parses rows: names, hash, category, size in bytes, seeders and leechers', () => {
+    const rows = parseTorrentDownload(TD_LISTING)
+    assert.equal(rows.length, 3)
+    assert.deepEqual(rows[0], {
+      name: 'Adele - 30 (2021) [FLAC]',
+      hash: HASH.toUpperCase(),
+      category: 'Music',
+      size: Math.round(1.2 * 1024 ** 3),
+      seeders: 1234,
+      leechers: 56
+    })
+    assert.equal(rows[1].name, 'Rock & Roll Hits')
+    assert.equal(rows[1].category, 'Audio » Lossless')
+    assert.equal(rows[2].category, 'Movies')
+    assert.equal(parseTorrentDownload('<html>nothing here</html>').length, 0)
+  })
+
+  it('keeps only music rows, builds magnets, and offers more pages', async () => {
+    stub([[/torrentdownload\.info\/search/, html(TD_LISTING)]])
+    const paged = await torrentdownload.search({ query: 'adele', options: {} })
+    assert.deepEqual(
+      requests.map(r => r.url),
+      ['https://www.torrentdownload.info/search?q=adele&p=1']
+    )
+    assert.ok(!Array.isArray(paged))
+    // Three rows parsed, the Movies one dropped, yet there may be more pages.
+    assert.equal(paged.hasMore, true)
+    assert.equal(paged.results.length, 2)
+    assert.match(paged.results[0].link ?? '', new RegExp(`^magnet:\\?xt=urn:btih:${HASH}&dn=`))
+    assert.match(paged.results[1].link ?? '', new RegExp(`^magnet:\\?xt=urn:btih:${HASH2}&dn=`))
+    assert.equal(paged.results[0].artist, 'Adele')
+    assert.deepEqual(paged.results[0].tags, ['FLAC'])
+    assert.equal(paged.results[0].seeders, 1234)
+    assert.equal(paged.results[1].title, 'Rock & Roll Hits')
+  })
+
+  it('requests page 2, stops at page 20 and skips blank queries', async () => {
+    stub([[/torrentdownload\.info\/search/, html(TD_LISTING)]])
+    await torrentdownload.search({ query: 'adele', page: 2, options: {} })
+    assert.equal(requests[0].url, 'https://www.torrentdownload.info/search?q=adele&p=2')
+    const last = await torrentdownload.search({ query: 'adele', page: 20, options: {} })
+    assert.ok(!Array.isArray(last))
+    assert.equal(last.hasMore, false)
+    requests.length = 0
+    assert.deepEqual(await torrentdownload.search({ query: '  ', options: {} }), [])
+    assert.equal(requests.length, 0)
+  })
+
+  it('self-test fails when the page has no torrents', async () => {
+    stub([[/torrentdownload\.info/, html('<html>redesigned</html>')]])
+    await assert.rejects(torrentdownload.test?.({ options: {} }), /no torrents/)
+    stub([[/torrentdownload\.info/, html(TD_LISTING)]])
+    assert.equal(await torrentdownload.test?.({ options: {} }), true)
+  })
+
+  it('declares its mirror list', () => {
+    assert.deepEqual(TORRENTDOWNLOAD_MIRRORS, ['www.torrentdownload.info'])
   })
 })
 

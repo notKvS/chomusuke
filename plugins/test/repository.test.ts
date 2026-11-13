@@ -10,6 +10,7 @@ import { MIRRORS as GLOTORRENTS_MIRRORS } from '../src/glotorrents.ts'
 import { MIRRORS as LIME_MIRRORS } from '../src/limetorrents.ts'
 import { MIRRORS as RUTOR_MIRRORS } from '../src/rutor.ts'
 import { MIRRORS as RUTRACKER_MIRRORS } from '../src/rutracker.ts'
+import { MIRRORS as TORRENTDOWNLOAD_MIRRORS } from '../src/torrentdownload.ts'
 
 const root = path.join(import.meta.dirname, '..')
 const raw = JSON.parse(readFileSync(path.join(root, 'index.json'), 'utf8'))
@@ -23,7 +24,8 @@ const TEMPLATES = [
   'rutracker',
   'rutor',
   'bitsearch',
-  'glotorrents'
+  'glotorrents',
+  'torrentdownload'
 ]
 
 test('bundled manifests are valid and have sources', () => {
@@ -46,4 +48,5 @@ test('mirror lists in code match the hosts the sandbox allows', () => {
   assert.deepEqual(hosts('rutor'), RUTOR_MIRRORS)
   assert.deepEqual(hosts('bitsearch'), BITSEARCH_MIRRORS)
   assert.deepEqual(hosts('glotorrents'), GLOTORRENTS_MIRRORS)
+  assert.deepEqual(hosts('torrentdownload'), TORRENTDOWNLOAD_MIRRORS)
 })
