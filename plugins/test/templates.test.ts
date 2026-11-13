@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
 import x1337x, { parseListing as parse1337x, parseMagnet } from '../src/1337x.ts'
 import bitsearch, { MIRRORS as BITSEARCH_MIRRORS, parseListing as parseBitSearch } from '../src/bitsearch.ts'
+import btEtree, { MIRRORS as BTETREE_MIRRORS, parseListing as parseBtEtree } from '../src/bt-etree.ts'
 import glotorrents, { MIRRORS as GLOTORRENTS_MIRRORS, parseListing as parseGloTorrents } from '../src/glotorrents.ts'
 import knaben from '../src/knaben.ts'
 import {
@@ -860,6 +861,79 @@ describe('TorrentGalaxy', () => {
 
   it('declares its mirror list', () => {
     assert.deepEqual(TORRENTGALAXY_MIRRORS, ['torrentgalaxy.one'])
+  })
+})
+
+// bt.etree's markup below is written from the upstream qBittorrent engine's regexes, not copied from the site.
+const BE_ROW = (
+  id: string,
+  name: string,
+  href: string,
+  size: string,
+  seeders: string,
+  leechers: string
+) => `<tr align="right" bgcolor="#ffffff">
+  <td align="left"><a class="details_link" href="details.php?id=${id}"><b>${name}</b></a></td>
+  <td><a href="${href}"><img src="dl.png"></a></td>
+  <td>${size}</td>
+  <td class="seeders">${seeders}</td>
+  <td class="leechers">${leechers}</td></tr>`
+const BE_LISTING = `<html><body><table><tr><th>Name</th></tr>
+${BE_ROW('1', 'Phish 1999-12-31 [FLAC]', 'download.php/1/Phish 1999.torrent', '1.2 GB', '1,234', '56')}
+${BE_ROW('2', 'Rock &amp; <i>Roll</i> Hits', 'download.php/2/rock.torrent', '700.5 MB', '9', '0')}
+<tr><td>not a torrent row</td></tr></table></body></html>`
+
+describe('bt.etree', () => {
+  it('parses rows: names, download href, size in bytes, seeders and leechers', () => {
+    const rows = parseBtEtree(BE_LISTING)
+    assert.equal(rows.length, 2)
+    assert.deepEqual(rows[0], {
+      name: 'Phish 1999-12-31 [FLAC]',
+      download: 'download.php/1/Phish 1999.torrent',
+      size: Math.round(1.2 * 1024 ** 3),
+      seeders: 1234,
+      leechers: 56
+    })
+    assert.equal(rows[1].name, 'Rock & Roll Hits')
+    assert.equal(rows[1].size, Math.round(700.5 * 1024 ** 2))
+    assert.equal(parseBtEtree('<html>nothing here</html>').length, 0)
+  })
+
+  it('links to the percent-encoded .torrent on the site and pages by row offset', async () => {
+    stub([[/bt\.etree\.org\/index\.php/, html(BE_LISTING)]])
+    const paged = await btEtree.search({ query: 'phish', options: {} })
+    assert.deepEqual(
+      requests.map(r => r.url),
+      ['https://bt.etree.org/index.php?searchzzzz=phish&cat=0&page=0']
+    )
+    assert.ok(!Array.isArray(paged))
+    assert.equal(paged.hasMore, true)
+    assert.equal(paged.results.length, 2)
+    assert.equal(paged.results[0].link, 'https://bt.etree.org/download.php/1/Phish%201999.torrent')
+    assert.equal(paged.results[0].seeders, 1234)
+    await btEtree.search({ query: 'phish', page: 3, options: {} })
+    assert.match(requests[1].url, /&page=100$/)
+  })
+
+  it('stops at page 20 and skips blank queries', async () => {
+    stub([[/bt\.etree\.org/, html(BE_LISTING)]])
+    const last = await btEtree.search({ query: 'phish', page: 20, options: {} })
+    assert.ok(!Array.isArray(last))
+    assert.equal(last.hasMore, false)
+    requests.length = 0
+    assert.deepEqual(await btEtree.search({ query: '  ', options: {} }), [])
+    assert.equal(requests.length, 0)
+  })
+
+  it('self-test fails when the page has no torrents', async () => {
+    stub([[/bt\.etree\.org/, html('<html>redesigned</html>')]])
+    await assert.rejects(btEtree.test?.({ options: {} }), /no torrents/)
+    stub([[/bt\.etree\.org/, html(BE_LISTING)]])
+    assert.equal(await btEtree.test?.({ options: {} }), true)
+  })
+
+  it('declares its mirror list', () => {
+    assert.deepEqual(BTETREE_MIRRORS, ['bt.etree.org'])
   })
 })
 

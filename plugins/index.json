@@ -610,6 +610,18 @@
   },
   {
     "manifestVersion": 1,
+    "id": "bt-etree",
+    "name": "bt.etree (live concerts)",
+    "description": "Template, off by default: enable it in Plugins and press Test. Live concert recordings from bt.etree (scraped).",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "bt-etree.js",
+    "enabledByDefault": false,
+    "hosts": ["bt.etree.org"],
+    "layout": "list"
+  },
+  {
+    "manifestVersion": 1,
     "id": "audius",
     "name": "Audius",
     "description": "Independent artists on Audius, played straight from the service (no torrent).",

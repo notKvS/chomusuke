@@ -9,6 +9,7 @@ import x1337x from '../../../plugins/dist/1337x.js?raw'
 import appleMusicCharts from '../../../plugins/dist/apple-music-charts.js?raw'
 import audius from '../../../plugins/dist/audius.js?raw'
 import bitsearch from '../../../plugins/dist/bitsearch.js?raw'
+import btEtree from '../../../plugins/dist/bt-etree.js?raw'
 
 import freeMusicArchive from '../../../plugins/dist/free-music-archive.js?raw'
 import glotorrents from '../../../plugins/dist/glotorrents.js?raw'
@@ -43,6 +44,7 @@ const CODE: Record<string, string> = {
   'apple-music-charts.js': appleMusicCharts,
   'audius.js': audius,
   'bitsearch.js': bitsearch,
+  'bt-etree.js': btEtree,
   'free-music-archive.js': freeMusicArchive,
   'glotorrents.js': glotorrents,
   'great-78.js': great78,
