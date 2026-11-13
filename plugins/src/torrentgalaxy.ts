@@ -4,6 +4,7 @@
 
 import {
   cleanQuery,
+  decodeEntities,
   detailMagnet,
   getText,
   mapLimit,
@@ -17,7 +18,6 @@ import type { ProviderPlugin } from './sdk.ts'
 /** Must match "hosts" in index.json. */
 export const MIRRORS = ['torrentgalaxy.one']
 const SITE = 'TorrentGalaxy'
-const MAX_PAGES = 20
 const RESOLVE = 10
 
 export interface Row {
@@ -40,7 +40,7 @@ export function parseListing(html: string): Row[] {
     if (!g) return []
     return [
       {
-        path: g.path,
+        path: decodeEntities(g.path),
         name: stripTags(g.name),
         size: parseSize(g.size),
         seeders: parseCount(g.seeds),
@@ -50,29 +50,29 @@ export function parseListing(html: string): Row[] {
   })
 }
 
-async function listing(query: string, page: number): Promise<Row[]> {
-  const url = `https://${MIRRORS[0]}/get-posts/keywords:${encodeURIComponent(query)}:category:Music/?page=${page}`
+async function listing(query: string): Promise<Row[]> {
+  const url = `https://${MIRRORS[0]}/get-posts/keywords:${encodeURIComponent(query)}:category:Music/?page=1`
   return parseListing(await getText(url, SITE))
 }
 
 const plugin: ProviderPlugin = {
   async test() {
-    if ((await listing('music', 1)).length === 0) {
+    if ((await listing('music')).length === 0) {
       throw new Error('TorrentGalaxy answered, but the page had no torrents — the site layout may have changed.')
     }
     return true
   },
 
-  async search({ query, page = 1 }) {
+  // Each call resolves only the top rows' detail pages, so it always reads site page 1: paging would skip rows.
+  async search({ query }) {
     const q = cleanQuery(query)
     if (!q) return []
-    const rows = await listing(q, page)
-    const results = await mapLimit(rows.slice(0, RESOLVE), 4, async row => {
+    const rows = await listing(q)
+    return mapLimit(rows.slice(0, RESOLVE), 4, async row => {
       const link = detailMagnet(await getText(new URL(row.path, `https://${MIRRORS[0]}`), SITE), row.name)
       if (!link) return undefined
       return { ...parseRelease(row.name), link, size: row.size, seeders: row.seeders, leechers: row.leechers }
     })
-    return { results, hasMore: rows.length > 0 && page < MAX_PAGES }
   }
 }
 

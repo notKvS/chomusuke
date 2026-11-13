@@ -623,7 +623,7 @@
   {
     "manifestVersion": 1,
     "id": "rockbox",
-    "name": "RockBox (music)",
+    "name": "RockBox",
     "description": "Template, off by default: enable it in Plugins and press Test. Music releases from RockBox (scraped).",
     "version": "1.0.0",
     "type": "torrent",

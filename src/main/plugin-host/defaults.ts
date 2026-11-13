@@ -1,7 +1,7 @@
 // Plugins shipped with the app: written in TypeScript (plugins/src), bundled by `npm run build:plugins`
 // into plugins/dist, and embedded into the main bundle at build time.
 // Installed on first launch and refreshed when the bundled version changes; users can still disable or remove them.
-// The tracker templates (The Pirate Bay … LimeTorrents) install switched off: see docs/sources.md.
+// The tracker templates (The Pirate Bay … RockBox) install switched off.
 // The charts (Spotify, YouTube Music, Apple Music, ListenBrainz) list top albums/songs for Explore and play them
 // through the providers.
 

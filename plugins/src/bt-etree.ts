@@ -2,7 +2,15 @@
 // Each result row carries its .torrent download link, so a search is a single request.
 // Template: off by default and not tested against the live site.
 
-import { cleanQuery, getText, parseCount, parseRelease, parseSize, stripTags } from './lib/torrent-kit.ts'
+import {
+  cleanQuery,
+  decodeEntities,
+  getText,
+  parseCount,
+  parseRelease,
+  parseSize,
+  stripTags
+} from './lib/torrent-kit.ts'
 import type { ProviderPlugin } from './sdk.ts'
 
 /** Must match "hosts" in index.json. */
@@ -66,7 +74,7 @@ const plugin: ProviderPlugin = {
     return {
       results: rows.map(row => ({
         ...parseRelease(row.name),
-        link: `https://${MIRRORS[0]}/${encodeURI(row.download)}`,
+        link: `https://${MIRRORS[0]}/${decodeEntities(row.download).split('/').map(encodeURIComponent).join('/')}`,
         size: row.size,
         seeders: row.seeders,
         leechers: row.leechers

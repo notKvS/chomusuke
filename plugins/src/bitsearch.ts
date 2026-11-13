@@ -61,17 +61,13 @@ const plugin: ProviderPlugin = {
     if (!q) return []
     const rows = await listing(q, page)
     return {
-      results: rows.map(row => {
-        const release = parseRelease(row.name)
-        return {
-          ...release,
-          link: row.magnet,
-          size: row.size,
-          seeders: row.seeders,
-          leechers: row.leechers,
-          tags: release.tags
-        }
-      }),
+      results: rows.map(row => ({
+        ...parseRelease(row.name),
+        link: row.magnet,
+        size: row.size,
+        seeders: row.seeders,
+        leechers: row.leechers
+      })),
       hasMore: rows.length > 0 && page < MAX_PAGES
     }
   }

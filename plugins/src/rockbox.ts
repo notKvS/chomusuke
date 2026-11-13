@@ -31,7 +31,7 @@ export interface Row {
 // The patterns are case-sensitive (<TR>, HREF), and the download href is unquoted.
 const ROW = /<TR> <td align="center".*?<\/TR>/g
 const FIELDS =
-  /HREF="(details.+?)".+?details:\s?(.+?)">.+?HREF=(download.+?)>.+?lista">(.+?)<\/td>.+?([0-9,.]+ (?:TB|GB|MB|KB)).+?peers details">([0-9,]+).+?peers details">([0-9,]+)/
+  /HREF="(details.+?)".+?details:\s?(.+?)">.+?HREF=(download[^\s>]+).+?lista">(.+?)<\/td>.+?([0-9,.]+ (?:TB|GB|MB|KB)).+?peers details">([0-9,]+).+?peers details">([0-9,]+)/
 
 export function parseListing(html: string): Row[] {
   const page = html.replace(/\s+/g, ' ').trim()
