@@ -550,6 +550,18 @@
   },
   {
     "manifestVersion": 1,
+    "id": "bitsearch",
+    "name": "BitSearch",
+    "description": "Template, off by default: enable it in Plugins and press Test. Music from BitSearch (scraped).",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "bitsearch.js",
+    "enabledByDefault": false,
+    "hosts": ["bitsearch.to"],
+    "layout": "list"
+  },
+  {
+    "manifestVersion": 1,
     "id": "audius",
     "name": "Audius",
     "description": "Independent artists on Audius, played straight from the service (no torrent).",

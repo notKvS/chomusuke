@@ -8,6 +8,7 @@
 import x1337x from '../../../plugins/dist/1337x.js?raw'
 import appleMusicCharts from '../../../plugins/dist/apple-music-charts.js?raw'
 import audius from '../../../plugins/dist/audius.js?raw'
+import bitsearch from '../../../plugins/dist/bitsearch.js?raw'
 
 import freeMusicArchive from '../../../plugins/dist/free-music-archive.js?raw'
 import great78 from '../../../plugins/dist/great-78.js?raw'
@@ -37,6 +38,7 @@ const CODE: Record<string, string> = {
   '1337x.js': x1337x,
   'apple-music-charts.js': appleMusicCharts,
   'audius.js': audius,
+  'bitsearch.js': bitsearch,
   'free-music-archive.js': freeMusicArchive,
   'great-78.js': great78,
   'jamendo.js': jamendo,

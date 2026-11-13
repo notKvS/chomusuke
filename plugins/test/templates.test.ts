@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
 import x1337x, { parseListing as parse1337x, parseMagnet } from '../src/1337x.ts'
+import bitsearch, { MIRRORS as BITSEARCH_MIRRORS, parseListing as parseBitSearch } from '../src/bitsearch.ts'
 import knaben from '../src/knaben.ts'
 import {
   decodeEntities,
@@ -358,6 +359,87 @@ describe('LimeTorrents', () => {
     assert.equal(results.length, 2)
     assert.match(results[0].link ?? '', /^magnet:\?xt=urn:btih:a{40}&dn=/)
     assert.equal(results[1].link, `magnet:?xt=urn:btih:${HASH2}&dn=Adele`)
+  })
+})
+
+// BitSearch's markup below is written from the upstream qBittorrent engine's regexes, not copied from the site.
+const BS_CARD =
+  'bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition duration-150 ease-in-out'
+const BS_ROW = (
+  name: string,
+  size: string,
+  seeders: string,
+  leechers: string,
+  hash: string
+) => `<div class="${BS_CARD}">
+  <h3 class="text-lg"><a href="/torrent/${hash}" class="hover:text-blue-600">
+    ${name} </a></h3>
+  <div class="flex"><i class="fa fa-download"></i> <span>${size}</span> <i class="fa fa-calendar"></i> <span>03/05/2021</span>
+    <span class="font-medium">${seeders}</span> <span class="font-medium">${leechers}</span>
+    <a href="magnet:?xt=urn:btih:${hash}&amp;dn=Adele" class="btn">Magnet</a></div>
+</div> <!-- Mobile layout -->`
+const BS_LISTING = `<html><body>${BS_ROW('Adele - 30 (2021) [FLAC]', '1.2 GB', '1,234', '56', HASH)}
+${BS_ROW('<b>Rock &amp; Roll</b> Hits', '700.5 MB', '9', '0', HASH2)}
+<div class="footer">not a card</div></body></html>`
+
+describe('BitSearch', () => {
+  it('parses cards: names, magnet, size in bytes, seeders and leechers', () => {
+    const rows = parseBitSearch(BS_LISTING)
+    assert.equal(rows.length, 2)
+    assert.deepEqual(rows[0], {
+      name: 'Adele - 30 (2021) [FLAC]',
+      magnet: `magnet:?xt=urn:btih:${HASH}&dn=Adele`,
+      size: Math.round(1.2 * 1024 ** 3),
+      seeders: 1234,
+      leechers: 56
+    })
+    assert.equal(rows[1].name, 'Rock & Roll Hits')
+    assert.equal(rows[1].size, Math.round(700.5 * 1024 ** 2))
+    assert.equal(parseBitSearch('<html>nothing here</html>').length, 0)
+  })
+
+  it('requests the music listing once and offers more pages', async () => {
+    stub([[/bitsearch\.to\/search/, html(BS_LISTING)]])
+    const paged = await bitsearch.search({ query: 'adele', page: 2, options: {} })
+    assert.deepEqual(
+      requests.map(r => r.url),
+      ['https://bitsearch.to/search?q=adele&page=2&category=7&sortBy=relevance']
+    )
+    assert.ok(!Array.isArray(paged))
+    assert.equal(paged.hasMore, true)
+    assert.equal(paged.results.length, 2)
+    assert.equal(paged.results[0].link, `magnet:?xt=urn:btih:${HASH}&dn=Adele`)
+    assert.equal(paged.results[0].artist, 'Adele')
+    assert.equal(paged.results[0].size, Math.round(1.2 * 1024 ** 3))
+    assert.deepEqual(paged.results[0].tags, ['FLAC'])
+  })
+
+  it('defaults to page 1, stops at page 20 and skips blank queries', async () => {
+    stub([[/bitsearch\.to\/search/, html(BS_LISTING)]])
+    await bitsearch.search({ query: 'adele', options: {} })
+    assert.match(requests[0].url, /&page=1&/)
+    const last = await bitsearch.search({ query: 'adele', page: 20, options: {} })
+    assert.ok(!Array.isArray(last))
+    assert.equal(last.hasMore, false)
+    requests.length = 0
+    assert.deepEqual(await bitsearch.search({ query: '  ', options: {} }), [])
+    assert.equal(requests.length, 0)
+  })
+
+  it('reports a bot check', async () => {
+    stub([[/bitsearch\.to/, html('<title>Just a moment...</title>', 503)]])
+    await assert.rejects(bitsearch.search({ query: 'adele', options: {} }), /bot check/)
+  })
+
+  it('self-test fails when the page has no torrents', async () => {
+    stub([[/bitsearch\.to/, html('<html>redesigned</html>')]])
+    await assert.rejects(bitsearch.test?.({ options: {} }), /no torrents/)
+    stub([[/bitsearch\.to/, html(BS_LISTING)]])
+    assert.equal(await bitsearch.test?.({ options: {} }), true)
+  })
+
+  it('declares its mirror list', () => {
+    assert.deepEqual(BITSEARCH_MIRRORS, ['bitsearch.to'])
   })
 })
 
