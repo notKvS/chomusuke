@@ -8,6 +8,7 @@ import glotorrents, { MIRRORS as GLOTORRENTS_MIRRORS, parseListing as parseGloTo
 import knaben from '../src/knaben.ts'
 import {
   decodeEntities,
+  detailMagnet,
   getText,
   parseRelease,
   parseSize,
@@ -30,6 +31,10 @@ import torrentdownload, {
   parseListing as parseTorrentDownload,
   MIRRORS as TORRENTDOWNLOAD_MIRRORS
 } from '../src/torrentdownload.ts'
+import torrentdownloads, {
+  parseListing as parseTorrentDownloads,
+  MIRRORS as TORRENTDOWNLOADS_MIRRORS
+} from '../src/torrentdownloads.ts'
 
 /** The results of a search, whether or not the plugin pages them. */
 const list = async <T>(paged: Promise<Paged<T>>): Promise<T[]> => {
@@ -90,6 +95,28 @@ describe('torrent-kit', () => {
     assert.equal(siteOrigin({}, ['a.example', 'b.example']), 'https://a.example')
     assert.equal(siteOrigin({ mirror: 'https://B.example/' }, ['a.example', 'b.example']), 'https://b.example')
     assert.throws(() => siteOrigin({ mirror: 'evil.example' }, ['a.example']), /isn’t one of this plugin’s mirrors/)
+  })
+
+  it('takes the magnet from a detail page, or builds one from an itorrents link', () => {
+    assert.equal(
+      detailMagnet(`<a href="magnet:?xt=urn:btih:${HASH}&amp;dn=Adele&amp;tr=udp%3A%2F%2Fx">Magnet</a>`, 'Adele'),
+      `magnet:?xt=urn:btih:${HASH}&dn=Adele&tr=udp%3A%2F%2Fx`
+    )
+    // The magnet wins over an itorrents link on the same page.
+    assert.equal(
+      detailMagnet(
+        `<a href="https://itorrents.org/torrent/${HASH2.toUpperCase()}.torrent">x</a><a href="magnet:?xt=urn:btih:${HASH}">m</a>`,
+        'Adele'
+      ),
+      `magnet:?xt=urn:btih:${HASH}`
+    )
+    const built = detailMagnet(
+      `<a href="https://itorrents.org/torrent/${HASH2.toUpperCase()}.torrent">x</a>`,
+      'Rock & Roll'
+    )
+    assert.match(built ?? '', new RegExp(`^magnet:\\?xt=urn:btih:${HASH2}&dn=Rock%20%26%20Roll&tr=`))
+    assert.equal(detailMagnet('<a href="https://example.com/a.torrent">x</a>', 'Adele'), undefined)
+    assert.equal(detailMagnet('<a href="https://itorrents.org/torrent/nothex.torrent">x</a>', 'Adele'), undefined)
   })
 })
 
@@ -599,6 +626,118 @@ describe('TorrentDownload', () => {
 
   it('declares its mirror list', () => {
     assert.deepEqual(TORRENTDOWNLOAD_MIRRORS, ['www.torrentdownload.info'])
+  })
+})
+
+// TorrentDownloads' markup below is written from the upstream qBittorrent engine's regexes, not copied from the site.
+const TDS_HEADER = '<div class="grey_bar3 back_none"><p class="check_box">&nbsp;</p><p>Name</p></div>'
+const TDS_ROW = (id: number, name: string, seeders: string, leechers: string, size: string, bar = 'grey_bar3') =>
+  `<div class="${bar}"><p><input type="checkbox" class="check_box" /></p>
+  <p><a href="/torrent/${id}/adele-30" title="Adele">${name}</a></p>
+  <p>Music</p><span>${seeders}</span> <span>${leechers}</span> <span>${size}</span></div>`
+const TDS_LISTING = `<html><body>${TDS_HEADER}
+${TDS_ROW(1, 'Adele - 30 (2021) [FLAC]', '1,234', '123', '1.2 GB')}
+${TDS_ROW(2, '<b>Rock</b> &amp; Roll Hits', '9', '0', '700.5 MB', 'grey_bar3 back_none')}
+${TDS_ROW(3, 'Adele Bootleg', '5', '1', '90 KB')}
+<div class="grey_bar3">no checkbox here</div></body></html>`
+const TDS_MAGNET_PAGE = `<html><a href="magnet:?xt=urn:btih:${HASH}&amp;dn=Adele">Magnet</a></html>`
+const TDS_ITORRENTS_PAGE = `<html><a href="https://itorrents.org/torrent/${HASH2.toUpperCase()}.torrent">Download</a></html>`
+const TDS_BARE_PAGE = '<html>No download here</html>'
+
+function stubTorrentDownloads(listing: string): void {
+  stub([
+    [/torrentdownloads\.pro\/search\//, html(listing)],
+    [/torrentdownloads\.pro\/torrent\/1\//, html(TDS_MAGNET_PAGE)],
+    [/torrentdownloads\.pro\/torrent\/2\//, html(TDS_ITORRENTS_PAGE)],
+    [/torrentdownloads\.pro\/torrent\/3\//, html(TDS_BARE_PAGE)],
+    [/torrentdownloads\.pro\/torrent\/\d+\//, html(TDS_MAGNET_PAGE)]
+  ])
+}
+
+describe('TorrentDownloads', () => {
+  it('parses rows without the header: path, clean name, size in bytes, seeders and leechers', () => {
+    const rows = parseTorrentDownloads(TDS_LISTING)
+    assert.equal(rows.length, 3)
+    assert.deepEqual(rows[0], {
+      path: '/torrent/1/adele-30',
+      name: 'Adele - 30 (2021) [FLAC]',
+      size: Math.round(1.2 * 1024 ** 3),
+      seeders: 1234,
+      leechers: 123
+    })
+    assert.equal(rows[1].name, 'Rock & Roll Hits')
+    assert.equal(rows[1].seeders, 9)
+    assert.equal(rows[1].leechers, 0)
+    assert.equal(rows[2].size, 90 * 1024)
+    assert.equal(parseTorrentDownloads('<html>nothing here</html>').length, 0)
+  })
+
+  it('fetches the listing, then each row detail page in order, and drops rows with no link', async () => {
+    stubTorrentDownloads(TDS_LISTING)
+    const paged = await torrentdownloads.search({ query: 'adele', options: {} })
+    assert.deepEqual(
+      requests.map(r => r.url),
+      [
+        'https://www.torrentdownloads.pro/search/?page=1&search=adele&s_cat=5&srt=seeds&pp=50&order=desc',
+        'https://www.torrentdownloads.pro/torrent/1/adele-30',
+        'https://www.torrentdownloads.pro/torrent/2/adele-30',
+        'https://www.torrentdownloads.pro/torrent/3/adele-30'
+      ]
+    )
+    assert.ok(!Array.isArray(paged))
+    assert.equal(paged.hasMore, true)
+    assert.equal(paged.results.length, 2)
+    assert.equal(paged.results[0].link, `magnet:?xt=urn:btih:${HASH}&dn=Adele`)
+    assert.match(
+      paged.results[1].link ?? '',
+      new RegExp(`^magnet:\\?xt=urn:btih:${HASH2}&dn=Rock%20%26%20Roll%20Hits&tr=`)
+    )
+    assert.equal(paged.results[0].artist, 'Adele')
+    assert.equal(paged.results[0].leechers, 123)
+    assert.equal(paged.results[0].seeders, 1234)
+    assert.equal(paged.results[1].title, 'Rock & Roll Hits')
+  })
+
+  it('looks up at most the top 10 rows', async () => {
+    const many =
+      TDS_HEADER + Array.from({ length: 12 }, (_, i) => TDS_ROW(10 + i, `Album ${i}`, '1', '1', '1 MB')).join('')
+    stubTorrentDownloads(many)
+    const paged = await torrentdownloads.search({ query: 'adele', options: {} })
+    assert.ok(!Array.isArray(paged))
+    assert.equal(requests.length, 11)
+    assert.equal(paged.results.length, 10)
+  })
+
+  it('requests page 2, stops at page 20 and skips blank queries', async () => {
+    stubTorrentDownloads(TDS_LISTING)
+    await torrentdownloads.search({ query: 'adele', page: 2, options: {} })
+    assert.match(requests[0].url, /\/search\/\?page=2&search=adele&/)
+    const last = await torrentdownloads.search({ query: 'adele', page: 20, options: {} })
+    assert.ok(!Array.isArray(last))
+    assert.equal(last.hasMore, false)
+    requests.length = 0
+    assert.deepEqual(await torrentdownloads.search({ query: '  ', options: {} }), [])
+    assert.equal(requests.length, 0)
+  })
+
+  it('has no more pages, and fetches no detail pages, when the listing has no rows', async () => {
+    stubTorrentDownloads(`<html>${TDS_HEADER}</html>`)
+    const paged = await torrentdownloads.search({ query: 'adele', options: {} })
+    assert.ok(!Array.isArray(paged))
+    assert.equal(paged.hasMore, false)
+    assert.deepEqual(paged.results, [])
+    assert.equal(requests.length, 1)
+  })
+
+  it('self-test fails when the page has no torrents', async () => {
+    stub([[/torrentdownloads\.pro/, html('<html>redesigned</html>')]])
+    await assert.rejects(torrentdownloads.test?.({ options: {} }), /no torrents/)
+    stubTorrentDownloads(TDS_LISTING)
+    assert.equal(await torrentdownloads.test?.({ options: {} }), true)
+  })
+
+  it('declares its mirror list', () => {
+    assert.deepEqual(TORRENTDOWNLOADS_MIRRORS, ['www.torrentdownloads.pro'])
   })
 })
 

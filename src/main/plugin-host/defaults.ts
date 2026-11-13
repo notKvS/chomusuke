@@ -28,6 +28,7 @@ import soundcloud from '../../../plugins/dist/soundcloud.js?raw'
 import spotifyCharts from '../../../plugins/dist/spotify-charts.js?raw'
 import thePirateBay from '../../../plugins/dist/the-pirate-bay.js?raw'
 import torrentdownload from '../../../plugins/dist/torrentdownload.js?raw'
+import torrentdownloads from '../../../plugins/dist/torrentdownloads.js?raw'
 import youtubeMusic from '../../../plugins/dist/youtube-music.js?raw'
 import youtubeMusicCharts from '../../../plugins/dist/youtube-music-charts.js?raw'
 import repository from '../../../plugins/index.json?raw'
@@ -59,6 +60,7 @@ const CODE: Record<string, string> = {
   'spotify-charts.js': spotifyCharts,
   'the-pirate-bay.js': thePirateBay,
   'torrentdownload.js': torrentdownload,
+  'torrentdownloads.js': torrentdownloads,
   'youtube-music-charts.js': youtubeMusicCharts,
   'youtube-music.js': youtubeMusic
 }
