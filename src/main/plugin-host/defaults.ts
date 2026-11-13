@@ -11,6 +11,7 @@ import audius from '../../../plugins/dist/audius.js?raw'
 import bitsearch from '../../../plugins/dist/bitsearch.js?raw'
 
 import freeMusicArchive from '../../../plugins/dist/free-music-archive.js?raw'
+import glotorrents from '../../../plugins/dist/glotorrents.js?raw'
 import great78 from '../../../plugins/dist/great-78.js?raw'
 import jamendo from '../../../plugins/dist/jamendo.js?raw'
 import jiosaavn from '../../../plugins/dist/jiosaavn.js?raw'
@@ -40,6 +41,7 @@ const CODE: Record<string, string> = {
   'audius.js': audius,
   'bitsearch.js': bitsearch,
   'free-music-archive.js': freeMusicArchive,
+  'glotorrents.js': glotorrents,
   'great-78.js': great78,
   'jamendo.js': jamendo,
   'jiosaavn.js': jiosaavn,

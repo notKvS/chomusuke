@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { afterEach, describe, it } from 'node:test'
 import x1337x, { parseListing as parse1337x, parseMagnet } from '../src/1337x.ts'
 import bitsearch, { MIRRORS as BITSEARCH_MIRRORS, parseListing as parseBitSearch } from '../src/bitsearch.ts'
+import glotorrents, { MIRRORS as GLOTORRENTS_MIRRORS, parseListing as parseGloTorrents } from '../src/glotorrents.ts'
 import knaben from '../src/knaben.ts'
 import {
   decodeEntities,
@@ -440,6 +441,78 @@ describe('BitSearch', () => {
 
   it('declares its mirror list', () => {
     assert.deepEqual(BITSEARCH_MIRRORS, ['bitsearch.to'])
+  })
+})
+
+// GloTorrents' markup below is written from the upstream qBittorrent engine's regexes, not copied from the site.
+const GLO_ROW = (
+  title: string,
+  size: string,
+  seeders: string,
+  leechers: string,
+  hash: string
+) => `<tr class='t-row'> <td class='ttable_col1' align='center'><a href="/cat.php?id=22"><img src="c.png"></a></td>
+  <td class='ttable_col2'><a title="${title}" href="/torrent/${hash}/x" ><b>${title}</b></a></td>
+  <td class='ttable_col1' align='center'><a href="magnet:?xt=urn:btih:${hash}&amp;dn=Adele"><img src="m.png"></a></td>
+  <td class='ttable_col2'>${size}</td>
+  <td class='ttable_col1'><font color='green'><b>${seeders}</b></font></td>
+  <td class='ttable_col2'><font color='#ff0000'><b>${leechers}</b></font></td></tr>`
+const GLO_LISTING = `<html><body><table>${GLO_ROW('Adele - 30 (2021) [FLAC]', '1.2 GB', '1,234', '56', HASH)}
+${GLO_ROW('Rock &amp; Roll Hits', '700.5 MB', '9', '0', HASH2)}
+<tr class='t-row'><td>not a torrent row</td></tr></table></body></html>`
+
+describe('GloTorrents', () => {
+  it('parses rows: names, magnet, size in bytes, seeders and leechers', () => {
+    const rows = parseGloTorrents(GLO_LISTING)
+    assert.equal(rows.length, 2)
+    assert.deepEqual(rows[0], {
+      name: 'Adele - 30 (2021) [FLAC]',
+      magnet: `magnet:?xt=urn:btih:${HASH}&dn=Adele`,
+      size: Math.round(1.2 * 1024 ** 3),
+      seeders: 1234,
+      leechers: 56
+    })
+    assert.equal(rows[1].name, 'Rock & Roll Hits')
+    assert.equal(rows[1].size, Math.round(700.5 * 1024 ** 2))
+    assert.equal(parseGloTorrents('<html>nothing here</html>').length, 0)
+  })
+
+  it('requests the music listing once, 0-based, and offers more pages', async () => {
+    stub([[/glodls\.to\/search_results/, html(GLO_LISTING)]])
+    const paged = await glotorrents.search({ query: 'adele', options: {} })
+    assert.deepEqual(
+      requests.map(r => r.url),
+      ['https://glodls.to/search_results.php?search=adele&cat=22&page=0&incldead=0&inclexternal=0']
+    )
+    assert.ok(!Array.isArray(paged))
+    assert.equal(paged.hasMore, true)
+    assert.equal(paged.results.length, 2)
+    assert.equal(paged.results[0].link, `magnet:?xt=urn:btih:${HASH}&dn=Adele`)
+    assert.equal(paged.results[0].artist, 'Adele')
+    assert.deepEqual(paged.results[0].tags, ['FLAC'])
+    await glotorrents.search({ query: 'adele', page: 3, options: {} })
+    assert.match(requests[1].url, /&page=2&/)
+  })
+
+  it('stops at page 20 and skips blank queries', async () => {
+    stub([[/glodls\.to\/search_results/, html(GLO_LISTING)]])
+    const last = await glotorrents.search({ query: 'adele', page: 20, options: {} })
+    assert.ok(!Array.isArray(last))
+    assert.equal(last.hasMore, false)
+    requests.length = 0
+    assert.deepEqual(await glotorrents.search({ query: '  ', options: {} }), [])
+    assert.equal(requests.length, 0)
+  })
+
+  it('self-test fails when the page has no torrents', async () => {
+    stub([[/glodls\.to/, html('<html>redesigned</html>')]])
+    await assert.rejects(glotorrents.test?.({ options: {} }), /no torrents/)
+    stub([[/glodls\.to/, html(GLO_LISTING)]])
+    assert.equal(await glotorrents.test?.({ options: {} }), true)
+  })
+
+  it('declares its mirror list', () => {
+    assert.deepEqual(GLOTORRENTS_MIRRORS, ['glodls.to'])
   })
 })
 

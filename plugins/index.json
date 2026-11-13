@@ -562,6 +562,18 @@
   },
   {
     "manifestVersion": 1,
+    "id": "glotorrents",
+    "name": "GloTorrents",
+    "description": "Template, off by default: enable it in Plugins and press Test. Music from GloTorrents (scraped).",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "glotorrents.js",
+    "enabledByDefault": false,
+    "hosts": ["glodls.to"],
+    "layout": "list"
+  },
+  {
+    "manifestVersion": 1,
     "id": "audius",
     "name": "Audius",
     "description": "Independent artists on Audius, played straight from the service (no torrent).",
