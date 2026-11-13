@@ -18,6 +18,7 @@ import {
 } from '../src/lib/torrent-kit.ts'
 import limetorrents, { parseListing as parseLime } from '../src/limetorrents.ts'
 import nyaa from '../src/nyaa.ts'
+import rockbox, { parseListing as parseRockBox, MIRRORS as ROCKBOX_MIRRORS } from '../src/rockbox.ts'
 import rutor, { parseListing as parseRutor, searchPath } from '../src/rutor.ts'
 import rutracker, {
   isLoginPage,
@@ -934,6 +935,76 @@ describe('bt.etree', () => {
 
   it('declares its mirror list', () => {
     assert.deepEqual(BTETREE_MIRRORS, ['bt.etree.org'])
+  })
+})
+
+// RockBox's markup below is written from the upstream qBittorrent engine's regexes, not copied from the site.
+const RB_ROW = (id: string, name: string, href: string, size: string, seeders: string, leechers: string) => `<TR>
+  <td align="center" class="lista"><A HREF="details.php?id=${id}">view</A></td>
+  <td class="lista"><A HREF="details.php?id=${id}" title="details: ${name}">${name}</A> <A HREF=${href}><img src="dl.png"></A></td>
+  <td align="center" class="lista">13/11/2026</td>
+  <td class="lista">${size}</td>
+  <td><a href="peers.php" title="peers details">${seeders}</a></td>
+  <td><a href="peers.php" title="peers details">${leechers}</a></td></TR>`
+const RB_LISTING = `<html><body><table><TR><th>Name</th></TR>
+${RB_ROW('1', 'Dream Theater - Awake [FLAC]', 'download.php?id=1&amp;f=Awake.torrent', '1.2 GB', '1,234', '56')}
+${RB_ROW('2', 'Rock &amp; Roll Hits', 'download.php?id=2&amp;f=rock.torrent', '700.5 MB', '9', '0')}
+<TR><td>not a torrent row</td></TR></table></body></html>`
+
+describe('RockBox', () => {
+  it('parses rows: names, decoded download href, size in bytes, seeders and leechers', () => {
+    const rows = parseRockBox(RB_LISTING)
+    assert.equal(rows.length, 2)
+    assert.deepEqual(rows[0], {
+      name: 'Dream Theater - Awake [FLAC]',
+      download: 'download.php?id=1&f=Awake.torrent',
+      size: Math.round(1.2 * 1024 ** 3),
+      seeders: 1234,
+      leechers: 56
+    })
+    assert.equal(rows[1].name, 'Rock & Roll Hits')
+    assert.equal(rows[1].size, Math.round(700.5 * 1024 ** 2))
+    assert.equal(parseRockBox('<html>nothing here</html>').length, 0)
+  })
+
+  it('links to the .torrent on the site and requests the 0-based page', async () => {
+    stub([[/rawkbawx\.rocks\/torrents\.php/, html(RB_LISTING)]])
+    const paged = await rockbox.search({ query: 'dream theater', options: {} })
+    assert.deepEqual(
+      requests.map(r => r.url),
+      ['https://rawkbawx.rocks/torrents.php?active=0&search=dream%20theater&options=0&order=data&page=0']
+    )
+    assert.ok(!Array.isArray(paged))
+    assert.equal(paged.hasMore, true)
+    assert.equal(paged.results.length, 2)
+    const link = paged.results[0].link
+    assert.equal(link, 'https://rawkbawx.rocks/download.php?id=1&f=Awake.torrent')
+    assert.equal(new URL(link).protocol, 'https:')
+    assert.equal(new URL(link).host, 'rawkbawx.rocks')
+    assert.equal(paged.results[0].seeders, 1234)
+    await rockbox.search({ query: 'dream theater', page: 3, options: {} })
+    assert.match(requests[1].url, /&page=2$/)
+  })
+
+  it('stops at page 20 and skips blank queries', async () => {
+    stub([[/rawkbawx\.rocks/, html(RB_LISTING)]])
+    const last = await rockbox.search({ query: 'phish', page: 20, options: {} })
+    assert.ok(!Array.isArray(last))
+    assert.equal(last.hasMore, false)
+    requests.length = 0
+    assert.deepEqual(await rockbox.search({ query: '  ', options: {} }), [])
+    assert.equal(requests.length, 0)
+  })
+
+  it('self-test fails when the page has no torrents', async () => {
+    stub([[/rawkbawx\.rocks/, html('<html>redesigned</html>')]])
+    await assert.rejects(rockbox.test?.({ options: {} }), /no torrents/)
+    stub([[/rawkbawx\.rocks/, html(RB_LISTING)]])
+    assert.equal(await rockbox.test?.({ options: {} }), true)
+  })
+
+  it('declares its mirror list', () => {
+    assert.deepEqual(ROCKBOX_MIRRORS, ['rawkbawx.rocks'])
   })
 })
 

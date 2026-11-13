@@ -23,6 +23,7 @@ import liveMusicArchive from '../../../plugins/dist/live-music-archive.js?raw'
 import netlabels from '../../../plugins/dist/netlabels.js?raw'
 import nyaa from '../../../plugins/dist/nyaa.js?raw'
 import publicDomainClassical from '../../../plugins/dist/public-domain-classical.js?raw'
+import rockbox from '../../../plugins/dist/rockbox.js?raw'
 import rutor from '../../../plugins/dist/rutor.js?raw'
 import rutracker from '../../../plugins/dist/rutracker.js?raw'
 import soundcloud from '../../../plugins/dist/soundcloud.js?raw'
@@ -57,6 +58,7 @@ const CODE: Record<string, string> = {
   'netlabels.js': netlabels,
   'nyaa.js': nyaa,
   'public-domain-classical.js': publicDomainClassical,
+  'rockbox.js': rockbox,
   'rutor.js': rutor,
   'rutracker.js': rutracker,
   'soundcloud.js': soundcloud,

@@ -9,6 +9,7 @@ import { MIRRORS as BITSEARCH_MIRRORS } from '../src/bitsearch.ts'
 import { MIRRORS as BTETREE_MIRRORS } from '../src/bt-etree.ts'
 import { MIRRORS as GLOTORRENTS_MIRRORS } from '../src/glotorrents.ts'
 import { MIRRORS as LIME_MIRRORS } from '../src/limetorrents.ts'
+import { MIRRORS as ROCKBOX_MIRRORS } from '../src/rockbox.ts'
 import { MIRRORS as RUTOR_MIRRORS } from '../src/rutor.ts'
 import { MIRRORS as RUTRACKER_MIRRORS } from '../src/rutracker.ts'
 import { MIRRORS as TORRENTDOWNLOAD_MIRRORS } from '../src/torrentdownload.ts'
@@ -31,7 +32,8 @@ const TEMPLATES = [
   'torrentdownload',
   'torrentdownloads',
   'torrentgalaxy',
-  'bt-etree'
+  'bt-etree',
+  'rockbox'
 ]
 
 test('bundled manifests are valid and have sources', () => {
@@ -58,4 +60,5 @@ test('mirror lists in code match the hosts the sandbox allows', () => {
   assert.deepEqual(hosts('torrentdownloads'), TORRENTDOWNLOADS_MIRRORS)
   assert.deepEqual(hosts('torrentgalaxy'), TORRENTGALAXY_MIRRORS)
   assert.deepEqual(hosts('bt-etree'), BTETREE_MIRRORS)
+  assert.deepEqual(hosts('rockbox'), ROCKBOX_MIRRORS)
 })

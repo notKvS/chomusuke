@@ -622,6 +622,18 @@
   },
   {
     "manifestVersion": 1,
+    "id": "rockbox",
+    "name": "RockBox (music)",
+    "description": "Template, off by default: enable it in Plugins and press Test. Music releases from RockBox (scraped).",
+    "version": "1.0.0",
+    "type": "torrent",
+    "code": "rockbox.js",
+    "enabledByDefault": false,
+    "hosts": ["rawkbawx.rocks"],
+    "layout": "list"
+  },
+  {
+    "manifestVersion": 1,
     "id": "audius",
     "name": "Audius",
     "description": "Independent artists on Audius, played straight from the service (no torrent).",
