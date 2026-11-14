@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { FetchError, fetchBodyOrMagnet } from '../http.ts'
 import { logger } from '../log.ts'
 import { sanitizeThirdPartyMagnet, stripPrivateEndpoints } from '../net.ts'
-import type { ChartWanted } from '../providers/chart-match.ts'
+import { type ChartWanted, wantedFromRef } from '../providers/chart-match.ts'
 import type { MusicProvider, Playable, ProviderResults } from '../providers/types.ts'
 import { parseSource, SourceError } from '../source.ts'
 import {
@@ -235,19 +235,8 @@ function createChartProvider(
     },
 
     async open(album, signal): Promise<Playable> {
-      let wanted: ChartWanted
-      try {
-        const ref = JSON.parse(album.ref) as Record<string, unknown>
-        if (typeof ref.title !== 'string' || typeof ref.artist !== 'string') throw new Error('incomplete')
-        wanted = {
-          kind: ref.kind === 'song' ? 'song' : 'album',
-          title: ref.title,
-          artist: ref.artist,
-          album: typeof ref.album === 'string' ? ref.album : undefined
-        }
-      } catch {
-        throw new SourceError('That chart entry is no longer available.')
-      }
+      const wanted = wantedFromRef(album.ref)
+      if (!wanted) throw new SourceError('That chart entry is no longer available.')
       if (!findRelease) throw new SourceError('Charts can’t be played here.')
       return findRelease(wanted, signal)
     }

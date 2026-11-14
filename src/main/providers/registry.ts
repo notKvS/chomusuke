@@ -3,7 +3,7 @@ import { parseRegion } from '../../shared/regions.ts'
 import type { ExploreOverview, ProviderSection, SearchAlbum, SearchResults, SearchSong } from '../../shared/types.ts'
 import { logger } from '../log.ts'
 import { SourceError } from '../source.ts'
-import { type ChartWanted, chartQueries, rankReleases } from './chart-match.ts'
+import { type ChartWanted, chartQueries, chartRef, rankReleases, wantedFromRef } from './chart-match.ts'
 import { TorznabError } from './torznab.ts'
 import type { MusicProvider, Playable, ProviderAlbum, ProviderResults } from './types.ts'
 
@@ -38,6 +38,20 @@ export class ProviderRegistry {
 
   private readonly fillCovers?: CoverFill
 
+  /** Where suggested songs open from (see {@link suggest}): like a chart, it finds them on the other providers. */
+  private readonly suggestions: MusicProvider = {
+    id: 'suggestions',
+    name: 'Suggestions',
+    layout: 'cards',
+    chart: true,
+    search: async () => ({ albums: [], songs: [] }),
+    open: (album, signal) => {
+      const wanted = wantedFromRef(album.ref)
+      if (!wanted) throw new SourceError('That suggestion is no longer available.')
+      return this.findRelease(wanted, signal)
+    }
+  }
+
   constructor(fillCovers?: CoverFill) {
     this.fillCovers = fillCovers
   }
@@ -47,7 +61,7 @@ export class ProviderRegistry {
     this.browsed.clear()
     // Results from providers that were removed or reconfigured can no longer be opened.
     for (const [id, entry] of this.results) {
-      if (!providers.includes(entry.provider)) this.results.delete(id)
+      if (entry.provider !== this.suggestions && !providers.includes(entry.provider)) this.results.delete(id)
     }
   }
 
@@ -167,6 +181,26 @@ export class ProviderRegistry {
       if (this.browsed.size > MAX_BROWSE_CACHE) this.browsed.delete(this.browsed.keys().next().value as string)
     }
     return section
+  }
+
+  /**
+   * Songs suggested for you (see similar.ts) as albums the renderer can open: like chart entries, each plays by
+   * finding a release on the providers. Missing covers are looked up as for charts.
+   */
+  async suggest(entries: Array<ChartWanted & { artwork?: string }>, signal: AbortSignal): Promise<SearchAlbum[]> {
+    let albums: ProviderAlbum[] = entries.map(entry => ({
+      ref: chartRef(entry),
+      title: entry.title,
+      artist: entry.artist,
+      artwork: entry.artwork,
+      chart: entry.kind
+    }))
+    if (this.fillCovers && albums.some(album => !album.artwork)) {
+      albums = await this.fillCovers(albums, AbortSignal.any([signal, AbortSignal.timeout(COVERS_TIMEOUT_MS)])).catch(
+        () => albums
+      )
+    }
+    return albums.map(album => this.remember(this.suggestions, album))
   }
 
   /** Another page of one provider's albums for a search; songs only come with the first page. */

@@ -16,6 +16,26 @@ export interface ChartWanted {
   album?: string
 }
 
+/** A chart entry as a provider album's locator (`ProviderAlbum.ref`). */
+export const chartRef = ({ kind, title, artist, album }: ChartWanted): string =>
+  JSON.stringify({ kind, title, artist, album })
+
+/** The chart entry a locator made by {@link chartRef} stands for; undefined when it isn't one. */
+export function wantedFromRef(ref: string): ChartWanted | undefined {
+  try {
+    const parsed = JSON.parse(ref) as Record<string, unknown>
+    if (typeof parsed.title !== 'string' || typeof parsed.artist !== 'string') return undefined
+    return {
+      kind: parsed.kind === 'song' ? 'song' : 'album',
+      title: parsed.title,
+      artist: parsed.artist,
+      album: typeof parsed.album === 'string' ? parsed.album : undefined
+    }
+  } catch {
+    return undefined
+  }
+}
+
 const MAX_QUERIES = 3
 const MAX_QUERY_LENGTH = 200
 /** Share of the wanted title words a release name must contain. */

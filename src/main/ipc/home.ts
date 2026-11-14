@@ -1,16 +1,32 @@
-import type { HomeShelf } from '../../shared/types.ts'
+import { songFingerprint } from '../../shared/fingerprint.ts'
+import type { HomeShelf, SearchAlbum } from '../../shared/types.ts'
+import { MBID } from '../genres.ts'
 import { ARTIST_SHELVES, planHome } from '../home.ts'
+import { pickSongs } from '../similar.ts'
 import type { IpcDeps } from './deps.ts'
 import { handle } from './guard.ts'
 
 /** How long Home waits for artist genres before it shows what it has. */
 const GENRES_TIMEOUT_MS = 5000
-/** Artists considered for the genre shelf. */
+/** Artists looked up on MusicBrainz: for the genre shelf, and the similar-artist shelves. */
 const GENRE_ARTISTS = 2
+/** How long a similar-artist shelf waits for ListenBrainz and covers. */
+const SIMILAR_TIMEOUT_MS = 20_000
+const SIMILAR_SHELF_SIZE = 12
 
 /** What you played lately, and the Home shelves made from it. */
 export function register(deps: IpcDeps): void {
-  const { assertTrustedSender, history, registry, artistGenres } = deps
+  const { assertTrustedSender, history, ratings, registry, artistInfo, similarSongs } = deps
+
+  /** Songs not worth suggesting: ones played lately, and rated ones (liked: you know it; disliked: you don't want it). */
+  const knownSongs = (): Set<string> => {
+    const known = history.fingerprints()
+    for (const song of ratings.list()) {
+      const key = song.fingerprint ?? songFingerprint(song.title, song.artist)
+      if (key) known.add(key)
+    }
+    return known
+  }
 
   handle('history:record', async (event, raw: unknown) => {
     assertTrustedSender(event)
@@ -31,7 +47,34 @@ export function register(deps: IpcDeps): void {
     assertTrustedSender(event)
     const artists = history.topArtists(Math.max(ARTIST_SHELVES, GENRE_ARTISTS))
     const signal = AbortSignal.timeout(GENRES_TIMEOUT_MS)
-    const genres = await Promise.all(artists.slice(0, GENRE_ARTISTS).map(artist => artistGenres(artist, signal)))
-    return planHome({ artists, genres, charts: registry.explore().charts, random: Math.random })
+    const infos = await Promise.all(artists.slice(0, GENRE_ARTISTS).map(artist => artistInfo(artist, signal)))
+    return planHome({
+      artists,
+      genres: infos.map(info => info.tags),
+      mbids: infos.map(info => info.mbid),
+      charts: registry.explore().charts,
+      random: Math.random
+    })
+  })
+
+  handle('home:similar', async (event, artistMbid: unknown): Promise<SearchAlbum[]> => {
+    assertTrustedSender(event)
+    if (typeof artistMbid !== 'string' || !MBID.test(artistMbid)) return []
+    const signal = AbortSignal.timeout(SIMILAR_TIMEOUT_MS)
+    const songs = pickSongs(await similarSongs(artistMbid, signal), {
+      skip: knownSongs(),
+      skipArtist: artistMbid,
+      limit: SIMILAR_SHELF_SIZE
+    })
+    return registry.suggest(
+      songs.map(song => ({
+        kind: 'song',
+        title: song.title,
+        artist: song.artist,
+        album: song.album,
+        artwork: song.artwork
+      })),
+      signal
+    )
   })
 }

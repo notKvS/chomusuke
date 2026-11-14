@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { ExploreSource } from '../shared/types.ts'
-import { genresFromSearch } from './genres.ts'
+import { artistFromSearch } from './genres.ts'
 import { genreCategory, planHome } from './home.ts'
 
 const apple: ExploreSource = {
@@ -50,6 +50,25 @@ test('Home gets shelves for the top artists and one for their genre', () => {
   assert.equal(shelves[2].subtitle, 'Like Coldplay')
 })
 
+test('an artist known on MusicBrainz also gets a shelf of similar artists, right after theirs', () => {
+  const mbid = 'cc197bad-dc9c-440d-a5b5-d52ba2e14234'
+  const shelves = planHome({
+    artists: ['Coldplay', 'Anuv Jain'],
+    genres: [[], []],
+    mbids: [mbid, undefined],
+    charts: [],
+    random: () => 0
+  })
+  assert.deepEqual(
+    shelves.map(s => [s.id, s.title, s.source]),
+    [
+      ['artist:coldplay', 'More from Coldplay', { kind: 'search', query: 'Coldplay' }],
+      [`similar:${mbid}`, 'If you like Coldplay', { kind: 'similar', artistMbid: mbid }],
+      ['artist:anuv jain', 'More from Anuv Jain', { kind: 'search', query: 'Anuv Jain' }]
+    ]
+  )
+})
+
 test('the genre shelf is skipped when no artist maps to a chart genre, or no chart is on', () => {
   const noGenre = planHome({ artists: ['A'], genres: [['british']], charts: [apple], random: () => 0 })
   assert.deepEqual(
@@ -90,6 +109,7 @@ test('MusicBrainz answers are used only for the artist asked about, most agreed 
     artists: [
       { name: 'Coldplay Tribute', score: 95, tags: [{ name: 'karaoke', count: 9 }] },
       {
+        id: 'cc197bad-dc9c-440d-a5b5-d52ba2e14234',
         name: 'Coldplay',
         score: 100,
         tags: [
@@ -100,21 +120,27 @@ test('MusicBrainz answers are used only for the artist asked about, most agreed 
       }
     ]
   }
-  assert.deepEqual(genresFromSearch('coldplay', body), ['alternative rock', 'british'])
-  assert.deepEqual(genresFromSearch('Someone Else', body), [])
+  assert.deepEqual(artistFromSearch('coldplay', body), {
+    mbid: 'cc197bad-dc9c-440d-a5b5-d52ba2e14234',
+    tags: ['alternative rock', 'british']
+  })
+  assert.deepEqual(artistFromSearch('Someone Else', body), { tags: [] })
   const unsure = { artists: [{ name: 'Coldplay', score: 50, tags: [{ name: 'x', count: 1 }] }] }
-  assert.deepEqual(genresFromSearch('Coldplay', unsure), [])
-  assert.deepEqual(genresFromSearch('Coldplay', null), [])
-  assert.deepEqual(genresFromSearch('Coldplay', { artists: [{ name: 'Coldplay', score: 100 }] }), [])
+  assert.deepEqual(artistFromSearch('Coldplay', unsure), { tags: [] })
+  assert.deepEqual(artistFromSearch('Coldplay', null), { tags: [] })
+  assert.deepEqual(artistFromSearch('Coldplay', { artists: [{ name: 'Coldplay', score: 100 }] }), { tags: [] })
+  assert.deepEqual(artistFromSearch('Coldplay', { artists: [{ id: '../x', name: 'Coldplay', score: 100 }] }), {
+    tags: []
+  })
 })
 
 test('artist lookups are one a second, remembered, and not repeated for a while after a failure', async () => {
-  const { createArtistGenres } = await import('./genres.ts')
+  const { createArtistLookup } = await import('./genres.ts')
   let clock = 1_000_000
   const waits: number[] = []
   const asked: string[] = []
   let down = false
-  const genres = createArtistGenres({
+  const lookup = createArtistLookup({
     now: () => clock,
     sleep: async ms => {
       waits.push(ms)
@@ -127,21 +153,21 @@ test('artist lookups are one a second, remembered, and not repeated for a while 
     }
   })
 
-  const [first, second] = await Promise.all([genres('Coldplay'), genres('Coldplay ')])
-  assert.deepEqual(first, ['pop'])
-  assert.deepEqual(second, ['pop'])
-  assert.deepEqual(await genres('COLDPLAY'), ['pop'])
+  const [first, second] = await Promise.all([lookup('Coldplay'), lookup('Coldplay ')])
+  assert.deepEqual(first.tags, ['pop'])
+  assert.deepEqual(second.tags, ['pop'])
+  assert.deepEqual((await lookup('COLDPLAY')).tags, ['pop'])
   // Asked for twice at once, and again later: one request.
   assert.equal(asked.length, 1)
 
   down = true
   const before = asked.length
-  assert.deepEqual(await genres('Broken Artist'), [])
-  assert.deepEqual(await genres('Broken Artist'), [])
+  assert.deepEqual(await lookup('Broken Artist'), { tags: [] })
+  assert.deepEqual(await lookup('Broken Artist'), { tags: [] })
   assert.equal(asked.length, before + 1)
   clock += 6 * 60_000
-  assert.deepEqual(await genres('Broken Artist'), [])
+  assert.deepEqual(await lookup('Broken Artist'), { tags: [] })
   assert.equal(asked.length, before + 2)
   assert.ok(waits.every(ms => ms > 0 && ms <= 1100))
-  assert.deepEqual(await genres(''), [])
+  assert.deepEqual(await lookup(''), { tags: [] })
 })

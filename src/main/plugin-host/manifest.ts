@@ -1,4 +1,5 @@
 import type { PluginKind, SourceCategory } from '../../shared/types.ts'
+import { chartRef } from '../providers/chart-match.ts'
 import type { HttpTrack, ProviderAlbum } from '../providers/types.ts'
 
 /**
@@ -307,7 +308,7 @@ export function sanitizeChartEntries(raw: unknown, manifest: PluginManifest): Pr
     if (!title || !artist) continue
     const kind = item.kind === 'song' ? 'song' : 'album'
     const album = kind === 'song' ? text(item.album, 200) : undefined
-    const ref = JSON.stringify({ kind, title, artist, album })
+    const ref = chartRef({ kind, title, artist, album })
     if (seen.has(ref)) continue
     seen.add(ref)
     entries.push({

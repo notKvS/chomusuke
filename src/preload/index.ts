@@ -38,6 +38,7 @@ const api: ChomusukeApi = {
   getHistorySize: () => ipcRenderer.invoke('history:size'),
   clearHistory: () => ipcRenderer.invoke('history:clear'),
   getHomeShelves: () => ipcRenderer.invoke('home:shelves'),
+  getSimilarSongs: artistMbid => ipcRenderer.invoke('home:similar', artistMbid),
   getRatings: () => ipcRenderer.invoke('ratings:list'),
   rateTrack: (infoHash, key, rating) => ipcRenderer.invoke('ratings:set', infoHash, key, rating),
   exportBackup: appearance => ipcRenderer.invoke('backup:export', appearance),
