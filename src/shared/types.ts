@@ -95,7 +95,11 @@ export interface HomeShelf {
   id: string
   title: string
   subtitle?: string
-  source: { kind: 'search'; query: string } | { kind: 'chart'; sourceId: string; categoryId: string }
+  source:
+    | { kind: 'search'; query: string }
+    | { kind: 'chart'; sourceId: string; categoryId: string }
+    /** Songs by artists like this one (its MusicBrainz id), from getSimilarSongs */
+    | { kind: 'similar'; artistMbid: string }
 }
 
 /** Whether the Discord status is getting through, for the Settings page. */
@@ -462,6 +466,8 @@ export interface ChomusukeApi {
   clearHistory(): Promise<void>
   /** The rows Home shows for what you listen to; with nothing played yet, a popular chart. */
   getHomeShelves(): Promise<HomeShelf[]>
+  /** Songs you don't know yet by artists like this one (MusicBrainz id); opened with openResult(). */
+  getSimilarSongs(artistMbid: string): Promise<SearchAlbum[]>
   getRatings(): Promise<RatedSong[]>
   /** Like (1), dislike (-1) or clear (0) a track of a loaded album. Returns the updated list. */
   rateTrack(infoHash: string, key: string, rating: 0 | 1 | -1): Promise<RatedSong[]>

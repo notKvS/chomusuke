@@ -239,6 +239,41 @@ test('findRelease searches the torrent providers and opens the best match', asyn
   assert.deepEqual(forSong.startAt, { title: 'Abracadabra', artist: 'Lady Gaga' })
 })
 
+test('suggested songs open through findRelease, keep their covers, and outlive a provider change', async () => {
+  const filled: string[] = []
+  const registry = new ProviderRegistry(async albums => {
+    filled.push(...albums.filter(a => !a.artwork).map(a => a.title))
+    return albums.map(a => (a.artwork ? a : { ...a, artwork: 'https://covers.example/x.jpg' }))
+  })
+  const tracker = fakeProvider('tracker', {
+    search: async () => ({ albums: [album('flac', 'Lady Gaga - Mayhem (2025) [FLAC]')], songs: [] })
+  })
+  registry.setProviders([tracker])
+
+  const [song, other] = await registry.suggest(
+    [
+      {
+        kind: 'song',
+        title: 'Abracadabra',
+        artist: 'Lady Gaga',
+        album: 'Mayhem',
+        artwork: 'https://caa.example/a.jpg'
+      },
+      { kind: 'song', title: 'Telephone', artist: 'Lady Gaga' }
+    ],
+    new AbortController().signal
+  )
+  assert.equal(song.artwork, 'https://caa.example/a.jpg')
+  assert.equal(other.artwork, 'https://covers.example/x.jpg')
+  assert.deepEqual(filled, ['Telephone'])
+  assert.ok(!JSON.stringify(song).includes('ref'))
+
+  registry.setProviders([tracker])
+  const playable = await registry.open(song.id)
+  assert.deepEqual(tracker.opened, ['flac'])
+  assert.deepEqual(playable.startAt, { title: 'Abracadabra', artist: 'Lady Gaga' })
+})
+
 test('findRelease tries the next match when one fails, and explains when nothing is found', async () => {
   const registry = new ProviderRegistry()
   const flaky = fakeProvider('tracker', {

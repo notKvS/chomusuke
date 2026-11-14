@@ -5,7 +5,7 @@ import { handleCrash, watchForCrashes } from './crash.ts'
 import { isCrash } from './crash-info.ts'
 import { DiscordPresence } from './discord.ts'
 import { TorrentEngine } from './engine.ts'
-import { createArtistGenres } from './genres.ts'
+import { createArtistLookup } from './genres.ts'
 import { PlayHistory } from './history.ts'
 import { HttpSource } from './http-source.ts'
 import * as backup from './ipc/backup.ts'
@@ -35,6 +35,7 @@ import { ProviderRegistry } from './providers/registry.ts'
 import { ProviderSettingsStore, type SecretBox } from './providers/settings.ts'
 import { RatingsStore } from './ratings.ts'
 import { SeedLibrary } from './seeding.ts'
+import { createSimilarSongs } from './similar.ts'
 import { type StreamServer, startStreamServer } from './stream-server.ts'
 import { Updater } from './updater.ts'
 
@@ -71,7 +72,8 @@ const ratings = new RatingsStore(path.join(app.getPath('userData'), 'ratings.jso
 const playlists = new PlaylistStore(path.join(app.getPath('userData'), 'playlists.json'))
 // What was played lately, for Home's suggestions.
 const history = new PlayHistory(path.join(app.getPath('userData'), 'history.json'))
-const artistGenres = createArtistGenres()
+const artistInfo = createArtistLookup()
+const similarSongs = createSimilarSongs()
 // What's playing, as the Discord status.
 // Covers for chart entries and for the Discord status.
 const covers = new CoverFinder()
@@ -207,7 +209,8 @@ function registerIpc(
     ratings,
     playlists,
     history,
-    artistGenres,
+    artistInfo,
+    similarSongs,
     presence,
     pluginRuntime,
     disposeUnusedHosts,

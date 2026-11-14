@@ -31,17 +31,18 @@ export function genreCategory(tags: string[], available: ReadonlySet<string>): s
 }
 
 /**
- * What Home shows besides the albums you opened: more from the artists you play most, and a chart in their genre.
- * With no history it's a popular chart picked at random, so Home is never empty while a chart is on.
- * `genres[i]` are the tags of `artists[i]`.
+ * What Home shows besides the albums you opened: more from the artists you play most, songs by artists like them, and
+ * a chart in their genre. With no history it's a popular chart picked at random, so Home is never empty while a chart
+ * is on. `genres[i]` are the tags of `artists[i]`, and `mbids[i]` its MusicBrainz id when known.
  */
 export function planHome(input: {
   artists: string[]
   genres: string[][]
+  mbids?: Array<string | undefined>
   charts: ExploreSource[]
   random: () => number
 }): HomeShelf[] {
-  const { artists, genres, charts, random } = input
+  const { artists, genres, mbids = [], charts, random } = input
   if (artists.length === 0) {
     if (charts.length === 0) return []
     const chart = charts[Math.floor(random() * charts.length) % charts.length]
@@ -58,12 +59,25 @@ export function planHome(input: {
     ]
   }
 
-  const shelves: HomeShelf[] = artists.slice(0, ARTIST_SHELVES).map(artist => ({
-    id: `artist:${artist.toLowerCase()}`,
-    title: `More from ${artist}`,
-    subtitle: 'Because you listen to them',
-    source: { kind: 'search', query: artist }
-  }))
+  const shelves: HomeShelf[] = artists.slice(0, ARTIST_SHELVES).flatMap((artist, index): HomeShelf[] => {
+    const more: HomeShelf = {
+      id: `artist:${artist.toLowerCase()}`,
+      title: `More from ${artist}`,
+      subtitle: 'Because you listen to them',
+      source: { kind: 'search', query: artist }
+    }
+    const mbid = mbids[index]
+    if (!mbid) return [more]
+    return [
+      more,
+      {
+        id: `similar:${mbid}`,
+        title: `If you like ${artist}`,
+        subtitle: 'Songs by similar artists',
+        source: { kind: 'similar', artistMbid: mbid }
+      }
+    ]
+  })
 
   const byCategory = new Map(
     charts.flatMap(chart => chart.categories.map(c => [c.id, { chart, category: c }] as const))

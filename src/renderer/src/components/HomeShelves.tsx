@@ -7,8 +7,9 @@ const ROW_SIZE = 12
 
 type Row = { status: 'loading' } | { status: 'done'; albums: SearchAlbum[] }
 
-/** Where a row's albums come from: a search for an artist (all plugins, merged) or a chart category. */
+/** Where a row's albums come from: a search for an artist (all plugins, merged), a chart category, or suggestions. */
 async function loadRow(shelf: HomeShelf): Promise<SearchAlbum[]> {
+  if (shelf.source.kind === 'similar') return window.chomusuke.getSimilarSongs(shelf.source.artistMbid)
   if (shelf.source.kind === 'chart') {
     const response = await window.chomusuke.browse(shelf.source.sourceId, shelf.source.categoryId)
     return response.ok ? response.section.albums : []

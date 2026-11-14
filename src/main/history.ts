@@ -1,4 +1,4 @@
-import { normalizeText } from '../shared/fingerprint.ts'
+import { normalizeText, songFingerprint } from '../shared/fingerprint.ts'
 import type { PlayedSong } from '../shared/types.ts'
 import { readJsonFile, writeJsonFile } from './json-file.ts'
 import { isoDate, isRecord, text } from './song-ref.ts'
@@ -87,6 +87,16 @@ export class PlayHistory {
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
       .map(entry => entry.name)
+  }
+
+  /** Every remembered song, as song fingerprints (normalised artist|title). */
+  fingerprints(): Set<string> {
+    const keys = new Set<string>()
+    for (const play of this.plays) {
+      const key = songFingerprint(play.title, play.artist)
+      if (key) keys.add(key)
+    }
+    return keys
   }
 
   private async persist(): Promise<void> {

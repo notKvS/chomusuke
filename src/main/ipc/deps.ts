@@ -1,7 +1,7 @@
 import type { BrowserWindow, IpcMainInvokeEvent } from 'electron'
 import type { DiscordPresence } from '../discord.ts'
 import type { TorrentEngine } from '../engine.ts'
-import type { ArtistGenres } from '../genres.ts'
+import type { ArtistLookup } from '../genres.ts'
 import type { PlayHistory } from '../history.ts'
 import type { HttpSource } from '../http-source.ts'
 import type { PlaylistStore } from '../playlists.ts'
@@ -11,6 +11,7 @@ import type { ProviderRegistry } from '../providers/registry.ts'
 import type { ProviderSettingsStore } from '../providers/settings.ts'
 import type { RatingsStore } from '../ratings.ts'
 import type { SeedLibrary } from '../seeding.ts'
+import type { SimilarSongs } from '../similar.ts'
 import type { Updater } from '../updater.ts'
 
 /**
@@ -31,8 +32,10 @@ export interface IpcDeps {
   playlists: PlaylistStore
   /** What was played lately. */
   history: PlayHistory
-  /** The kinds of music an artist makes. */
-  artistGenres: ArtistGenres
+  /** An artist's MusicBrainz id and the kinds of music they make. */
+  artistInfo: ArtistLookup
+  /** Songs by artists like one (by MusicBrainz id), from ListenBrainz. */
+  similarSongs: SimilarSongs
   /** The Discord status; follows the `discordStatus` sharing setting. */
   presence: DiscordPresence
   /** The sandbox for an installed plugin, reused while its code is unchanged. */
