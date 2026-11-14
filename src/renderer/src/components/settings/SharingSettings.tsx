@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { DiscordStatus, SharingSettings as Sharing } from '../../../../shared/types'
 import { formatBytes, formatSpeed } from '../../format'
 import { useLibrary } from '../../useLibrary'
+import { radioEnabled, setRadioEnabled } from '../../useRadio'
 import { SettingRow } from '../controls/SettingRow'
 import { Switch } from '../controls/Switch'
 import { Icon } from '../Icon'
@@ -58,6 +59,7 @@ function DiscordStatusLine({ enabled }: { enabled: boolean }) {
 /** What Home knows about what you play, and a way to forget it. */
 function HistorySettings() {
   const [size, setSize] = useState<number | null>(null)
+  const [radio, setRadio] = useState(radioEnabled)
   useEffect(() => {
     void window.chomusuke.getHistorySize().then(setSize)
   }, [])
@@ -78,6 +80,19 @@ function HistorySettings() {
           <button type="button" className="pill-button" disabled={!size} onClick={() => void clear()}>
             {size === null ? 'Clear history' : `Clear ${size} ${size === 1 ? 'song' : 'songs'}`}
           </button>
+        </SettingRow>
+        <SettingRow
+          title="Play similar songs when the music ends"
+          hint="When an album or playlist finishes, keep playing songs by artists like the last one. Their names come from ListenBrainz."
+        >
+          <Switch
+            checked={radio}
+            label="Play similar songs when the music ends"
+            onChange={enabled => {
+              setRadioEnabled(enabled)
+              setRadio(enabled)
+            }}
+          />
         </SettingRow>
       </div>
     </section>
