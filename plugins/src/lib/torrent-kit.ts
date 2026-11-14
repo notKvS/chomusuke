@@ -255,3 +255,14 @@ export function cleanQuery(query: string): string {
     .trim()
     .slice(0, 100)
 }
+
+/**
+ * The download link on a torrent's detail page: its magnet link if it has one, otherwise a magnet built from the
+ * info hash in an itorrents `.torrent` link.
+ */
+export function detailMagnet(html: string, name: string): string | undefined {
+  const direct = /href="(magnet:[^"]+)"/i.exec(html)?.[1]
+  if (direct) return direct.replace(/&amp;/g, '&')
+  const hash = /href="[^"]*itorrents[^"]*\/torrent\/([a-f0-9]{40})\.torrent/i.exec(html)?.[1]
+  return hash ? magnet(hash, name) : undefined
+}
