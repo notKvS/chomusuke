@@ -1,6 +1,7 @@
 import { type CSSProperties, useEffect, useRef } from 'react'
 import type { TorrentStats } from '../../../shared/types'
 import { formatSpeed, formatTime, plural } from '../format'
+import { usePlaybackTime } from '../playbackTime'
 import type { Appearance } from '../theme/appearance'
 import type { Player } from '../usePlayer'
 import type { Playlists } from '../usePlaylists'
@@ -43,6 +44,7 @@ export function PlayerBar({
   onToggleLyrics
 }: Props) {
   const { state, track, audio } = player
+  const { currentTime, bufferedEnd } = usePlaybackTime(player.time)
   const progressRef = useRef<HTMLDivElement>(null)
 
   // `timeupdate` only fires ~4×/s, which makes the bar step. While playing, follow the audio clock every
@@ -60,11 +62,11 @@ export function PlayerBar({
     }
     paint()
     return () => cancelAnimationFrame(frame)
-  }, [audio, state.isPlaying, state.currentTime, state.index])
+  }, [audio, state.isPlaying, currentTime, state.index])
 
   if (!track || !state.album) return null
 
-  const { currentTime, duration, bufferedEnd } = state
+  const { duration } = state
   const pct = (value: number) => (duration > 0 ? `${Math.min(100, (value / duration) * 100)}%` : '0%')
   const hasPrev = state.index > 0 || currentTime > 0 || Boolean(queue?.hasPrev)
   const hasNext = state.index + 1 < state.album.tracks.length || Boolean(queue?.hasNext)
