@@ -13,7 +13,7 @@ async function loadRow(shelf: HomeShelf): Promise<SearchAlbum[]> {
     const response = await window.chomusuke.browse(shelf.source.sourceId, shelf.source.categoryId)
     return response.ok ? response.section.albums : []
   }
-  const response = await window.chomusuke.search(shelf.source.query)
+  const response = await window.chomusuke.searchShelf(shelf.source.query)
   if (!response.ok) return []
   // Interleave the plugins so one of them doesn't fill the whole row.
   const lists = response.results.sections.map(section => section.albums)
