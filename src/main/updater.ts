@@ -4,7 +4,8 @@
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { app, shell } from 'electron'
-import electronUpdater from 'electron-updater'
+// Type-only: electron-updater takes ~0.4 s to load, so it's imported at the first check, after the window is up.
+import type { AppUpdater } from 'electron-updater'
 import type { UpdateState, UpdateStatus } from '../shared/types.ts'
 import { logger } from './log.ts'
 import { releasePageUrl, type UpdateMode, updateMode } from './update-mode.ts'
@@ -18,6 +19,11 @@ export class Updater {
   private status: UpdateStatus
   private restartPending = false
   private readonly onChange: (state: UpdateState) => void
+  /** Download new versions without asking (where this copy installs them itself). */
+  private autoDownload: boolean
+  private loading: Promise<AppUpdater> | null = null
+  /** Set once loaded; a version can only be ready to install after that. */
+  private loaded: AppUpdater | null = null
 
   /** `autoUpdate`: download new versions without asking (the `autoUpdate` setting). */
   constructor(onChange: (state: UpdateState) => void, autoUpdate: boolean) {
@@ -30,11 +36,18 @@ export class Updater {
       appImage: Boolean(process.env.APPIMAGE)
     })
     this.status = this.mode === 'off' ? { state: 'off' } : { state: 'idle' }
+    this.autoDownload = this.mode === 'auto' && autoUpdate
     log.info(`update mode: ${this.mode}`)
-    if (this.mode === 'off') return
+  }
 
-    const { autoUpdater } = electronUpdater
-    autoUpdater.autoDownload = this.mode === 'auto' && autoUpdate
+  /** electron-updater's updater, loaded and wired up on first use. */
+  private updater(): Promise<AppUpdater> {
+    this.loading ??= import('electron-updater').then(module => this.wire(module.default.autoUpdater))
+    return this.loading
+  }
+
+  private wire(autoUpdater: AppUpdater): AppUpdater {
+    autoUpdater.autoDownload = this.autoDownload
     // Applies only once an update is downloaded, so also to one downloaded on request.
     autoUpdater.autoInstallOnAppQuit = this.mode === 'auto'
     autoUpdater.on('checking-for-update', () => this.set({ state: 'checking' }))
@@ -52,6 +65,8 @@ export class Updater {
       log.error(err)
       this.set({ state: 'error', message: 'Couldn’t check for updates. Try again later.' })
     })
+    this.loaded = autoUpdater
+    return autoUpdater
   }
 
   /** First check now, then every few hours. */
@@ -68,7 +83,8 @@ export class Updater {
   /** The `autoUpdate` setting changed; turning it on downloads a version that is waiting to be asked for. */
   setAutoUpdate(on: boolean): void {
     if (this.mode !== 'auto') return
-    electronUpdater.autoUpdater.autoDownload = on
+    this.autoDownload = on
+    if (this.loaded) this.loaded.autoDownload = on
     if (on) this.download()
   }
 
@@ -76,7 +92,9 @@ export class Updater {
     const busy = ['off', 'checking', 'downloading', 'ready'].includes(this.status.state)
     if (!busy) {
       // Failures also arrive as the 'error' event, which sets the status.
-      const result = await electronUpdater.autoUpdater.checkForUpdates().catch(() => undefined)
+      const result = await this.updater()
+        .then(updater => updater.checkForUpdates())
+        .catch(() => undefined)
       if (result === null) this.set({ state: 'idle' })
     }
     return this.current()
@@ -92,7 +110,7 @@ export class Updater {
   /** Last step of quitting, once everything is saved: installs and reopens when a restart was asked for. */
   finishQuit(): void {
     // quitAndInstall only quits when the installer started; quit regardless so a failed install never hangs.
-    if (this.restartPending) electronUpdater.autoUpdater.quitAndInstall()
+    if (this.restartPending) this.loaded?.quitAndInstall()
     app.quit()
   }
 
@@ -106,7 +124,9 @@ export class Updater {
     }
     this.set({ state: 'downloading', version, percent: 0 })
     // Failures also arrive as the 'error' event, which sets the status.
-    electronUpdater.autoUpdater.downloadUpdate().catch(() => undefined)
+    this.updater()
+      .then(updater => updater.downloadUpdate())
+      .catch(() => undefined)
   }
 
   private set(status: UpdateStatus): void {
