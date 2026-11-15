@@ -1,11 +1,11 @@
 import { type CSSProperties, useEffect, useRef } from 'react'
-import type { TorrentStats } from '../../../shared/types'
 import { formatSpeed, formatTime, plural } from '../format'
 import { usePlaybackTime } from '../playbackTime'
 import type { Appearance } from '../theme/appearance'
 import type { Player } from '../usePlayer'
 import type { Playlists } from '../usePlaylists'
 import type { Ratings } from '../useRatings'
+import { useTorrentStats } from '../useTorrentStats'
 import { AddToPlaylist } from './AddToPlaylist'
 import { ArtistLink } from './ArtistLink'
 import { Cover } from './Cover'
@@ -16,7 +16,6 @@ import './PlayerBar.css'
 
 interface Props {
   player: Player
-  stats?: TorrentStats
   onOpenAlbum: () => void
   ratings: Ratings
   playlists: Playlists
@@ -34,7 +33,6 @@ interface Props {
  */
 export function PlayerBar({
   player,
-  stats,
   onOpenAlbum,
   ratings,
   playlists,
@@ -45,6 +43,7 @@ export function PlayerBar({
 }: Props) {
   const { state, track, audio } = player
   const { currentTime, bufferedEnd } = usePlaybackTime(player.time)
+  const stats = useTorrentStats(state.album?.infoHash)
   const progressRef = useRef<HTMLDivElement>(null)
 
   // `timeupdate` only fires ~4×/s, which makes the bar step. While playing, follow the audio clock every

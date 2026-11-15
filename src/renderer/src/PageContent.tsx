@@ -1,4 +1,4 @@
-import type { Album, SearchAlbum, SearchSong, SongRef, TorrentStats } from '../../shared/types'
+import type { Album, SearchAlbum, SearchSong, SongRef } from '../../shared/types'
 import { AlbumError, AlbumLoading, AlbumView } from './components/AlbumView'
 import { ExploreView } from './components/ExploreView'
 import { Home } from './components/Home'
@@ -19,7 +19,6 @@ interface Props {
   view: View
   albums: Album[]
   searches: Record<string, SearchState>
-  stats: Record<string, TorrentStats>
   player: Player
   queue: Queue | null
   ratings: Ratings
@@ -119,7 +118,6 @@ export function PageContent(props: Props) {
       return album ? (
         <AlbumView
           album={album}
-          stats={props.stats[album.infoHash]}
           durations={player.durations}
           currentTrackId={player.track?.id ?? null}
           isPlaying={player.state.isPlaying}
