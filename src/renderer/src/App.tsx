@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { SearchSong, TorrentStats, Track } from '../../shared/types'
+import type { SearchSong, Track } from '../../shared/types'
 import { ArtistSearchContext } from './components/ArtistLink'
 import { Icon } from './components/Icon'
 import { LyricsPanel } from './components/LyricsPanel'
@@ -29,7 +29,6 @@ import { useToast } from './useToast'
 
 /** The app shell: wires the hooks to the top bar, sidebar, page and player bar. */
 export function App() {
-  const [stats, setStats] = useState<Record<string, TorrentStats>>({})
   const [toast, setToast] = useToast()
   const [lyricsOpen, setLyricsOpen] = useState(false)
   const [sidebarCollapsed, toggleSidebar] = useSidebarCollapsed()
@@ -68,8 +67,6 @@ export function App() {
   const loader = useAlbumLoader({ loaded, nav, play: queue.playAlbumAt, setToast })
   const { loadSource, openSearchAlbum, hashFor } = loader
   const { searches, runSearch } = useSearches({ page: nav.page, nav })
-
-  useEffect(() => window.chomusuke.onStats(list => setStats(Object.fromEntries(list.map(s => [s.infoHash, s])))), [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -161,7 +158,6 @@ export function App() {
             view={view}
             albums={loaded.albums}
             searches={searches}
-            stats={stats}
             player={player}
             queue={queue.queue}
             ratings={ratings}
@@ -183,7 +179,6 @@ export function App() {
         </main>
         <PlayerBar
           player={player}
-          stats={playingHash ? stats[playingHash] : undefined}
           onOpenAlbum={() => playingHash && loader.openAlbum(playingHash)}
           ratings={ratings}
           playlists={playlists}

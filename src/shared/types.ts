@@ -420,6 +420,8 @@ export interface ChomusukeApi {
   openSong(song: SongRef): Promise<LoadResult>
   openTorrentFile(): Promise<LoadResult | null>
   search(query: string): Promise<SearchResponse>
+  /** A search for a Home row: unlike `search`, it doesn't cancel (and isn't cancelled by) other searches. */
+  searchShelf(query: string): Promise<SearchResponse>
   /** The next page of one source's albums for a search (page 2, 3…), when its section said `hasMore`. */
   searchMore(sourceId: string, query: string, page: number): Promise<BrowseResponse>
   openResult(albumId: string): Promise<LoadResult>

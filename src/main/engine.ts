@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
-import WebTorrent, { type Torrent } from 'webtorrent'
+// Type-only: WebTorrent takes ~1 s to load, so it's imported when the first torrent is (see TorrentEngine.start).
+import type { Torrent, default as WebTorrent } from 'webtorrent'
 import type { Album, SourceHints, TorrentDetails, TorrentStats, Track } from '../shared/types.ts'
 import { buildLibrary } from './library.ts'
 import { logger } from './log.ts'
@@ -75,13 +76,17 @@ const extensionOf = (name: string): string => name.slice(name.lastIndexOf('.') +
 
 /** Owns the WebTorrent client and maps torrents to playable albums. */
 export class TorrentEngine {
-  private readonly client: WebTorrent
+  /** Null until the first torrent loads: starting WebTorrent at launch would hold up the window by about a second. */
+  private client: WebTorrent | null = null
+  private starting: Promise<WebTorrent> | null = null
   private readonly loaded = new Map<string, LoadedTorrent>()
   private readonly pending = new Map<string, Promise<Album>>()
   private readonly cacheDir: string
   private readonly libraryDir: string
   private readonly mediaBaseUrl: string
   private sharing = true
+  /** Bytes/s, 0 for unlimited */
+  private uploadLimit = 0
 
   /**
    * @param cacheDir session cache (streamed pieces, wiped on quit)
@@ -91,11 +96,21 @@ export class TorrentEngine {
     this.cacheDir = path.resolve(cacheDir)
     this.libraryDir = path.resolve(libraryDir)
     this.mediaBaseUrl = mediaBaseUrl
-    // No UPnP / NAT-PMP: never open ports on the user's router behind their back.
-    // No uTP: WebTorrent retries uTP several times before falling back to TCP, which stalls
-    // for ~30s per peer on networks that drop UDP (common on corporate Wi-Fi).
-    this.client = new WebTorrent({ natUpnp: false, natPmp: false, utp: false })
-    this.client.on('error', (err: unknown) => log.error('client error:', errorMessage(err)))
+  }
+
+  /** The WebTorrent client, loaded and started the first time it's needed. */
+  private start(): Promise<WebTorrent> {
+    this.starting ??= import('webtorrent').then(({ default: WebTorrent }) => {
+      // No UPnP / NAT-PMP: never open ports on the user's router behind their back.
+      // No uTP: WebTorrent retries uTP several times before falling back to TCP, which stalls
+      // for ~30s per peer on networks that drop UDP (common on corporate Wi-Fi).
+      const client = new WebTorrent({ natUpnp: false, natPmp: false, utp: false })
+      client.on('error', (err: unknown) => log.error('client error:', errorMessage(err)))
+      client.throttleUpload(this.uploadLimit > 0 ? this.uploadLimit : -1)
+      this.client = client
+      return client
+    })
+    return this.starting
   }
 
   /** `storePath` (inside the library folder) is used for kept albums; everything else goes to the cache. */
@@ -113,16 +128,17 @@ export class TorrentEngine {
   private async loadNow(torrentId: string | Uint8Array, hints: SourceHints, storePath?: string): Promise<Album> {
     const started = performance.now()
     const what = typeof torrentId === 'string' ? torrentId.slice(0, 120) : `a .torrent file (${torrentId.length} bytes)`
+    const client = await this.start()
     let torrent: Torrent | null
     try {
-      torrent = await this.client.get(torrentId as never)
+      torrent = await client.get(torrentId as never)
     } catch (err) {
       log.warn(`not a valid torrent: ${what}:`, err)
       throw new SourceError("That isn't a valid torrent.")
     }
     if (!torrent) {
       log.info(`adding ${what} into the ${storePath ? 'library' : 'session cache'}`, hints)
-      torrent = this.client.add(torrentId as never, {
+      torrent = client.add(torrentId as never, {
         // Our own folder per torrent: with addUID the store root would be built from the torrent's
         // unsanitised `name` field, which a hostile torrent can set to "../../somewhere".
         path: storePath ?? path.join(this.cacheDir, randomUUID()),
@@ -311,7 +327,7 @@ export class TorrentEngine {
 
   totals(): { uploaded: number; uploadSpeed: number } {
     const uploaded = [...this.loaded.values()].reduce((sum, { torrent }) => sum + torrent.uploaded, 0)
-    return { uploaded, uploadSpeed: this.client.uploadSpeed }
+    return { uploaded, uploadSpeed: this.client?.uploadSpeed ?? 0 }
   }
 
   /**
@@ -321,6 +337,9 @@ export class TorrentEngine {
   setSharing(enabled: boolean, uploadLimit: number): void {
     log.info(`sharing ${enabled ? 'on' : 'off'}, upload limit ${uploadLimit > 0 ? `${uploadLimit} B/s` : 'none'}`)
     this.sharing = enabled
+    this.uploadLimit = uploadLimit
+    // Not started yet: the client picks these up when it starts.
+    if (!this.client) return
     this.client.throttleUpload(uploadLimit > 0 ? uploadLimit : -1)
     for (const torrent of this.client.torrents) {
       for (const wire of torrent.wires as unknown as ChokeableWire[]) this.applySharing(wire)
@@ -373,8 +392,9 @@ export class TorrentEngine {
     return released
   }
 
-  destroy(): Promise<void> {
-    return new Promise(resolve => this.client.destroy(() => resolve()))
+  async destroy(): Promise<void> {
+    const client = await this.starting?.catch(() => null)
+    if (client) await new Promise<void>(resolve => client.destroy(() => resolve()))
   }
 
   private toAlbum(torrent: Torrent, hints: SourceHints): LoadedTorrent {

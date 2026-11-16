@@ -7,6 +7,7 @@ const api: ChomusukeApi = {
   openSong: song => ipcRenderer.invoke('source:open-song', song),
   openTorrentFile: () => ipcRenderer.invoke('source:open-file'),
   search: query => ipcRenderer.invoke('search:query', query),
+  searchShelf: query => ipcRenderer.invoke('search:shelf', query),
   searchMore: (sourceId, query, page) => ipcRenderer.invoke('search:more', sourceId, query, page),
   openResult: albumId => ipcRenderer.invoke('search:open', albumId),
   listProviders: () => ipcRenderer.invoke('providers:list'),
