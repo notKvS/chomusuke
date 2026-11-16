@@ -468,6 +468,8 @@ export interface ChomusukeApi {
   getHomeShelves(): Promise<HomeShelf[]>
   /** Songs you don't know yet by artists like this one (MusicBrainz id); opened with openResult(). */
   getSimilarSongs(artistMbid: string): Promise<SearchAlbum[]>
+  /** Songs to play when the music runs out, by artists like the one of the song that ended; best first. */
+  getRadioSongs(ended: PlayedSong): Promise<SearchAlbum[]>
   getRatings(): Promise<RatedSong[]>
   /** Like (1), dislike (-1) or clear (0) a track of a loaded album. Returns the updated list. */
   rateTrack(infoHash: string, key: string, rating: 0 | 1 | -1): Promise<RatedSong[]>
