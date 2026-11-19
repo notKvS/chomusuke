@@ -1,5 +1,6 @@
 import type { Socket } from 'node:net'
-import { Client, type SetActivity, StatusDisplayType } from '@xhayper/discord-rpc'
+// Type-only: the client library takes ~0.5 s to load, so it's imported when Discord is first used (connect).
+import type { Client, SetActivity } from '@xhayper/discord-rpc'
 import type { DiscordStatus, NowPlaying } from '../shared/types.ts'
 import { logger } from './log.ts'
 import type { CoverWanted } from './providers/covers.ts'
@@ -81,7 +82,8 @@ export function toActivity(song: NowPlaying, at: number): SetActivity {
   const activity: SetActivity = {
     type: 2, // Listening
     // The member list shows the song instead of "Chomusuke".
-    statusDisplayType: StatusDisplayType.DETAILS,
+    // StatusDisplayType.DETAILS: the status line names the song.
+    statusDisplayType: 2,
     details: field(song.title),
     state: byline && field(byline),
     largeImageKey: song.coverUrl ?? LOGO_URL,
@@ -207,6 +209,7 @@ export class DiscordPresence {
   }
 
   private async connect(): Promise<Client> {
+    const { Client } = await import('@xhayper/discord-rpc')
     const client = new Client({ clientId: CLIENT_ID, transport: { type: 'ipc' } })
     client.on('disconnected', () => {
       if (this.client !== client) return

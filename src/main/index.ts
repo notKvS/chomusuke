@@ -344,8 +344,14 @@ app.whenReady().then(async () => {
   void seedLibrary(library, torrents)
   updater.start()
 
+  // Nothing loaded (and nothing was last time): no message, so an idle app stays idle.
+  let sentNone = false
   setInterval(() => {
     const contents = mainWindow?.webContents
-    if (contents && !contents.isDestroyed() && !contents.isCrashed()) contents.send('torrent:stats', torrents.stats())
+    if (!contents || contents.isDestroyed() || contents.isCrashed()) return
+    const stats = torrents.stats()
+    if (stats.length === 0 && sentNone) return
+    sentNone = stats.length === 0
+    contents.send('torrent:stats', stats)
   }, STATS_INTERVAL_MS)
 })

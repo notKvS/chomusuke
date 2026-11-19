@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import type { Album, TorrentStats } from '../../../shared/types'
+import type { Album } from '../../../shared/types'
 import { formatBytes, formatSpeed, formatTime, plural } from '../format'
 import type { Playlists } from '../usePlaylists'
 import type { Ratings } from '../useRatings'
+import { useTorrentStats } from '../useTorrentStats'
 import { AddToPlaylist } from './AddToPlaylist'
 import { ArtistLink } from './ArtistLink'
 import { Cover } from './Cover'
@@ -15,7 +16,6 @@ import './AlbumView.css'
 
 interface Props {
   album: Album
-  stats?: TorrentStats
   durations: Record<string, number>
   currentTrackId: string | null
   isPlaying: boolean
@@ -31,7 +31,6 @@ interface Props {
  */
 export function AlbumView({
   album,
-  stats,
   durations,
   currentTrackId,
   isPlaying,
@@ -65,7 +64,7 @@ export function AlbumView({
             {plural(album.tracks.length, 'song')}
             {isTorrent && <> • {formatBytes(album.totalSize)}</>}
           </p>
-          {isTorrent && <SwarmStatus stats={stats} />}
+          {isTorrent && <SwarmStatus infoHash={album.infoHash} />}
           <div className="album__actions">
             <button
               type="button"
@@ -147,7 +146,9 @@ export function AlbumView({
   )
 }
 
-function SwarmStatus({ stats }: { stats?: TorrentStats }) {
+/** Its own component so only this line re-renders when the swarm numbers change (every second while loaded). */
+function SwarmStatus({ infoHash }: { infoHash: string }) {
+  const stats = useTorrentStats(infoHash)
   if (!stats) return null
   const healthy = stats.numPeers > 0
   return (

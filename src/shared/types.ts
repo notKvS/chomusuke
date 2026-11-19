@@ -420,6 +420,8 @@ export interface ChomusukeApi {
   openSong(song: SongRef): Promise<LoadResult>
   openTorrentFile(): Promise<LoadResult | null>
   search(query: string): Promise<SearchResponse>
+  /** A search for a Home row: unlike `search`, it doesn't cancel (and isn't cancelled by) other searches. */
+  searchShelf(query: string): Promise<SearchResponse>
   /** The next page of one source's albums for a search (page 2, 3…), when its section said `hasMore`. */
   searchMore(sourceId: string, query: string, page: number): Promise<BrowseResponse>
   openResult(albumId: string): Promise<LoadResult>
@@ -468,6 +470,8 @@ export interface ChomusukeApi {
   getHomeShelves(): Promise<HomeShelf[]>
   /** Songs you don't know yet by artists like this one (MusicBrainz id); opened with openResult(). */
   getSimilarSongs(artistMbid: string): Promise<SearchAlbum[]>
+  /** Songs to play when the music runs out, by artists like the one of the song that ended; best first. */
+  getRadioSongs(ended: PlayedSong): Promise<SearchAlbum[]>
   getRatings(): Promise<RatedSong[]>
   /** Like (1), dislike (-1) or clear (0) a track of a loaded album. Returns the updated list. */
   rateTrack(infoHash: string, key: string, rating: 0 | 1 | -1): Promise<RatedSong[]>

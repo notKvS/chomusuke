@@ -8,15 +8,19 @@ import { playableToAlbum } from './sources.ts'
 
 const log = logger('search')
 
+/** How long a Home row waits for the providers. */
+const SHELF_SEARCH_TIMEOUT_MS = 30_000
+const BAD_QUERY = 'Type a song, album or artist to search for.'
+const validQuery = (raw: unknown): raw is string =>
+  typeof raw === 'string' && Boolean(raw.trim()) && raw.length <= MAX_QUERY_LENGTH
+
 /** Searching every enabled source, opening a result, and browsing sources by category on Explore. */
 export function register(deps: IpcDeps): void {
   const { assertTrustedSender, registry, library } = deps
   let activeSearch: AbortController | null = null
   handle('search:query', async (event, rawQuery: unknown): Promise<SearchResponse> => {
     assertTrustedSender(event)
-    if (typeof rawQuery !== 'string' || !rawQuery.trim() || rawQuery.length > MAX_QUERY_LENGTH) {
-      return { ok: false, error: 'Type a song, album or artist to search for.' }
-    }
+    if (!validQuery(rawQuery)) return { ok: false, error: BAD_QUERY }
     // Only one search runs at a time; a new query cancels the previous one's requests.
     activeSearch?.abort()
     const controller = new AbortController()
@@ -29,6 +33,18 @@ export function register(deps: IpcDeps): void {
       return { ok: false, error: 'Search failed. Check your connection and try again.' }
     } finally {
       if (activeSearch === controller) activeSearch = null
+    }
+  })
+
+  // Home's rows search for several artists at once: they neither cancel the search box's search nor each other.
+  handle('search:shelf', async (event, rawQuery: unknown): Promise<SearchResponse> => {
+    assertTrustedSender(event)
+    if (!validQuery(rawQuery)) return { ok: false, error: BAD_QUERY }
+    try {
+      return { ok: true, results: await registry.search(rawQuery.trim(), AbortSignal.timeout(SHELF_SEARCH_TIMEOUT_MS)) }
+    } catch (err) {
+      log.warn('shelf search failed:', err)
+      return { ok: false, error: 'Search failed. Check your connection and try again.' }
     }
   })
 

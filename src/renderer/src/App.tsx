@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { SearchSong, TorrentStats, Track } from '../../shared/types'
+import type { SearchSong, Track } from '../../shared/types'
 import { ArtistSearchContext } from './components/ArtistLink'
 import { Icon } from './components/Icon'
 import { LyricsPanel } from './components/LyricsPanel'
@@ -21,6 +21,7 @@ import { usePlayer } from './usePlayer'
 import { usePlayHistory } from './usePlayHistory'
 import { usePlaylists } from './usePlaylists'
 import { useQueue } from './useQueue'
+import { useRadio } from './useRadio'
 import { useRatings } from './useRatings'
 import { useSearches } from './useSearches'
 import { useSidebarCollapsed } from './useSidebarCollapsed'
@@ -28,7 +29,6 @@ import { useToast } from './useToast'
 
 /** The app shell: wires the hooks to the top bar, sidebar, page and player bar. */
 export function App() {
-  const [stats, setStats] = useState<Record<string, TorrentStats>>({})
   const [toast, setToast] = useToast()
   const [lyricsOpen, setLyricsOpen] = useState(false)
   const [sidebarCollapsed, toggleSidebar] = useSidebarCollapsed()
@@ -52,12 +52,21 @@ export function App() {
   const { view, goTo } = nav
   const loaded = useLoadedAlbums()
   const queue = useQueue({ playAt, addAlbum: loaded.addAlbum, setToast })
-  edgeRef.current = queue.step
+  // What the player has now, for the radio to notice something else started while it was finding a song.
+  const playingRef = useRef({ album: player.state.album, index: player.state.index })
+  playingRef.current = { album: player.state.album, index: player.state.index }
+  const playing = useCallback(() => playingRef.current, [])
+  const radio = useRadio({ playAt, addAlbum: loaded.addAlbum, setToast, playing })
+  // Past the end of a queue, or of an album played on its own, similar songs play on.
+  edgeRef.current = direction => {
+    if (queue.step(direction)) return true
+    const { track, state } = player
+    if (direction !== 1 || !track) return false
+    return radio.start({ title: track.title, artist: track.artist ?? state.album?.artist })
+  }
   const loader = useAlbumLoader({ loaded, nav, play: queue.playAlbumAt, setToast })
   const { loadSource, openSearchAlbum, hashFor } = loader
   const { searches, runSearch } = useSearches({ page: nav.page, nav })
-
-  useEffect(() => window.chomusuke.onStats(list => setStats(Object.fromEntries(list.map(s => [s.infoHash, s])))), [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -149,7 +158,6 @@ export function App() {
             view={view}
             albums={loaded.albums}
             searches={searches}
-            stats={stats}
             player={player}
             queue={queue.queue}
             ratings={ratings}
@@ -171,7 +179,6 @@ export function App() {
         </main>
         <PlayerBar
           player={player}
-          stats={playingHash ? stats[playingHash] : undefined}
           onOpenAlbum={() => playingHash && loader.openAlbum(playingHash)}
           ratings={ratings}
           playlists={playlists}

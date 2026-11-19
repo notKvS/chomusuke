@@ -1,4 +1,5 @@
 import { type CSSProperties, useEffect, useRef } from 'react'
+import { usePlaybackTime } from '../playbackTime'
 import type { Appearance } from '../theme/appearance'
 import { useCoverTint } from '../useCoverTint'
 import { activeLine, useLyrics } from '../useLyrics'
@@ -15,7 +16,8 @@ export function LyricsPanel({ player, open, mode }: { player: Player; open: bool
   const [lyrics, retry] = useLyrics(track, state.album, open)
   const tint = useCoverTint(state.album?.coverUrl, mode, open)
   const body = useRef<HTMLDivElement>(null)
-  const active = lyrics.status === 'ready' && lyrics.lyrics ? activeLine(lyrics.lyrics, state.currentTime) : -1
+  const { currentTime } = usePlaybackTime(player.time)
+  const active = lyrics.status === 'ready' && lyrics.lyrics ? activeLine(lyrics.lyrics, currentTime) : -1
 
   // Keep the line being sung in the middle of the panel (scrolling the panel only, never the page behind it).
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new active line is what moves the panel

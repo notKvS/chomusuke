@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Album, Track } from '../../shared/types'
 import { log } from './log'
+import { createPlaybackClock } from './playbackTime'
 
 export interface PlayerState {
   album: Album | null
   index: number
   isPlaying: boolean
   isBuffering: boolean
-  currentTime: number
   duration: number
-  bufferedEnd: number
   volume: number
   muted: boolean
 }
@@ -63,13 +62,13 @@ export function usePlayer(
     index: -1,
     isPlaying: false,
     isBuffering: false,
-    currentTime: 0,
     duration: 0,
-    bufferedEnd: 0,
     volume: audio.volume,
     muted: false
   }))
   const [durations, setDurations] = useState<Record<string, number>>({})
+  // The playback time changes ~4×/s: kept outside `state` so only what shows it re-renders (see usePlaybackTime).
+  const time = useMemo(createPlaybackClock, [])
 
   // Event handlers need the latest queue without re-subscribing.
   const queueRef = useRef<{ album: Album | null; index: number }>({ album: null, index: -1 })
@@ -89,7 +88,16 @@ export function usePlayer(
     return undefined
   }, [])
 
-  const patch = useCallback((next: Partial<PlayerState>) => setState(prev => ({ ...prev, ...next })), [])
+  // Audio events repeat themselves (canplay, progress…): an update that changes nothing keeps the same state.
+  const patch = useCallback(
+    (next: Partial<PlayerState>) =>
+      setState(prev =>
+        Object.entries(next).every(([key, value]) => prev[key as keyof PlayerState] === value)
+          ? prev
+          : { ...prev, ...next }
+      ),
+    []
+  )
 
   const playAt = useCallback(
     (album: Album, index: number) => {
@@ -97,7 +105,8 @@ export function usePlayer(
       if (!track) return
       queueRef.current = { album, index }
       log.info(`playing “${track.title}” (${track.id}) from “${album.title}”`)
-      patch({ album, index, currentTime: 0, duration: 0, bufferedEnd: 0, isBuffering: true })
+      patch({ album, index, duration: 0, isBuffering: true })
+      time.set({ currentTime: 0, bufferedEnd: 0 })
       audio.src = track.url
       audio.play().catch((err: unknown) => {
         // Switching tracks quickly aborts the previous play() — that's expected.
@@ -105,7 +114,7 @@ export function usePlayer(
         log.warn(`play() failed for ${track.id}:`, err)
       })
     },
-    [audio, patch]
+    [audio, patch, time]
   )
 
   const next = useCallback(() => {
@@ -160,10 +169,10 @@ export function usePlayer(
       pause: () => patch({ isPlaying: false }),
       waiting: () => patch({ isBuffering: true }),
       canplay: () => patch({ isBuffering: false }),
-      timeupdate: () => patch({ currentTime: audio.currentTime, bufferedEnd: bufferedAhead(audio) }),
+      timeupdate: () => time.set({ currentTime: audio.currentTime, bufferedEnd: bufferedAhead(audio) }),
       progress: () => {
         lastDataAt.current = Date.now()
-        patch({ bufferedEnd: bufferedAhead(audio) })
+        time.set({ ...time.get(), bufferedEnd: bufferedAhead(audio) })
       },
       durationchange: () => {
         const track = current()
@@ -194,7 +203,7 @@ export function usePlayer(
     return () => {
       for (const [name, handler] of Object.entries(handlers)) audio.removeEventListener(name, handler)
     }
-  }, [audio, patch, playAt, nextIndex])
+  }, [audio, patch, playAt, nextIndex, time])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new track restarts the stall timer
   useEffect(() => {
@@ -238,7 +247,7 @@ export function usePlayer(
 
   useEffect(() => () => audio.pause(), [audio])
 
-  return { audio, state, track, durations, playAt, toggle, next, prev, seek, setVolume, toggleMute }
+  return { audio, state, time, track, durations, playAt, toggle, next, prev, seek, setVolume, toggleMute }
 }
 
 export type Player = ReturnType<typeof usePlayer>

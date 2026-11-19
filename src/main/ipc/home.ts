@@ -1,8 +1,9 @@
 import { songFingerprint } from '../../shared/fingerprint.ts'
 import type { HomeShelf, SearchAlbum } from '../../shared/types.ts'
 import { MBID } from '../genres.ts'
+import { leadArtist, sanitizePlay } from '../history.ts'
 import { ARTIST_SHELVES, planHome } from '../home.ts'
-import { pickSongs } from '../similar.ts'
+import { pickSongs, type SimilarSong } from '../similar.ts'
 import type { IpcDeps } from './deps.ts'
 import { handle } from './guard.ts'
 
@@ -13,6 +14,8 @@ const GENRE_ARTISTS = 2
 /** How long a similar-artist shelf waits for ListenBrainz and covers. */
 const SIMILAR_TIMEOUT_MS = 20_000
 const SIMILAR_SHELF_SIZE = 12
+/** Songs the radio is offered at a time: it plays the first one a plugin can find. */
+const RADIO_CANDIDATES = 4
 
 /** What you played lately, and the Home shelves made from it. */
 export function register(deps: IpcDeps): void {
@@ -27,6 +30,19 @@ export function register(deps: IpcDeps): void {
     }
     return known
   }
+
+  /** Suggested songs as albums the renderer can open. */
+  const suggest = (songs: SimilarSong[], signal: AbortSignal): Promise<SearchAlbum[]> =>
+    registry.suggest(
+      songs.map(song => ({
+        kind: 'song',
+        title: song.title,
+        artist: song.artist,
+        album: song.album,
+        artwork: song.artwork
+      })),
+      signal
+    )
 
   handle('history:record', async (event, raw: unknown) => {
     assertTrustedSender(event)
@@ -66,15 +82,22 @@ export function register(deps: IpcDeps): void {
       skipArtist: artistMbid,
       limit: SIMILAR_SHELF_SIZE
     })
-    return registry.suggest(
-      songs.map(song => ({
-        kind: 'song',
-        title: song.title,
-        artist: song.artist,
-        album: song.album,
-        artwork: song.artwork
-      })),
-      signal
-    )
+    return suggest(songs, signal)
+  })
+
+  // What to play when the music runs out: songs you don't know yet by artists like the one of the song that ended.
+  handle('radio:next', async (event, raw: unknown): Promise<SearchAlbum[]> => {
+    assertTrustedSender(event)
+    const ended = sanitizePlay(raw)
+    if (!ended?.artist) return []
+    const signal = AbortSignal.timeout(SIMILAR_TIMEOUT_MS)
+    const { mbid } = await artistInfo(leadArtist(ended.artist), signal)
+    if (!mbid) return []
+    const songs = pickSongs(await similarSongs(mbid, signal), {
+      skip: knownSongs(),
+      skipArtist: mbid,
+      limit: RADIO_CANDIDATES
+    })
+    return suggest(songs, signal)
   })
 }
