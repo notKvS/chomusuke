@@ -25,6 +25,10 @@ interface Props {
   queue?: { label: string; hasNext: boolean; hasPrev: boolean }
   lyricsOpen: boolean
   onToggleLyrics: () => void
+  /** Songs queued to play next (they go ahead of the rest of the album) */
+  queued: number
+  queueOpen: boolean
+  onToggleQueue: () => void
 }
 
 /**
@@ -39,7 +43,10 @@ export function PlayerBar({
   seekThumb,
   queue,
   lyricsOpen,
-  onToggleLyrics
+  onToggleLyrics,
+  queued,
+  queueOpen,
+  onToggleQueue
 }: Props) {
   const { state, track, audio } = player
   const { currentTime, bufferedEnd } = usePlaybackTime(player.time)
@@ -68,7 +75,7 @@ export function PlayerBar({
   const { duration } = state
   const pct = (value: number) => (duration > 0 ? `${Math.min(100, (value / duration) * 100)}%` : '0%')
   const hasPrev = state.index > 0 || currentTime > 0 || Boolean(queue?.hasPrev)
-  const hasNext = state.index + 1 < state.album.tracks.length || Boolean(queue?.hasNext)
+  const hasNext = state.index + 1 < state.album.tracks.length || Boolean(queue?.hasNext) || queued > 0
   const picture = seekPicture(seekThumb, state.isPlaying)
   const volumeIcon = state.muted || state.volume === 0 ? 'volumeOff' : state.volume < 0.5 ? 'volumeLow' : 'volume'
 
@@ -144,7 +151,8 @@ export function PlayerBar({
           playlists={playlists}
           infoHash={state.album.infoHash}
           trackKey={track.key}
-          label={`Add ${track.title} to a playlist`}
+          label={`Queue or add ${track.title} to a playlist`}
+          artwork={state.album.coverUrl}
           size={20}
           className="is-up"
         />
@@ -166,6 +174,16 @@ export function PlayerBar({
           title="Lyrics"
         >
           <Icon name="lyrics" size={20} />
+        </button>
+        <button
+          type="button"
+          className={`icon-button ${queueOpen ? 'is-on' : ''}`}
+          onClick={onToggleQueue}
+          aria-pressed={queueOpen}
+          aria-label={queued > 0 ? `Queue (${queued})` : 'Queue'}
+          title="Queue"
+        >
+          <Icon name="queueMusic" size={20} />
         </button>
         <div className="volume">
           <button

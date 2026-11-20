@@ -45,10 +45,15 @@ function bufferedAhead(audio: HTMLAudioElement): number {
  * `onEdge` is asked to continue past the end (1) or before the start (-1) of the current album — e.g. to move on in a
  * playlist that spans several torrents. It returns true when it took over.
  */
+/**
+ * `onBeforeNext` is asked first whenever playback moves on (the track ended, or Next), before the next track of the
+ * album: songs queued to play next go ahead of the album. It returns true when it took over.
+ */
 export function usePlayer(
   onError: (message: string) => void,
   shouldSkip: (track: Track) => boolean = () => false,
-  onEdge: (direction: 1 | -1) => boolean = () => false
+  onEdge: (direction: 1 | -1) => boolean = () => false,
+  onBeforeNext: () => boolean = () => false
 ) {
   const audio = useMemo(() => {
     const element = new Audio()
@@ -76,11 +81,13 @@ export function usePlayer(
   const onErrorRef = useRef(onError)
   const skipRef = useRef(shouldSkip)
   const edgeRef = useRef(onEdge)
+  const beforeNextRef = useRef(onBeforeNext)
   useEffect(() => {
     onErrorRef.current = onError
     skipRef.current = shouldSkip
     edgeRef.current = onEdge
-  }, [onError, shouldSkip, onEdge])
+    beforeNextRef.current = onBeforeNext
+  }, [onError, shouldSkip, onEdge, onBeforeNext])
 
   /** The next playable index after `index`, skipping what the user doesn't want to hear. */
   const nextIndex = useCallback((album: Album, index: number): number | undefined => {
@@ -117,12 +124,25 @@ export function usePlayer(
     [audio, patch, time]
   )
 
-  const next = useCallback(() => {
+  /** Plays the track after `index` of `album`, skipping what shouldn't play; false when there's none. */
+  const playAfter = useCallback(
+    (album: Album, index: number): boolean => {
+      const target = nextIndex(album, index)
+      if (target === undefined) return false
+      playAt(album, target)
+      return true
+    },
+    [playAt, nextIndex]
+  )
+
+  /** Moves on from the current track: queued songs first, then the album, then `onEdge`. False when nothing's left. */
+  const advance = useCallback((): boolean => {
+    if (beforeNextRef.current()) return true
     const { album, index } = queueRef.current
-    const target = album ? nextIndex(album, index) : undefined
-    if (album && target !== undefined) playAt(album, target)
-    else edgeRef.current(1)
-  }, [playAt, nextIndex])
+    return (album !== null && playAfter(album, index)) || edgeRef.current(1)
+  }, [playAfter])
+
+  const next = useCallback(() => void advance(), [advance])
 
   const prev = useCallback(() => {
     const { album, index } = queueRef.current
@@ -182,10 +202,7 @@ export function usePlayer(
       },
       volumechange: () => patch({ volume: audio.volume, muted: audio.muted }),
       ended: () => {
-        const { album, index } = queueRef.current
-        const target = album ? nextIndex(album, index) : undefined
-        if (album && target !== undefined) playAt(album, target)
-        else if (!edgeRef.current(1)) patch({ isPlaying: false })
+        if (!advance()) patch({ isPlaying: false })
       },
       error: () => {
         if (!audio.src) return
@@ -203,7 +220,7 @@ export function usePlayer(
     return () => {
       for (const [name, handler] of Object.entries(handlers)) audio.removeEventListener(name, handler)
     }
-  }, [audio, patch, playAt, nextIndex, time])
+  }, [audio, patch, advance, time])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new track restarts the stall timer
   useEffect(() => {
@@ -247,7 +264,7 @@ export function usePlayer(
 
   useEffect(() => () => audio.pause(), [audio])
 
-  return { audio, state, time, track, durations, playAt, toggle, next, prev, seek, setVolume, toggleMute }
+  return { audio, state, time, track, durations, playAt, playAfter, toggle, next, prev, seek, setVolume, toggleMute }
 }
 
 export type Player = ReturnType<typeof usePlayer>

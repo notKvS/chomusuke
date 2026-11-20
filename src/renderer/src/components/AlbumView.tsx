@@ -134,7 +134,8 @@ export function AlbumView({
                   playlists={playlists}
                   infoHash={album.infoHash}
                   trackKey={track.key}
-                  label={`Add ${track.title} to a playlist`}
+                  label={`Queue or add ${track.title} to a playlist`}
+                  artwork={album.coverUrl}
                 />
                 <RateButtons infoHash={album.infoHash} track={track} ratings={ratings} />
               </span>

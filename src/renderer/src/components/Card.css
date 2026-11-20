@@ -131,3 +131,33 @@
     box-shadow: 0 0.5rem 1.5rem rgb(var(--ink-rgb) / 0.18);
   }
 }
+
+@layer components {
+  .card:has(> .card__menu) {
+    position: relative;
+  }
+
+  .card__menu {
+    position: absolute;
+    z-index: 1;
+    top: 0.5rem;
+    right: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .card__menu .add-to-playlist__button {
+    border-radius: 50%;
+    color: var(--text);
+    background: rgb(var(--surface-rgb) / 0.75);
+  }
+
+  .card__menu .playlist-menu {
+    min-width: 10.5rem;
+  }
+
+  .card:hover .card__menu,
+  .card__menu:focus-within {
+    opacity: 1;
+  }
+}

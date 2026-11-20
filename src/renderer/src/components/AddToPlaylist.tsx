@@ -1,12 +1,15 @@
-import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { type FormEvent, useState } from 'react'
 import type { SongRef } from '../../../shared/types'
+import { songItem, type UpNextItem } from '../upNext'
 import type { Playlists } from '../usePlaylists'
 import { Icon } from './Icon'
+import { QueueMenuItems, useMenuDismiss } from './QueueMenu'
 import './AddToPlaylist.css'
 
 /**
- * "+" button with a small menu: add a song to an existing playlist or to a new one. Pass either a loaded track
- * (`infoHash` + `trackKey`, details read from the torrent) or known songs (`songs`).
+ * "+" button with a small menu: queue a song (play next, or at the end of the queue), or add it to an existing playlist
+ * or to a new one. Pass either a loaded track (`infoHash` + `trackKey`, details read from the torrent) or known songs
+ * (`songs`). `artwork` shows next to them in the queue.
  */
 export function AddToPlaylist({
   playlists,
@@ -14,6 +17,7 @@ export function AddToPlaylist({
   trackKey,
   songs,
   label,
+  artwork,
   size = 18,
   className = ''
 }: {
@@ -22,28 +26,14 @@ export function AddToPlaylist({
   trackKey?: string
   songs?: SongRef[]
   label: string
+  artwork?: string
   size?: number
   className?: string
 }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [done, setDone] = useState<string | null>(null)
-  const ref = useRef<HTMLSpanElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const close = (event: MouseEvent | KeyboardEvent) => {
-      if (event instanceof KeyboardEvent ? event.key === 'Escape' : !ref.current?.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-    window.addEventListener('mousedown', close)
-    window.addEventListener('keydown', close)
-    return () => {
-      window.removeEventListener('mousedown', close)
-      window.removeEventListener('keydown', close)
-    }
-  }, [open])
+  const ref = useMenuDismiss(open, () => setOpen(false))
 
   const addTo = async (id: string, playlistName: string) => {
     if (songs) await playlists.addSongs(id, songs)
@@ -53,6 +43,12 @@ export function AddToPlaylist({
       setDone(null)
       setOpen(false)
     }, 900)
+  }
+
+  const queueItems = async (): Promise<UpNextItem[]> => {
+    if (songs) return songs.map(song => songItem(song, artwork))
+    const song = infoHash && trackKey ? await window.chomusuke.songRef(infoHash, trackKey) : null
+    return song ? [songItem(song, artwork)] : []
   }
 
   const createAndAdd = async (event: FormEvent) => {
@@ -70,7 +66,7 @@ export function AddToPlaylist({
         type="button"
         className="icon-button add-to-playlist__button"
         aria-label={label}
-        title="Add to playlist"
+        title="Queue or add to a playlist"
         aria-expanded={open}
         onClick={event => {
           event.stopPropagation()
@@ -88,6 +84,7 @@ export function AddToPlaylist({
             </p>
           ) : (
             <>
+              <QueueMenuItems items={queueItems} onDone={() => setOpen(false)} />
               <p className="playlist-menu__title">Add to playlist</p>
               {playlists.playlists.map(playlist => (
                 <button

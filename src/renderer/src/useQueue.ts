@@ -81,5 +81,10 @@ export function useQueue({
     [playAt, setCurrentQueue]
   )
 
-  return { queue, step, startQueue, playAlbumAt }
+  /** Stops waiting for a playlist song that's still loading (something else is about to play). */
+  const cancel = useCallback(() => {
+    queueLoad.current++
+  }, [])
+
+  return { queue, step, startQueue, playAlbumAt, cancel }
 }

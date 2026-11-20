@@ -126,3 +126,24 @@
     margin-top: 1.25rem;
   }
 }
+
+@layer components {
+  /* The queue button sits over the row, before the duration; shown on hover. */
+  .song-list__item {
+    position: relative;
+  }
+
+  .song-list__item > .add-to-playlist {
+    position: absolute;
+    top: 50%;
+    right: 4.75rem;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .song-list__item:hover > .add-to-playlist,
+  .song-list__item > .add-to-playlist:focus-within {
+    opacity: 1;
+  }
+}

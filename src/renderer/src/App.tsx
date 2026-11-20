@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { SearchSong, Track } from '../../shared/types'
+import type { Album, SearchSong, Track } from '../../shared/types'
 import { ArtistSearchContext } from './components/ArtistLink'
 import { Icon } from './components/Icon'
 import { LyricsPanel } from './components/LyricsPanel'
 import { Particles } from './components/mascot/Particles'
 import { Splash } from './components/mascot/Splash'
 import { PlayerBar } from './components/PlayerBar'
+import { type PlaysLater, QueuePanel } from './components/QueuePanel'
 import { Sidebar } from './components/Sidebar'
 import { TopBar } from './components/TopBar'
 import { UpdatePrompt } from './components/UpdatePrompt'
@@ -25,11 +26,14 @@ import { useRatings } from './useRatings'
 import { useSearches } from './useSearches'
 import { useSidebarCollapsed } from './useSidebarCollapsed'
 import { useToast } from './useToast'
+import { UpNextContext, useUpNext } from './useUpNext'
 
 /** The app shell: wires the hooks to the top bar, sidebar, page and player bar. */
 export function App() {
   const [toast, setToast] = useToast()
-  const [lyricsOpen, setLyricsOpen] = useState(false)
+  // The panel on the right: lyrics or the queue, one at a time.
+  const [panel, setPanel] = useState<'lyrics' | 'queue' | null>(null)
+  const togglePanel = (which: 'lyrics' | 'queue') => setPanel(open => (open === which ? null : which))
   const [sidebarCollapsed, toggleSidebar] = useSidebarCollapsed()
   const looks = useAppearance()
   // Decided once at launch: turning the setting on later shouldn't replay the splash.
@@ -42,8 +46,11 @@ export function App() {
   // The player asks this to go past the end (or start) of the current album; filled in once the queue exists.
   const edgeRef = useRef<(direction: 1 | -1) => boolean>(() => false)
   const onEdge = useCallback((direction: 1 | -1) => edgeRef.current(direction), [])
-  const player = usePlayer(setToast, isDisliked, onEdge)
-  const { playAt, toggle } = player
+  // Asked first whenever playback moves on: songs queued to play next go ahead of the album.
+  const beforeNextRef = useRef<() => boolean>(() => false)
+  const onBeforeNext = useCallback(() => beforeNextRef.current(), [])
+  const player = usePlayer(setToast, isDisliked, onEdge, onBeforeNext)
+  const { playAt, playAfter, toggle } = player
   useNowPlaying(player)
   usePlayHistory(player)
 
@@ -51,8 +58,50 @@ export function App() {
   const { view, goTo } = nav
   const loaded = useLoadedAlbums()
   const queue = useQueue({ playAt, addAlbum: loaded.addAlbum, setToast })
-  edgeRef.current = queue.step
-  const loader = useAlbumLoader({ loaded, nav, play: queue.playAlbumAt, setToast })
+  // What the player has now, for the queue to notice something else started while it was loading a song.
+  const playingRef = useRef({ album: player.state.album, index: player.state.index })
+  playingRef.current = { album: player.state.album, index: player.state.index }
+  const playing = useCallback(() => playingRef.current, [])
+  const onQueueExhausted = useCallback(() => void edgeRef.current(1), [])
+  const upNext = useUpNext({
+    playAt,
+    playAfter,
+    addAlbum: loaded.addAlbum,
+    setToast,
+    playing,
+    onExhausted: onQueueExhausted
+  })
+  // Whichever of the queue and the playlist starts loading a song last wins: the other stops waiting for its own.
+  beforeNextRef.current = () => {
+    if (!upNext.playQueued()) return false
+    queue.cancel()
+    return true
+  }
+  edgeRef.current = direction => {
+    // Previous on a queued song restarts it: there's no "before" in the queue.
+    if (direction === -1 && upNext.isQueuedAlbum(player.state.album)) return false
+    // After the queued songs: back to the album they cut into, or on through the playlist.
+    if (direction === 1 && upNext.resume()) return true
+    upNext.cancel()
+    return queue.step(direction)
+  }
+  // Picking something to play ends what the queue would have gone back to (the queued songs stay).
+  const { forgetResume } = upNext
+  const playAlbumAt = useCallback(
+    (album: Album, index: number) => {
+      forgetResume()
+      queue.playAlbumAt(album, index)
+    },
+    [forgetResume, queue.playAlbumAt]
+  )
+  const startQueue = useCallback(
+    (...args: Parameters<typeof queue.startQueue>) => {
+      forgetResume()
+      queue.startQueue(...args)
+    },
+    [forgetResume, queue.startQueue]
+  )
+  const loader = useAlbumLoader({ loaded, nav, play: playAlbumAt, setToast })
   const { loadSource, openSearchAlbum, hashFor } = loader
   const { searches, runSearch } = useSearches({ page: nav.page, nav })
 
@@ -106,87 +155,120 @@ export function App() {
 
   const playingHash = player.state.album?.infoHash ?? null
 
+  /** The rest of the playlist or album, which plays after the queued songs: for the queue panel. */
+  const playsLater = (): PlaysLater | null => {
+    const shown = 20
+    const list = queue.queue
+    if (list) {
+      const songs = list.items.slice(list.position + 1, list.position + 1 + shown)
+      return {
+        label: list.label,
+        songs: songs.map((s, i) => ({ id: `${i}:${s.id}`, title: s.title, artist: s.artist }))
+      }
+    }
+    const { album, index } = player.state
+    const from = upNext.resumesFrom() ?? (album && !upNext.isQueuedAlbum(album) ? { album, index } : null)
+    if (!from) return null
+    const tracks = from.album.tracks.slice(from.index + 1, from.index + 1 + shown)
+    return { label: from.album.title, songs: tracks.map(t => ({ id: t.id, title: t.title, artist: t.artist })) }
+  }
+
   return (
     <ArtistSearchContext.Provider value={searchArtist}>
-      <div
-        className={`app ${player.track ? 'has-player' : ''} ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''} ${lyricsOpen && player.track ? 'has-lyrics' : ''}`}
-      >
-        {looks.appearance.particles !== 'off' && (
-          <Particles kind={looks.appearance.particles} count={looks.appearance.particleCount} />
-        )}
-        <TopBar
-          onSubmit={submitTopBar}
-          onHome={goHome}
-          playing={player.state.isPlaying}
-          canGoBack={nav.canGoBack}
-          canGoForward={nav.canGoForward}
-          onBack={nav.goBack}
-          onForward={nav.goForward}
-        />
-        <Sidebar
-          active={sidebarKey(view)}
-          albums={loaded.albums}
-          playingAlbum={playingHash}
-          collapsed={sidebarCollapsed}
-          onToggleCollapsed={toggleSidebar}
-          onHome={goHome}
-          onExplore={() => goTo({ kind: 'explore' })}
-          onSettings={() => goSettings()}
-          onLiked={() => goTo({ kind: 'liked' })}
-          likedCount={ratings.songs.filter(song => song.rating === 1).length}
-          onSaved={() => goTo({ kind: 'saved' })}
-          playlists={playlists.playlists}
-          onOpenPlaylist={goPlaylist}
-          onCreatePlaylist={createPlaylist}
-          onOpenAlbum={loader.openAlbum}
-          onOpenFile={loader.openFile}
-        />
-        <main className="content" ref={nav.contentRef} onScroll={e => nav.rememberScroll(e.currentTarget.scrollTop)}>
-          <PageContent
-            view={view}
+      <UpNextContext.Provider value={upNext.actions}>
+        <div
+          className={`app ${player.track ? 'has-player' : ''} ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''} ${panel && player.track ? 'has-lyrics' : ''}`}
+        >
+          {looks.appearance.particles !== 'off' && (
+            <Particles kind={looks.appearance.particles} count={looks.appearance.particleCount} />
+          )}
+          <TopBar
+            onSubmit={submitTopBar}
+            onHome={goHome}
+            playing={player.state.isPlaying}
+            canGoBack={nav.canGoBack}
+            canGoForward={nav.canGoForward}
+            onBack={nav.goBack}
+            onForward={nav.goForward}
+          />
+          <Sidebar
+            active={sidebarKey(view)}
             albums={loaded.albums}
-            searches={searches}
+            playingAlbum={playingHash}
+            collapsed={sidebarCollapsed}
+            onToggleCollapsed={toggleSidebar}
+            onHome={goHome}
+            onExplore={() => goTo({ kind: 'explore' })}
+            onSettings={() => goSettings()}
+            onLiked={() => goTo({ kind: 'liked' })}
+            likedCount={ratings.songs.filter(song => song.rating === 1).length}
+            onSaved={() => goTo({ kind: 'saved' })}
+            playlists={playlists.playlists}
+            onOpenPlaylist={goPlaylist}
+            onCreatePlaylist={createPlaylist}
+            onOpenAlbum={loader.openAlbum}
+            onOpenFile={loader.openFile}
+          />
+          <main className="content" ref={nav.contentRef} onScroll={e => nav.rememberScroll(e.currentTarget.scrollTop)}>
+            <PageContent
+              view={view}
+              albums={loaded.albums}
+              searches={searches}
+              player={player}
+              queue={queue.queue}
+              ratings={ratings}
+              playlists={playlists}
+              looks={looks}
+              onOpenAlbum={loader.openAlbum}
+              onOpenSearchAlbum={openSearchAlbum}
+              onOpenLibraryAlbum={loader.openLibraryAlbum}
+              onPlaySong={playSong}
+              isSongPlaying={isSongPlaying}
+              onRetrySearch={query => void runSearch(query, false)}
+              onPlayAlbumAt={playAlbumAt}
+              onStartQueue={startQueue}
+              onSettings={goSettings}
+              onManagePlugins={goPlugins}
+              onManageCharts={goCharts}
+              onHome={goHome}
+            />
+          </main>
+          <PlayerBar
             player={player}
-            queue={queue.queue}
+            onOpenAlbum={() => playingHash && loader.openAlbum(playingHash)}
             ratings={ratings}
             playlists={playlists}
-            looks={looks}
-            onOpenAlbum={loader.openAlbum}
-            onOpenSearchAlbum={openSearchAlbum}
-            onOpenLibraryAlbum={loader.openLibraryAlbum}
-            onPlaySong={playSong}
-            isSongPlaying={isSongPlaying}
-            onRetrySearch={query => void runSearch(query, false)}
-            onPlayAlbumAt={queue.playAlbumAt}
-            onStartQueue={queue.startQueue}
-            onSettings={goSettings}
-            onManagePlugins={goPlugins}
-            onManageCharts={goCharts}
-            onHome={goHome}
+            seekThumb={looks.appearance.seekThumb}
+            queue={queue.queue ? { label: queue.queue.label, ...queueEdges(queue.queue) } : undefined}
+            lyricsOpen={panel === 'lyrics'}
+            onToggleLyrics={() => togglePanel('lyrics')}
+            queued={upNext.items.length}
+            queueOpen={panel === 'queue'}
+            onToggleQueue={() => togglePanel('queue')}
           />
-        </main>
-        <PlayerBar
-          player={player}
-          onOpenAlbum={() => playingHash && loader.openAlbum(playingHash)}
-          ratings={ratings}
-          playlists={playlists}
-          seekThumb={looks.appearance.seekThumb}
-          queue={queue.queue ? { label: queue.queue.label, ...queueEdges(queue.queue) } : undefined}
-          lyricsOpen={lyricsOpen}
-          onToggleLyrics={() => setLyricsOpen(open => !open)}
-        />
-        <LyricsPanel player={player} open={lyricsOpen} mode={looks.appearance.mode} />
-        {toast && (
-          <div className="toast" role="status">
-            <span>{toast}</span>
-            <button type="button" className="icon-button" onClick={() => setToast(null)} aria-label="Dismiss">
-              <Icon name="close" size={18} />
-            </button>
-          </div>
-        )}
-        <UpdatePrompt />
-        {showSplash && <Splash />}
-      </div>
+          <LyricsPanel player={player} open={panel === 'lyrics'} mode={looks.appearance.mode} />
+          <QueuePanel
+            open={panel === 'queue'}
+            track={player.track}
+            artwork={player.state.album?.coverUrl}
+            items={upNext.items}
+            later={playsLater()}
+            onMove={upNext.move}
+            onRemove={upNext.remove}
+            onClear={upNext.clear}
+          />
+          {toast && (
+            <div className="toast" role="status">
+              <span>{toast}</span>
+              <button type="button" className="icon-button" onClick={() => setToast(null)} aria-label="Dismiss">
+                <Icon name="close" size={18} />
+              </button>
+            </div>
+          )}
+          <UpdatePrompt />
+          {showSplash && <Splash />}
+        </div>
+      </UpNextContext.Provider>
     </ArtistSearchContext.Provider>
   )
 }

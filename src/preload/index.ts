@@ -5,6 +5,7 @@ import type { ChomusukeApi, TorrentStats, UpdateState } from '../shared/types'
 const api: ChomusukeApi = {
   loadSource: (source, hints) => ipcRenderer.invoke('source:load', source, hints),
   openSong: song => ipcRenderer.invoke('source:open-song', song),
+  songRef: (infoHash, key) => ipcRenderer.invoke('source:song-ref', infoHash, key),
   openTorrentFile: () => ipcRenderer.invoke('source:open-file'),
   search: query => ipcRenderer.invoke('search:query', query),
   searchShelf: query => ipcRenderer.invoke('search:shelf', query),

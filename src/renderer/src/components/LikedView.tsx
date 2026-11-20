@@ -43,7 +43,7 @@ export function LikedView({
         <AddToPlaylist
           playlists={playlists}
           songs={songs}
-          label="Add all of these to a playlist"
+          label="Queue or add all of these to a playlist"
           className="liked__add-all"
         />
       </div>
@@ -96,7 +96,7 @@ export function LikedView({
               </button>
               <span className="liked-song__duration">{song.duration ? formatTime(song.duration) : ''}</span>
               <span className="liked-song__date">{new Date(song.ratedAt).toLocaleDateString()}</span>
-              <AddToPlaylist playlists={playlists} songs={[song]} label={`Add ${song.title} to a playlist`} />
+              <AddToPlaylist playlists={playlists} songs={[song]} label={`Queue or add ${song.title} to a playlist`} />
               <button
                 type="button"
                 className="icon-button"

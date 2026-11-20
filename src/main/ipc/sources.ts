@@ -1,9 +1,10 @@
 import { readFile, stat } from 'node:fs/promises'
 import { dialog } from 'electron'
-import type { Album, LoadResult } from '../../shared/types.ts'
+import type { Album, LoadResult, SongRef } from '../../shared/types.ts'
 import { annotationsForTorrentUrl } from '../providers/archive.ts'
 import { archiveJsonFetcher } from '../providers/index.ts'
 import type { Playable } from '../providers/types.ts'
+import { isInfoHash } from '../seeding.ts'
 import { sanitizeSongRef } from '../song-ref.ts'
 import { type ResolvedSong, SongResolver } from '../song-resolver.ts'
 import { parseSource, SourceError } from '../source.ts'
@@ -53,6 +54,13 @@ export function register(deps: IpcDeps): void {
     magnet: (magnet, hints) => torrents.load(magnet, hints),
     playable: playable => playableToAlbum(deps, playable)
   })
+  // A loaded track as a song that can be opened again later (to queue it); details come from the loaded album.
+  handle('source:song-ref', (event, infoHash: unknown, key: unknown): SongRef | null => {
+    assertTrustedSender(event)
+    if (!isInfoHash(infoHash) || typeof key !== 'string') return null
+    return sanitizeSongRef(torrents.songInfo(infoHash, key) ?? deps.httpSource.songInfo(infoHash, key)) ?? null
+  })
+
   handle('source:open-song', async (event, rawSong: unknown): Promise<LoadResult> => {
     assertTrustedSender(event)
     const song = sanitizeSongRef(rawSong)

@@ -2,6 +2,7 @@ import { type FormEvent, useState } from 'react'
 import type { Playlist } from '../../../shared/types'
 import { formatTime, plural } from '../format'
 import type { Playlists } from '../usePlaylists'
+import { AddToPlaylist } from './AddToPlaylist'
 import { Icon } from './Icon'
 import { Sticker } from './mascot/Sticker'
 import './AlbumView.css'
@@ -159,6 +160,7 @@ export function PlaylistView({
                   <Icon name="arrowDown" size={20} />
                 </button>
               </span>
+              <AddToPlaylist playlists={playlists} songs={[song]} label={`Queue or add ${song.title} to a playlist`} />
               <button
                 type="button"
                 className="icon-button"

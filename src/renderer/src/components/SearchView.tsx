@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import type { BrowseResponse, ProviderSection, SearchAlbum, SearchResults, SearchSong } from '../../../shared/types'
 import { formatBytes, formatTime, plural } from '../format'
+import { resultItem } from '../upNext'
 import { ArtistLink } from './ArtistLink'
 import { Card } from './Card'
 import { Cover } from './Cover'
 import { Icon } from './Icon'
 import { Sticker } from './mascot/Sticker'
+import { QueueButton } from './QueueMenu'
 import './AlbumView.css'
 import './SearchView.css'
 
@@ -85,7 +87,7 @@ export function SearchView({ search, isPlaying, onPlaySong, onOpenAlbum, onRetry
             {results.songs.map(song => {
               const playing = isPlaying(song)
               return (
-                <li key={song.id}>
+                <li key={song.id} className="song-list__item">
                   <button
                     type="button"
                     className={`song-row ${playing ? 'is-current' : ''}`}
@@ -107,6 +109,18 @@ export function SearchView({ search, isPlaying, onPlaySong, onOpenAlbum, onRetry
                     {song.album.license && <span className="track__format">{song.album.license}</span>}
                     <span className="track__duration">{song.duration ? formatTime(song.duration) : ''}</span>
                   </button>
+                  <QueueButton
+                    label={`Queue ${song.title}`}
+                    items={() => [
+                      resultItem({
+                        albumId: song.album.id,
+                        key: song.key,
+                        title: song.title,
+                        artist: song.artist,
+                        artwork: song.album.artwork
+                      })
+                    ]}
+                  />
                 </li>
               )
             })}
@@ -245,6 +259,22 @@ export function SectionBody({
               badge={album.license ?? (album.chart ? `#${index + 1}` : undefined)}
               tags={album.tags}
               onOpen={autoplay => onOpenAlbum(album, autoplay)}
+              menu={
+                // A chart song is one song: it can be queued (it's found on the plugins when its turn comes).
+                album.chart === 'song' && (
+                  <QueueButton
+                    label={`Queue ${album.title}`}
+                    items={() => [
+                      resultItem({
+                        albumId: album.id,
+                        title: album.title,
+                        artist: album.artist,
+                        artwork: album.artwork
+                      })
+                    ]}
+                  />
+                )
+              }
             />
           ))}
         </div>

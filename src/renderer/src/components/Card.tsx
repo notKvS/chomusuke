@@ -13,10 +13,12 @@ interface CardProps {
   /** Short labels from the source (format, licence, genre…) */
   tags?: string[]
   onOpen: (autoplay: boolean) => void
+  /** A small menu in the cover's top corner, shown on hover */
+  menu?: ReactNode
 }
 
 /** Square album card: click opens the album, the hover play button starts it. */
-export function Card({ artwork, title, subtitle, subtitleText, badge, tags, onOpen }: CardProps) {
+export function Card({ artwork, title, subtitle, subtitleText, badge, tags, onOpen, menu }: CardProps) {
   const chips = (tags ?? []).filter(tag => tag !== badge)
   return (
     <div className="card">
@@ -28,6 +30,8 @@ export function Card({ artwork, title, subtitle, subtitleText, badge, tags, onOp
           <Icon name="play" size={28} />
         </button>
       </div>
+      {/* Outside the cover, which clips its content to the rounded corners: the menu may need more room. */}
+      {menu && <span className="card__menu">{menu}</span>}
       <button type="button" className="card__title" onClick={() => onOpen(false)} tabIndex={-1} title={title}>
         {title}
       </button>

@@ -414,6 +414,8 @@ export interface ChomusukeApi {
   getLyrics(query: LyricsQuery): Promise<LyricsResponse>
   /** Opens the album of a remembered http song again (asks its plugin), for playing a liked song or playlist entry. */
   openSong(song: SongRef): Promise<LoadResult>
+  /** A loaded track (album info hash + track key) as a song openSong can open again; null once it's gone. */
+  songRef(infoHash: string, key: string): Promise<SongRef | null>
   openTorrentFile(): Promise<LoadResult | null>
   search(query: string): Promise<SearchResponse>
   /** A search for a Home row: unlike `search`, it doesn't cancel (and isn't cancelled by) other searches. */
